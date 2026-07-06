@@ -1,0 +1,36 @@
+package auth
+
+import (
+	"context"
+	"errors"
+
+	authv1 "github.com/qkitzero/auth-service/gen/go/auth/v1"
+	"github.com/qkitzero/fitness-service/internal/application/auth"
+	"google.golang.org/grpc/metadata"
+)
+
+type authService struct {
+	client authv1.AuthServiceClient
+}
+
+func NewAuthService(client authv1.AuthServiceClient) auth.AuthService {
+	return &authService{client: client}
+}
+
+func (s *authService) VerifyToken(ctx context.Context) (string, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", errors.New("metadata is missing")
+	}
+
+	ctx = metadata.NewOutgoingContext(ctx, md)
+
+	verifyTokenRequest := &authv1.VerifyTokenRequest{}
+
+	verifyTokenResponse, err := s.client.VerifyToken(ctx, verifyTokenRequest)
+	if err != nil {
+		return "", err
+	}
+
+	return verifyTokenResponse.GetUserId(), nil
+}

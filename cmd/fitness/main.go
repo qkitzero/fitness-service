@@ -12,12 +12,16 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 
+	authv1 "github.com/qkitzero/auth-service/gen/go/auth/v1"
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
 	appcustomer "github.com/qkitzero/fitness-service/internal/application/customer"
+	apiauth "github.com/qkitzero/fitness-service/internal/infrastructure/api/auth"
 	infracustomer "github.com/qkitzero/fitness-service/internal/infrastructure/customer"
 	"github.com/qkitzero/fitness-service/internal/infrastructure/db"
 	grpccustomer "github.com/qkitzero/fitness-service/internal/interface/grpc/customer"
@@ -26,14 +30,16 @@ import (
 const shutdownTimeout = 15 * time.Second
 
 type config struct {
-	Env        string
-	Port       string
-	DBHost     string
-	DBUser     string
-	DBPassword string
-	DBName     string
-	DBPort     string
-	DBSSLMode  string
+	Env             string
+	Port            string
+	DBHost          string
+	DBUser          string
+	DBPassword      string
+	DBName          string
+	DBPort          string
+	DBSSLMode       string
+	AuthServiceHost string
+	AuthServicePort string
 }
 
 func loadConfig() (config, error) {
@@ -53,6 +59,8 @@ func loadConfig() (config, error) {
 		{"DB_NAME", &cfg.DBName},
 		{"DB_PORT", &cfg.DBPort},
 		{"DB_SSL_MODE", &cfg.DBSSLMode},
+		{"AUTH_SERVICE_HOST", &cfg.AuthServiceHost},
+		{"AUTH_SERVICE_PORT", &cfg.AuthServicePort},
 	}
 	var missing []string
 	for _, r := range required {
@@ -96,11 +104,27 @@ func run() error {
 		return fmt.Errorf("listen: %w", err)
 	}
 
+	var dialOpt grpc.DialOption
+	switch cfg.Env {
+	case "production":
+		dialOpt = grpc.WithTransportCredentials(credentials.NewClientTLSFromCert(nil, ""))
+	default:
+		dialOpt = grpc.WithTransportCredentials(insecure.NewCredentials())
+	}
+
+	conn, err := grpc.NewClient(cfg.AuthServiceHost+":"+cfg.AuthServicePort, dialOpt)
+	if err != nil {
+		return fmt.Errorf("auth client: %w", err)
+	}
+	defer func() { _ = conn.Close() }()
+
 	server := grpc.NewServer()
 
+	authServiceClient := authv1.NewAuthServiceClient(conn)
 	customerRepository := infracustomer.NewCustomerRepository(gormDB)
 
-	customerUsecase := appcustomer.NewCustomerUsecase(customerRepository)
+	authService := apiauth.NewAuthService(authServiceClient)
+	customerUsecase := appcustomer.NewCustomerUsecase(authService, customerRepository)
 
 	healthServer := health.NewServer()
 	customerHandler := grpccustomer.NewCustomerHandler(customerUsecase)

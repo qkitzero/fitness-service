@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/qkitzero/fitness-service/internal/application/auth"
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
 )
 
@@ -15,14 +16,19 @@ type CustomerUsecase interface {
 }
 
 type customerUsecase struct {
+	authService  auth.AuthService
 	customerRepo customer.CustomerRepository
 }
 
-func NewCustomerUsecase(customerRepo customer.CustomerRepository) CustomerUsecase {
-	return &customerUsecase{customerRepo: customerRepo}
+func NewCustomerUsecase(authService auth.AuthService, customerRepo customer.CustomerRepository) CustomerUsecase {
+	return &customerUsecase{authService: authService, customerRepo: customerRepo}
 }
 
 func (u *customerUsecase) CreateCustomer(ctx context.Context, name customer.Name) (customer.Customer, error) {
+	if _, err := u.authService.VerifyToken(ctx); err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
 
 	newCustomer := customer.NewCustomer(customer.NewCustomerID(), name, now, now)
@@ -35,6 +41,10 @@ func (u *customerUsecase) CreateCustomer(ctx context.Context, name customer.Name
 }
 
 func (u *customerUsecase) GetCustomer(ctx context.Context, customerID customer.CustomerID) (customer.Customer, error) {
+	if _, err := u.authService.VerifyToken(ctx); err != nil {
+		return nil, err
+	}
+
 	foundCustomer, err := u.customerRepo.FindByID(ctx, customerID)
 	if err != nil {
 		return nil, err
@@ -44,6 +54,10 @@ func (u *customerUsecase) GetCustomer(ctx context.Context, customerID customer.C
 }
 
 func (u *customerUsecase) UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name) (customer.Customer, error) {
+	if _, err := u.authService.VerifyToken(ctx); err != nil {
+		return nil, err
+	}
+
 	foundCustomer, err := u.customerRepo.FindByID(ctx, customerID)
 	if err != nil {
 		return nil, err
@@ -59,6 +73,10 @@ func (u *customerUsecase) UpdateCustomer(ctx context.Context, customerID custome
 }
 
 func (u *customerUsecase) DeleteCustomer(ctx context.Context, customerID customer.CustomerID) error {
+	if _, err := u.authService.VerifyToken(ctx); err != nil {
+		return err
+	}
+
 	if _, err := u.customerRepo.FindByID(ctx, customerID); err != nil {
 		return err
 	}
