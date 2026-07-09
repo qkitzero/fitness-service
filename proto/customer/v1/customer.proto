@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package customer.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/qkitzero/fitness-service/gen/go/customer/v1";
+
+service CustomerService {
+  rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse) {
+    option (google.api.http) = {
+      post: "/v1/customer"
+      body: "*"
+    };
+  }
+  rpc GetCustomer(GetCustomerRequest) returns (GetCustomerResponse) {
+    option (google.api.http) = {get: "/v1/customer/{customer_id}"};
+  }
+  rpc UpdateCustomer(UpdateCustomerRequest) returns (UpdateCustomerResponse) {
+    option (google.api.http) = {
+      patch: "/v1/customer/{customer_id}"
+      body: "*"
+    };
+  }
+  rpc DeleteCustomer(DeleteCustomerRequest) returns (DeleteCustomerResponse) {
+    option (google.api.http) = {delete: "/v1/customer/{customer_id}"};
+  }
+}
+
+message CreateCustomerRequest {
+  string name = 1;
+}
+
+message CreateCustomerResponse {
+  string customer_id = 1;
+}
+
+message GetCustomerRequest {
+  string customer_id = 1;
+}
+
+message GetCustomerResponse {
+  string customer_id = 1;
+  string name = 2;
+}
+
+message UpdateCustomerRequest {
+  string customer_id = 1;
+  string name = 2;
+}
+
+message UpdateCustomerResponse {
+  string customer_id = 1;
+  string name = 2;
+}
+
+message DeleteCustomerRequest {
+  string customer_id = 1;
+}
+
+message DeleteCustomerResponse {}
