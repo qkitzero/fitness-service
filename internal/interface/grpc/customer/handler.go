@@ -10,6 +10,7 @@ import (
 
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
 	appcustomer "github.com/qkitzero/fitness-service/internal/application/customer"
+	appuser "github.com/qkitzero/fitness-service/internal/application/user"
 	domaincustomer "github.com/qkitzero/fitness-service/internal/domain/customer"
 )
 
@@ -31,11 +32,18 @@ func (h *CustomerHandler) CreateCustomer(ctx context.Context, req *customerv1.Cr
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
+	groupID, err := domaincustomer.NewGroupID(req.GetGroupId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
 
-	customer, err := h.customerUsecase.CreateCustomer(ctx, name)
+	customer, err := h.customerUsecase.CreateCustomer(ctx, groupID, name)
 	if err != nil {
 		if _, ok := status.FromError(err); ok {
 			return nil, err
+		}
+		if errors.Is(err, appuser.ErrNotGroupMember) {
+			return nil, status.Error(codes.PermissionDenied, err.Error())
 		}
 		log.Printf("CreateCustomer: internal error: %v", err)
 		return nil, status.Error(codes.Internal, "internal error")
@@ -57,6 +65,9 @@ func (h *CustomerHandler) GetCustomer(ctx context.Context, req *customerv1.GetCu
 		if _, ok := status.FromError(err); ok {
 			return nil, err
 		}
+		if errors.Is(err, appuser.ErrNotGroupMember) {
+			return nil, status.Error(codes.PermissionDenied, err.Error())
+		}
 		if errors.Is(err, domaincustomer.ErrCustomerNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
 		}
@@ -67,6 +78,39 @@ func (h *CustomerHandler) GetCustomer(ctx context.Context, req *customerv1.GetCu
 	return &customerv1.GetCustomerResponse{
 		CustomerId: customer.ID().String(),
 		Name:       customer.Name().String(),
+		GroupId:    customer.GroupID().String(),
+	}, nil
+}
+
+func (h *CustomerHandler) ListCustomers(ctx context.Context, req *customerv1.ListCustomersRequest) (*customerv1.ListCustomersResponse, error) {
+	groupID, err := domaincustomer.NewGroupID(req.GetGroupId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	customers, err := h.customerUsecase.ListCustomers(ctx, groupID)
+	if err != nil {
+		if _, ok := status.FromError(err); ok {
+			return nil, err
+		}
+		if errors.Is(err, appuser.ErrNotGroupMember) {
+			return nil, status.Error(codes.PermissionDenied, err.Error())
+		}
+		log.Printf("ListCustomers: internal error: %v", err)
+		return nil, status.Error(codes.Internal, "internal error")
+	}
+
+	customerMessages := make([]*customerv1.Customer, 0, len(customers))
+	for _, c := range customers {
+		customerMessages = append(customerMessages, &customerv1.Customer{
+			CustomerId: c.ID().String(),
+			Name:       c.Name().String(),
+			GroupId:    c.GroupID().String(),
+		})
+	}
+
+	return &customerv1.ListCustomersResponse{
+		Customers: customerMessages,
 	}, nil
 }
 
@@ -85,6 +129,9 @@ func (h *CustomerHandler) UpdateCustomer(ctx context.Context, req *customerv1.Up
 		if _, ok := status.FromError(err); ok {
 			return nil, err
 		}
+		if errors.Is(err, appuser.ErrNotGroupMember) {
+			return nil, status.Error(codes.PermissionDenied, err.Error())
+		}
 		if errors.Is(err, domaincustomer.ErrCustomerNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())
 		}
@@ -95,6 +142,7 @@ func (h *CustomerHandler) UpdateCustomer(ctx context.Context, req *customerv1.Up
 	return &customerv1.UpdateCustomerResponse{
 		CustomerId: customer.ID().String(),
 		Name:       customer.Name().String(),
+		GroupId:    customer.GroupID().String(),
 	}, nil
 }
 
@@ -107,6 +155,9 @@ func (h *CustomerHandler) DeleteCustomer(ctx context.Context, req *customerv1.De
 	if err := h.customerUsecase.DeleteCustomer(ctx, customerID); err != nil {
 		if _, ok := status.FromError(err); ok {
 			return nil, err
+		}
+		if errors.Is(err, appuser.ErrNotGroupMember) {
+			return nil, status.Error(codes.PermissionDenied, err.Error())
 		}
 		if errors.Is(err, domaincustomer.ErrCustomerNotFound) {
 			return nil, status.Error(codes.NotFound, err.Error())

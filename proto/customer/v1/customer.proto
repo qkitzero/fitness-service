@@ -16,6 +16,9 @@ service CustomerService {
   rpc GetCustomer(GetCustomerRequest) returns (GetCustomerResponse) {
     option (google.api.http) = {get: "/v1/customer/{customer_id}"};
   }
+  rpc ListCustomers(ListCustomersRequest) returns (ListCustomersResponse) {
+    option (google.api.http) = {get: "/v1/customers"};
+  }
   rpc UpdateCustomer(UpdateCustomerRequest) returns (UpdateCustomerResponse) {
     option (google.api.http) = {
       patch: "/v1/customer/{customer_id}"
@@ -29,6 +32,7 @@ service CustomerService {
 
 message CreateCustomerRequest {
   string name = 1;
+  string group_id = 2;
 }
 
 message CreateCustomerResponse {
@@ -42,6 +46,21 @@ message GetCustomerRequest {
 message GetCustomerResponse {
   string customer_id = 1;
   string name = 2;
+  string group_id = 3;
+}
+
+message ListCustomersRequest {
+  string group_id = 1;
+}
+
+message ListCustomersResponse {
+  repeated Customer customers = 1;
+}
+
+message Customer {
+  string customer_id = 1;
+  string name = 2;
+  string group_id = 3;
 }
 
 message UpdateCustomerRequest {
@@ -52,6 +71,7 @@ message UpdateCustomerRequest {
 message UpdateCustomerResponse {
   string customer_id = 1;
   string name = 2;
+  string group_id = 3;
 }
 
 message DeleteCustomerRequest {

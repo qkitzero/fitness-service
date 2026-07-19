@@ -55,6 +55,20 @@ func (mr *MockCustomerMockRecorder) CreatedAt() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatedAt", reflect.TypeOf((*MockCustomer)(nil).CreatedAt))
 }
 
+// GroupID mocks base method.
+func (m *MockCustomer) GroupID() customer.GroupID {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GroupID")
+	ret0, _ := ret[0].(customer.GroupID)
+	return ret0
+}
+
+// GroupID indicates an expected call of GroupID.
+func (mr *MockCustomerMockRecorder) GroupID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupID", reflect.TypeOf((*MockCustomer)(nil).GroupID))
+}
+
 // ID mocks base method.
 func (m *MockCustomer) ID() customer.CustomerID {
 	m.ctrl.T.Helper()

@@ -16,6 +16,8 @@ services:
       - DB_SSL_MODE=${DB_SSL_MODE}
       - AUTH_SERVICE_HOST=${AUTH_SERVICE_HOST}
       - AUTH_SERVICE_PORT=${AUTH_SERVICE_PORT}
+      - USER_SERVICE_HOST=${USER_SERVICE_HOST}
+      - USER_SERVICE_PORT=${USER_SERVICE_PORT}
     depends_on:
       fitness-db:
         condition: service_healthy

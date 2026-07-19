@@ -11,6 +11,10 @@ func TestNewCustomer(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to new customer id: %v", err)
 	}
+	groupID, err := NewGroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	if err != nil {
+		t.Errorf("failed to new group id: %v", err)
+	}
 	name, err := NewName("test customer")
 	if err != nil {
 		t.Errorf("failed to new name: %v", err)
@@ -19,20 +23,24 @@ func TestNewCustomer(t *testing.T) {
 		name      string
 		success   bool
 		id        CustomerID
+		groupID   GroupID
 		customer  Name
 		createdAt time.Time
 		updatedAt time.Time
 	}{
-		{"success new customer", true, id, name, time.Now(), time.Now()},
+		{"success new customer", true, id, groupID, name, time.Now(), time.Now()},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			customer := NewCustomer(tt.id, tt.customer, tt.createdAt, tt.updatedAt)
+			customer := NewCustomer(tt.id, tt.groupID, tt.customer, tt.createdAt, tt.updatedAt)
 			if tt.success && customer.ID() != tt.id {
 				t.Errorf("ID() = %v, want %v", customer.ID(), tt.id)
+			}
+			if tt.success && customer.GroupID() != tt.groupID {
+				t.Errorf("GroupID() = %v, want %v", customer.GroupID(), tt.groupID)
 			}
 			if tt.success && customer.Name() != tt.customer {
 				t.Errorf("Name() = %v, want %v", customer.Name(), tt.customer)
@@ -53,6 +61,10 @@ func TestUpdateCustomer(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to new customer id: %v", err)
 	}
+	groupID, err := NewGroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	if err != nil {
+		t.Errorf("failed to new group id: %v", err)
+	}
 	name, err := NewName("test customer")
 	if err != nil {
 		t.Errorf("failed to new name: %v", err)
@@ -61,7 +73,7 @@ func TestUpdateCustomer(t *testing.T) {
 	if err != nil {
 		t.Errorf("failed to new name: %v", err)
 	}
-	customer := NewCustomer(id, name, time.Now(), time.Now())
+	customer := NewCustomer(id, groupID, name, time.Now(), time.Now())
 	tests := []struct {
 		name        string
 		success     bool
