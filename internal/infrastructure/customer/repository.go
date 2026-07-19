@@ -21,6 +21,7 @@ func (r *customerRepository) Create(ctx context.Context, c customer.Customer) er
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		customerModel := CustomerModel{
 			ID:        c.ID(),
+			GroupID:   c.GroupID(),
 			Name:      c.Name(),
 			CreatedAt: c.CreatedAt(),
 			UpdatedAt: c.UpdatedAt(),
@@ -46,16 +47,38 @@ func (r *customerRepository) FindByID(ctx context.Context, id customer.CustomerI
 
 	return customer.NewCustomer(
 		customerModel.ID,
+		customerModel.GroupID,
 		customerModel.Name,
 		customerModel.CreatedAt,
 		customerModel.UpdatedAt,
 	), nil
 }
 
+func (r *customerRepository) ListByGroupID(ctx context.Context, groupID customer.GroupID) ([]customer.Customer, error) {
+	var customerModels []CustomerModel
+	if err := r.db.WithContext(ctx).Where("group_id = ?", groupID).Order("created_at, id").Find(&customerModels).Error; err != nil {
+		return nil, err
+	}
+
+	customers := make([]customer.Customer, 0, len(customerModels))
+	for _, customerModel := range customerModels {
+		customers = append(customers, customer.NewCustomer(
+			customerModel.ID,
+			customerModel.GroupID,
+			customerModel.Name,
+			customerModel.CreatedAt,
+			customerModel.UpdatedAt,
+		))
+	}
+
+	return customers, nil
+}
+
 func (r *customerRepository) Update(ctx context.Context, c customer.Customer) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		customerModel := CustomerModel{
 			ID:        c.ID(),
+			GroupID:   c.GroupID(),
 			Name:      c.Name(),
 			CreatedAt: c.CreatedAt(),
 			UpdatedAt: c.UpdatedAt(),
