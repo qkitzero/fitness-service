@@ -42,18 +42,18 @@ func (m *MockCustomerUsecase) EXPECT() *MockCustomerUsecaseMockRecorder {
 }
 
 // CreateCustomer mocks base method.
-func (m *MockCustomerUsecase) CreateCustomer(ctx context.Context, name customer.Name) (customer.Customer, error) {
+func (m *MockCustomerUsecase) CreateCustomer(ctx context.Context, groupID customer.GroupID, name customer.Name) (customer.Customer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateCustomer", ctx, name)
+	ret := m.ctrl.Call(m, "CreateCustomer", ctx, groupID, name)
 	ret0, _ := ret[0].(customer.Customer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateCustomer indicates an expected call of CreateCustomer.
-func (mr *MockCustomerUsecaseMockRecorder) CreateCustomer(ctx, name any) *gomock.Call {
+func (mr *MockCustomerUsecaseMockRecorder) CreateCustomer(ctx, groupID, name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomer", reflect.TypeOf((*MockCustomerUsecase)(nil).CreateCustomer), ctx, name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomer", reflect.TypeOf((*MockCustomerUsecase)(nil).CreateCustomer), ctx, groupID, name)
 }
 
 // DeleteCustomer mocks base method.
@@ -83,6 +83,21 @@ func (m *MockCustomerUsecase) GetCustomer(ctx context.Context, customerID custom
 func (mr *MockCustomerUsecaseMockRecorder) GetCustomer(ctx, customerID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCustomer", reflect.TypeOf((*MockCustomerUsecase)(nil).GetCustomer), ctx, customerID)
+}
+
+// ListCustomers mocks base method.
+func (m *MockCustomerUsecase) ListCustomers(ctx context.Context, groupID customer.GroupID) ([]customer.Customer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCustomers", ctx, groupID)
+	ret0, _ := ret[0].([]customer.Customer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListCustomers indicates an expected call of ListCustomers.
+func (mr *MockCustomerUsecaseMockRecorder) ListCustomers(ctx, groupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCustomers", reflect.TypeOf((*MockCustomerUsecase)(nil).ListCustomers), ctx, groupID)
 }
 
 // UpdateCustomer mocks base method.
