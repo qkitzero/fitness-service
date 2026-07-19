@@ -1,0 +1,1 @@
+ALTER TABLE customers ADD COLUMN group_id VARCHAR(36) NOT NULL;
