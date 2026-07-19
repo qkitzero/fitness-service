@@ -6,6 +6,7 @@ import (
 
 type Customer interface {
 	ID() CustomerID
+	GroupID() GroupID
 	Name() Name
 	CreatedAt() time.Time
 	UpdatedAt() time.Time
@@ -14,6 +15,7 @@ type Customer interface {
 
 type customer struct {
 	id        CustomerID
+	groupID   GroupID
 	name      Name
 	createdAt time.Time
 	updatedAt time.Time
@@ -21,6 +23,10 @@ type customer struct {
 
 func (c customer) ID() CustomerID {
 	return c.id
+}
+
+func (c customer) GroupID() GroupID {
+	return c.groupID
 }
 
 func (c customer) Name() Name {
@@ -42,12 +48,14 @@ func (c *customer) Update(name Name) {
 
 func NewCustomer(
 	id CustomerID,
+	groupID GroupID,
 	name Name,
 	createdAt time.Time,
 	updatedAt time.Time,
 ) Customer {
 	return &customer{
 		id:        id,
+		groupID:   groupID,
 		name:      name,
 		createdAt: createdAt,
 		updatedAt: updatedAt,
