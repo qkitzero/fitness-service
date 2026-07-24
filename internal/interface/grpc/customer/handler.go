@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 
+	"google.golang.org/genproto/googleapis/type/date"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -27,6 +28,40 @@ func NewCustomerHandler(
 	}
 }
 
+func toDomainGender(g customerv1.Gender) (domaincustomer.Gender, error) {
+	switch g {
+	case customerv1.Gender_GENDER_MALE:
+		return domaincustomer.GenderMale, nil
+	case customerv1.Gender_GENDER_FEMALE:
+		return domaincustomer.GenderFemale, nil
+	case customerv1.Gender_GENDER_OTHER:
+		return domaincustomer.GenderOther, nil
+	default:
+		return domaincustomer.NewGender("")
+	}
+}
+
+func toProtoGender(g domaincustomer.Gender) customerv1.Gender {
+	switch g {
+	case domaincustomer.GenderMale:
+		return customerv1.Gender_GENDER_MALE
+	case domaincustomer.GenderFemale:
+		return customerv1.Gender_GENDER_FEMALE
+	case domaincustomer.GenderOther:
+		return customerv1.Gender_GENDER_OTHER
+	default:
+		return customerv1.Gender_GENDER_UNSPECIFIED
+	}
+}
+
+func toProtoBirthDate(b domaincustomer.BirthDate) *date.Date {
+	return &date.Date{
+		Year:  int32(b.Year()),
+		Month: int32(b.Month()),
+		Day:   int32(b.Day()),
+	}
+}
+
 func (h *CustomerHandler) CreateCustomer(ctx context.Context, req *customerv1.CreateCustomerRequest) (*customerv1.CreateCustomerResponse, error) {
 	name, err := domaincustomer.NewName(req.GetName())
 	if err != nil {
@@ -36,8 +71,20 @@ func (h *CustomerHandler) CreateCustomer(ctx context.Context, req *customerv1.Cr
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
+	nameKana, err := domaincustomer.NewNameKana(req.GetNameKana())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	gender, err := toDomainGender(req.GetGender())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	birthDate, err := domaincustomer.NewBirthDate(req.GetBirthDate().GetYear(), req.GetBirthDate().GetMonth(), req.GetBirthDate().GetDay())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
 
-	customer, err := h.customerUsecase.CreateCustomer(ctx, groupID, name)
+	customer, err := h.customerUsecase.CreateCustomer(ctx, groupID, name, nameKana, gender, birthDate)
 	if err != nil {
 		if _, ok := status.FromError(err); ok {
 			return nil, err
@@ -79,6 +126,9 @@ func (h *CustomerHandler) GetCustomer(ctx context.Context, req *customerv1.GetCu
 		CustomerId: customer.ID().String(),
 		Name:       customer.Name().String(),
 		GroupId:    customer.GroupID().String(),
+		NameKana:   customer.NameKana().String(),
+		Gender:     toProtoGender(customer.Gender()),
+		BirthDate:  toProtoBirthDate(customer.BirthDate()),
 	}, nil
 }
 
@@ -106,6 +156,9 @@ func (h *CustomerHandler) ListCustomers(ctx context.Context, req *customerv1.Lis
 			CustomerId: c.ID().String(),
 			Name:       c.Name().String(),
 			GroupId:    c.GroupID().String(),
+			NameKana:   c.NameKana().String(),
+			Gender:     toProtoGender(c.Gender()),
+			BirthDate:  toProtoBirthDate(c.BirthDate()),
 		})
 	}
 
@@ -123,8 +176,20 @@ func (h *CustomerHandler) UpdateCustomer(ctx context.Context, req *customerv1.Up
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
+	nameKana, err := domaincustomer.NewNameKana(req.GetNameKana())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	gender, err := toDomainGender(req.GetGender())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	birthDate, err := domaincustomer.NewBirthDate(req.GetBirthDate().GetYear(), req.GetBirthDate().GetMonth(), req.GetBirthDate().GetDay())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
 
-	customer, err := h.customerUsecase.UpdateCustomer(ctx, customerID, name)
+	customer, err := h.customerUsecase.UpdateCustomer(ctx, customerID, name, nameKana, gender, birthDate)
 	if err != nil {
 		if _, ok := status.FromError(err); ok {
 			return nil, err
@@ -143,6 +208,9 @@ func (h *CustomerHandler) UpdateCustomer(ctx context.Context, req *customerv1.Up
 		CustomerId: customer.ID().String(),
 		Name:       customer.Name().String(),
 		GroupId:    customer.GroupID().String(),
+		NameKana:   customer.NameKana().String(),
+		Gender:     toProtoGender(customer.Gender()),
+		BirthDate:  toProtoBirthDate(customer.BirthDate()),
 	}, nil
 }
 
