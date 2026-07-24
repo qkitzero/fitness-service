@@ -3,6 +3,7 @@ syntax = "proto3";
 package customer.v1;
 
 import "google/api/annotations.proto";
+import "google/type/date.proto";
 
 option go_package = "github.com/qkitzero/fitness-service/gen/go/customer/v1";
 
@@ -30,9 +31,19 @@ service CustomerService {
   }
 }
 
+enum Gender {
+  GENDER_UNSPECIFIED = 0;
+  GENDER_MALE = 1;
+  GENDER_FEMALE = 2;
+  GENDER_OTHER = 3;
+}
+
 message CreateCustomerRequest {
   string name = 1;
   string group_id = 2;
+  string name_kana = 3;
+  Gender gender = 4;
+  google.type.Date birth_date = 5;
 }
 
 message CreateCustomerResponse {
@@ -47,6 +58,9 @@ message GetCustomerResponse {
   string customer_id = 1;
   string name = 2;
   string group_id = 3;
+  string name_kana = 4;
+  Gender gender = 5;
+  google.type.Date birth_date = 6;
 }
 
 message ListCustomersRequest {
@@ -61,17 +75,26 @@ message Customer {
   string customer_id = 1;
   string name = 2;
   string group_id = 3;
+  string name_kana = 4;
+  Gender gender = 5;
+  google.type.Date birth_date = 6;
 }
 
 message UpdateCustomerRequest {
   string customer_id = 1;
   string name = 2;
+  string name_kana = 3;
+  Gender gender = 4;
+  google.type.Date birth_date = 5;
 }
 
 message UpdateCustomerResponse {
   string customer_id = 1;
   string name = 2;
   string group_id = 3;
+  string name_kana = 4;
+  Gender gender = 5;
+  google.type.Date birth_date = 6;
 }
 
 message DeleteCustomerRequest {
