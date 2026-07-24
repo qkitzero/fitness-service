@@ -10,10 +10,10 @@ import (
 )
 
 type CustomerUsecase interface {
-	CreateCustomer(ctx context.Context, groupID customer.GroupID, name customer.Name) (customer.Customer, error)
+	CreateCustomer(ctx context.Context, groupID customer.GroupID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate) (customer.Customer, error)
 	GetCustomer(ctx context.Context, customerID customer.CustomerID) (customer.Customer, error)
 	ListCustomers(ctx context.Context, groupID customer.GroupID) ([]customer.Customer, error)
-	UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name) (customer.Customer, error)
+	UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate) (customer.Customer, error)
 	DeleteCustomer(ctx context.Context, customerID customer.CustomerID) error
 }
 
@@ -42,7 +42,7 @@ func (u *customerUsecase) verifyGroupMembership(ctx context.Context, groupID cus
 	return user.ErrNotGroupMember
 }
 
-func (u *customerUsecase) CreateCustomer(ctx context.Context, groupID customer.GroupID, name customer.Name) (customer.Customer, error) {
+func (u *customerUsecase) CreateCustomer(ctx context.Context, groupID customer.GroupID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate) (customer.Customer, error) {
 	if _, err := u.authService.VerifyToken(ctx); err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (u *customerUsecase) CreateCustomer(ctx context.Context, groupID customer.G
 
 	now := time.Now()
 
-	newCustomer := customer.NewCustomer(customer.NewCustomerID(), groupID, name, now, now)
+	newCustomer := customer.NewCustomer(customer.NewCustomerID(), groupID, name, nameKana, gender, birthDate, now, now)
 
 	if err := u.customerRepo.Create(ctx, newCustomer); err != nil {
 		return nil, err
@@ -96,7 +96,7 @@ func (u *customerUsecase) ListCustomers(ctx context.Context, groupID customer.Gr
 	return customers, nil
 }
 
-func (u *customerUsecase) UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name) (customer.Customer, error) {
+func (u *customerUsecase) UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate) (customer.Customer, error) {
 	if _, err := u.authService.VerifyToken(ctx); err != nil {
 		return nil, err
 	}
@@ -110,7 +110,7 @@ func (u *customerUsecase) UpdateCustomer(ctx context.Context, customerID custome
 		return nil, err
 	}
 
-	foundCustomer.Update(name)
+	foundCustomer.Update(name, nameKana, gender, birthDate)
 
 	if err := u.customerRepo.Update(ctx, foundCustomer); err != nil {
 		return nil, err

@@ -9,6 +9,7 @@ require (
 	github.com/qkitzero/auth-service v1.4.2
 	github.com/qkitzero/user-service v1.3.0
 	go.uber.org/mock v0.6.0
+	google.golang.org/genproto v0.0.0-20250422160041-2d3770c4ea7f
 	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217
 	google.golang.org/grpc v1.79.3
 	google.golang.org/protobuf v1.36.10

@@ -31,8 +31,8 @@ func TestCreate(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
 				mock.ExpectBegin()
 
-				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "customers" ("id","group_id","name","created_at","updated_at") VALUES ($1,$2,$3,$4,$5)`)).
-					WithArgs(customer.ID(), customer.GroupID(), customer.Name(), testutil.AnyTime{}, testutil.AnyTime{}).
+				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "customers" ("id","group_id","name","name_kana","gender","birth_date","created_at","updated_at") VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`)).
+					WithArgs(customer.ID(), customer.GroupID(), customer.Name(), customer.NameKana(), customer.Gender(), testutil.AnyTime{}, testutil.AnyTime{}, testutil.AnyTime{}).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 
 				mock.ExpectCommit()
@@ -44,8 +44,8 @@ func TestCreate(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
 				mock.ExpectBegin()
 
-				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "customers" ("id","group_id","name","created_at","updated_at") VALUES ($1,$2,$3,$4,$5)`)).
-					WithArgs(customer.ID(), customer.GroupID(), customer.Name(), testutil.AnyTime{}, testutil.AnyTime{}).
+				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "customers" ("id","group_id","name","name_kana","gender","birth_date","created_at","updated_at") VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`)).
+					WithArgs(customer.ID(), customer.GroupID(), customer.Name(), customer.NameKana(), customer.Gender(), testutil.AnyTime{}, testutil.AnyTime{}, testutil.AnyTime{}).
 					WillReturnError(errors.New("create customer error"))
 
 				mock.ExpectRollback()
@@ -74,6 +74,9 @@ func TestCreate(t *testing.T) {
 			mockCustomer.EXPECT().ID().Return(customer.CustomerID{UUID: uuid.New()}).AnyTimes()
 			mockCustomer.EXPECT().GroupID().Return(customer.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")).AnyTimes()
 			mockCustomer.EXPECT().Name().Return(customer.Name("test customer")).AnyTimes()
+			mockCustomer.EXPECT().NameKana().Return(customer.NameKana("テストカナ")).AnyTimes()
+			mockCustomer.EXPECT().Gender().Return(customer.GenderMale).AnyTimes()
+			mockCustomer.EXPECT().BirthDate().Return(customer.BirthDate{Time: time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)}).AnyTimes()
 			mockCustomer.EXPECT().CreatedAt().Return(time.Now()).AnyTimes()
 			mockCustomer.EXPECT().UpdatedAt().Return(time.Now()).AnyTimes()
 
@@ -109,8 +112,8 @@ func TestFindByID(t *testing.T) {
 			success:    true,
 			customerID: customer.CustomerID{UUID: uuid.New()},
 			setup: func(mock sqlmock.Sqlmock, customerID customer.CustomerID) {
-				customerRows := sqlmock.NewRows([]string{"id", "group_id", "name", "created_at", "updated_at"}).
-					AddRow(customerID, "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b", "test customer", time.Now(), time.Now())
+				customerRows := sqlmock.NewRows([]string{"id", "group_id", "name", "name_kana", "gender", "birth_date", "created_at", "updated_at"}).
+					AddRow(customerID, "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b", "test customer", "テストカナ", "male", time.Now(), time.Now(), time.Now())
 				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE id = $1 ORDER BY "customers"."id" LIMIT $2`)).
 					WithArgs(customerID, 1).
 					WillReturnRows(customerRows)
@@ -186,9 +189,9 @@ func TestListByGroupID(t *testing.T) {
 			wantCount: 2,
 			groupID:   customer.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
 			setup: func(mock sqlmock.Sqlmock, groupID customer.GroupID) {
-				customerRows := sqlmock.NewRows([]string{"id", "group_id", "name", "created_at", "updated_at"}).
-					AddRow(uuid.New().String(), groupID, "test customer 1", time.Now(), time.Now()).
-					AddRow(uuid.New().String(), groupID, "test customer 2", time.Now(), time.Now())
+				customerRows := sqlmock.NewRows([]string{"id", "group_id", "name", "name_kana", "gender", "birth_date", "created_at", "updated_at"}).
+					AddRow(uuid.New().String(), groupID, "test customer 1", "テストカナ", "male", time.Now(), time.Now(), time.Now()).
+					AddRow(uuid.New().String(), groupID, "test customer 2", "テストカナ", "female", time.Now(), time.Now(), time.Now())
 				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE group_id = $1 ORDER BY created_at, id`)).
 					WithArgs(groupID).
 					WillReturnRows(customerRows)
@@ -200,7 +203,7 @@ func TestListByGroupID(t *testing.T) {
 			wantCount: 0,
 			groupID:   customer.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
 			setup: func(mock sqlmock.Sqlmock, groupID customer.GroupID) {
-				customerRows := sqlmock.NewRows([]string{"id", "group_id", "name", "created_at", "updated_at"})
+				customerRows := sqlmock.NewRows([]string{"id", "group_id", "name", "name_kana", "gender", "birth_date", "created_at", "updated_at"})
 				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE group_id = $1 ORDER BY created_at, id`)).
 					WithArgs(groupID).
 					WillReturnRows(customerRows)
@@ -268,8 +271,8 @@ func TestUpdate(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
 				mock.ExpectBegin()
 
-				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "customers" SET "group_id"=$1,"name"=$2,"created_at"=$3,"updated_at"=$4 WHERE "id" = $5`)).
-					WithArgs(customer.GroupID(), customer.Name(), testutil.AnyTime{}, testutil.AnyTime{}, customer.ID()).
+				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "customers" SET "group_id"=$1,"name"=$2,"name_kana"=$3,"gender"=$4,"birth_date"=$5,"created_at"=$6,"updated_at"=$7 WHERE "id" = $8`)).
+					WithArgs(customer.GroupID(), customer.Name(), customer.NameKana(), customer.Gender(), testutil.AnyTime{}, testutil.AnyTime{}, testutil.AnyTime{}, customer.ID()).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 
 				mock.ExpectCommit()
@@ -281,8 +284,8 @@ func TestUpdate(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
 				mock.ExpectBegin()
 
-				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "customers" SET "group_id"=$1,"name"=$2,"created_at"=$3,"updated_at"=$4 WHERE "id" = $5`)).
-					WithArgs(customer.GroupID(), customer.Name(), testutil.AnyTime{}, testutil.AnyTime{}, customer.ID()).
+				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "customers" SET "group_id"=$1,"name"=$2,"name_kana"=$3,"gender"=$4,"birth_date"=$5,"created_at"=$6,"updated_at"=$7 WHERE "id" = $8`)).
+					WithArgs(customer.GroupID(), customer.Name(), customer.NameKana(), customer.Gender(), testutil.AnyTime{}, testutil.AnyTime{}, testutil.AnyTime{}, customer.ID()).
 					WillReturnError(errors.New("update customer error"))
 
 				mock.ExpectRollback()
@@ -311,6 +314,9 @@ func TestUpdate(t *testing.T) {
 			mockCustomer.EXPECT().ID().Return(customer.CustomerID{UUID: uuid.New()}).AnyTimes()
 			mockCustomer.EXPECT().GroupID().Return(customer.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")).AnyTimes()
 			mockCustomer.EXPECT().Name().Return(customer.Name("updated customer")).AnyTimes()
+			mockCustomer.EXPECT().NameKana().Return(customer.NameKana("コウシンカナ")).AnyTimes()
+			mockCustomer.EXPECT().Gender().Return(customer.GenderFemale).AnyTimes()
+			mockCustomer.EXPECT().BirthDate().Return(customer.BirthDate{Time: time.Date(1999, 12, 31, 0, 0, 0, 0, time.UTC)}).AnyTimes()
 			mockCustomer.EXPECT().CreatedAt().Return(time.Now()).AnyTimes()
 			mockCustomer.EXPECT().UpdatedAt().Return(time.Now()).AnyTimes()
 

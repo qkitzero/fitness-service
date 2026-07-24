@@ -23,6 +23,9 @@ func (r *customerRepository) Create(ctx context.Context, c customer.Customer) er
 			ID:        c.ID(),
 			GroupID:   c.GroupID(),
 			Name:      c.Name(),
+			NameKana:  c.NameKana(),
+			Gender:    c.Gender(),
+			BirthDate: c.BirthDate(),
 			CreatedAt: c.CreatedAt(),
 			UpdatedAt: c.UpdatedAt(),
 		}
@@ -49,6 +52,9 @@ func (r *customerRepository) FindByID(ctx context.Context, id customer.CustomerI
 		customerModel.ID,
 		customerModel.GroupID,
 		customerModel.Name,
+		customerModel.NameKana,
+		customerModel.Gender,
+		customerModel.BirthDate,
 		customerModel.CreatedAt,
 		customerModel.UpdatedAt,
 	), nil
@@ -66,6 +72,9 @@ func (r *customerRepository) ListByGroupID(ctx context.Context, groupID customer
 			customerModel.ID,
 			customerModel.GroupID,
 			customerModel.Name,
+			customerModel.NameKana,
+			customerModel.Gender,
+			customerModel.BirthDate,
 			customerModel.CreatedAt,
 			customerModel.UpdatedAt,
 		))
@@ -80,6 +89,9 @@ func (r *customerRepository) Update(ctx context.Context, c customer.Customer) er
 			ID:        c.ID(),
 			GroupID:   c.GroupID(),
 			Name:      c.Name(),
+			NameKana:  c.NameKana(),
+			Gender:    c.Gender(),
+			BirthDate: c.BirthDate(),
 			CreatedAt: c.CreatedAt(),
 			UpdatedAt: c.UpdatedAt(),
 		}
