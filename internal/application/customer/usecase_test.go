@@ -17,6 +17,9 @@ func TestCreateCustomer(t *testing.T) {
 	t.Parallel()
 	groupID, _ := customer.NewGroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
 	name, _ := customer.NewName("test customer")
+	nameKana, _ := customer.NewNameKana("テストカナ")
+	gender, _ := customer.NewGender("male")
+	birthDate, _ := customer.NewBirthDate(2000, 1, 1)
 
 	tests := []struct {
 		name            string
@@ -51,7 +54,7 @@ func TestCreateCustomer(t *testing.T) {
 
 			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository)
 
-			_, err := u.CreateCustomer(tt.ctx, groupID, name)
+			_, err := u.CreateCustomer(tt.ctx, groupID, name, nameKana, gender, birthDate)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}
@@ -166,6 +169,9 @@ func TestUpdateCustomer(t *testing.T) {
 	t.Parallel()
 	groupID, _ := customer.NewGroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
 	name, _ := customer.NewName("updated test customer")
+	nameKana, _ := customer.NewNameKana("コウシンカナ")
+	gender, _ := customer.NewGender("female")
+	birthDate, _ := customer.NewBirthDate(1999, 12, 31)
 
 	tests := []struct {
 		name            string
@@ -198,7 +204,7 @@ func TestUpdateCustomer(t *testing.T) {
 			mockUserService := mocksappuser.NewMockUserService(ctrl)
 			mockCustomer := mockscustomer.NewMockCustomer(ctrl)
 			mockCustomer.EXPECT().GroupID().Return(groupID).AnyTimes()
-			mockCustomer.EXPECT().Update(gomock.Any()).AnyTimes()
+			mockCustomer.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 			mockCustomerRepository := mockscustomer.NewMockCustomerRepository(ctrl)
 			mockAuthService.EXPECT().VerifyToken(tt.ctx).Return(tt.userID, tt.verifyTokenErr).AnyTimes()
 			mockCustomerRepository.EXPECT().FindByID(tt.ctx, gomock.Any()).Return(mockCustomer, tt.findByIDErr).AnyTimes()
@@ -207,7 +213,7 @@ func TestUpdateCustomer(t *testing.T) {
 
 			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository)
 
-			_, err := u.UpdateCustomer(tt.ctx, customer.NewCustomerID(), name)
+			_, err := u.UpdateCustomer(tt.ctx, customer.NewCustomerID(), name, nameKana, gender, birthDate)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}
