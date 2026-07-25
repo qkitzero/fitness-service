@@ -62,38 +62,167 @@ func toProtoBirthDate(b domaincustomer.BirthDate) *date.Date {
 	}
 }
 
-func (h *CustomerHandler) CreateCustomer(ctx context.Context, req *customerv1.CreateCustomerRequest) (*customerv1.CreateCustomerResponse, error) {
-	name, err := domaincustomer.NewName(req.GetName())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
+func toProtoCustomer(c domaincustomer.Customer) *customerv1.Customer {
+	msg := &customerv1.Customer{
+		CustomerId: c.ID().String(),
+		Name:       c.Name().String(),
+		GroupId:    c.GroupID().String(),
+		NameKana:   c.NameKana().String(),
+		Gender:     toProtoGender(c.Gender()),
+		BirthDate:  toProtoBirthDate(c.BirthDate()),
 	}
+	if v := c.Phone(); v != nil {
+		s := v.String()
+		msg.Phone = &s
+	}
+	if v := c.Email(); v != nil {
+		s := v.String()
+		msg.Email = &s
+	}
+	if v := c.PostalCode(); v != nil {
+		s := v.String()
+		msg.PostalCode = &s
+	}
+	if v := c.Prefecture(); v != nil {
+		s := v.String()
+		msg.Prefecture = &s
+	}
+	if v := c.City(); v != nil {
+		s := v.String()
+		msg.City = &s
+	}
+	if v := c.Street(); v != nil {
+		s := v.String()
+		msg.Street = &s
+	}
+	if v := c.Building(); v != nil {
+		s := v.String()
+		msg.Building = &s
+	}
+	if v := c.EmergencyContactName(); v != nil {
+		s := v.String()
+		msg.EmergencyContactName = &s
+	}
+	if v := c.EmergencyContactRelationship(); v != nil {
+		s := v.String()
+		msg.EmergencyContactRelationship = &s
+	}
+	if v := c.EmergencyContactPhone(); v != nil {
+		s := v.String()
+		msg.EmergencyContactPhone = &s
+	}
+	return msg
+}
+
+type customerFieldsRequest interface {
+	GetName() string
+	GetNameKana() string
+	GetGender() customerv1.Gender
+	GetBirthDate() *date.Date
+	GetPhone() string
+	GetEmail() string
+	GetPostalCode() string
+	GetPrefecture() string
+	GetCity() string
+	GetStreet() string
+	GetBuilding() string
+	GetEmergencyContactName() string
+	GetEmergencyContactRelationship() string
+	GetEmergencyContactPhone() string
+}
+
+type customerFields struct {
+	name                         domaincustomer.Name
+	nameKana                     domaincustomer.NameKana
+	gender                       domaincustomer.Gender
+	birthDate                    domaincustomer.BirthDate
+	phone                        *domaincustomer.Phone
+	email                        *domaincustomer.Email
+	postalCode                   *domaincustomer.PostalCode
+	prefecture                   *domaincustomer.Prefecture
+	city                         *domaincustomer.City
+	street                       *domaincustomer.Street
+	building                     *domaincustomer.Building
+	emergencyContactName         *domaincustomer.EmergencyContactName
+	emergencyContactRelationship *domaincustomer.EmergencyContactRelationship
+	emergencyContactPhone        *domaincustomer.Phone
+}
+
+func parseCustomerFields(req customerFieldsRequest) (customerFields, error) {
+	var f customerFields
+	var err error
+	if f.name, err = domaincustomer.NewName(req.GetName()); err != nil {
+		return f, err
+	}
+	if f.nameKana, err = domaincustomer.NewNameKana(req.GetNameKana()); err != nil {
+		return f, err
+	}
+	if f.gender, err = toDomainGender(req.GetGender()); err != nil {
+		return f, err
+	}
+	if f.birthDate, err = domaincustomer.NewBirthDate(req.GetBirthDate().GetYear(), req.GetBirthDate().GetMonth(), req.GetBirthDate().GetDay()); err != nil {
+		return f, err
+	}
+	if f.phone, err = domaincustomer.NewPhone(req.GetPhone()); err != nil {
+		return f, err
+	}
+	if f.email, err = domaincustomer.NewEmail(req.GetEmail()); err != nil {
+		return f, err
+	}
+	if f.postalCode, err = domaincustomer.NewPostalCode(req.GetPostalCode()); err != nil {
+		return f, err
+	}
+	if f.prefecture, err = domaincustomer.NewPrefecture(req.GetPrefecture()); err != nil {
+		return f, err
+	}
+	if f.city, err = domaincustomer.NewCity(req.GetCity()); err != nil {
+		return f, err
+	}
+	if f.street, err = domaincustomer.NewStreet(req.GetStreet()); err != nil {
+		return f, err
+	}
+	if f.building, err = domaincustomer.NewBuilding(req.GetBuilding()); err != nil {
+		return f, err
+	}
+	if f.emergencyContactName, err = domaincustomer.NewEmergencyContactName(req.GetEmergencyContactName()); err != nil {
+		return f, err
+	}
+	if f.emergencyContactRelationship, err = domaincustomer.NewEmergencyContactRelationship(req.GetEmergencyContactRelationship()); err != nil {
+		return f, err
+	}
+	if f.emergencyContactPhone, err = domaincustomer.NewPhone(req.GetEmergencyContactPhone()); err != nil {
+		return f, err
+	}
+	return f, nil
+}
+
+func mapCustomerError(err error, op string) error {
+	if _, ok := status.FromError(err); ok {
+		return err
+	}
+	if errors.Is(err, appuser.ErrNotGroupMember) {
+		return status.Error(codes.PermissionDenied, err.Error())
+	}
+	if errors.Is(err, domaincustomer.ErrCustomerNotFound) {
+		return status.Error(codes.NotFound, err.Error())
+	}
+	log.Printf("%s: internal error: %v", op, err)
+	return status.Error(codes.Internal, "internal error")
+}
+
+func (h *CustomerHandler) CreateCustomer(ctx context.Context, req *customerv1.CreateCustomerRequest) (*customerv1.CreateCustomerResponse, error) {
 	groupID, err := domaincustomer.NewGroupID(req.GetGroupId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	nameKana, err := domaincustomer.NewNameKana(req.GetNameKana())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	gender, err := toDomainGender(req.GetGender())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	birthDate, err := domaincustomer.NewBirthDate(req.GetBirthDate().GetYear(), req.GetBirthDate().GetMonth(), req.GetBirthDate().GetDay())
+	fields, err := parseCustomerFields(req)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	customer, err := h.customerUsecase.CreateCustomer(ctx, groupID, name, nameKana, gender, birthDate)
+	customer, err := h.customerUsecase.CreateCustomer(ctx, groupID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.postalCode, fields.prefecture, fields.city, fields.street, fields.building, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone)
 	if err != nil {
-		if _, ok := status.FromError(err); ok {
-			return nil, err
-		}
-		if errors.Is(err, appuser.ErrNotGroupMember) {
-			return nil, status.Error(codes.PermissionDenied, err.Error())
-		}
-		log.Printf("CreateCustomer: internal error: %v", err)
-		return nil, status.Error(codes.Internal, "internal error")
+		return nil, mapCustomerError(err, "CreateCustomer")
 	}
 
 	return &customerv1.CreateCustomerResponse{
@@ -109,26 +238,11 @@ func (h *CustomerHandler) GetCustomer(ctx context.Context, req *customerv1.GetCu
 
 	customer, err := h.customerUsecase.GetCustomer(ctx, customerID)
 	if err != nil {
-		if _, ok := status.FromError(err); ok {
-			return nil, err
-		}
-		if errors.Is(err, appuser.ErrNotGroupMember) {
-			return nil, status.Error(codes.PermissionDenied, err.Error())
-		}
-		if errors.Is(err, domaincustomer.ErrCustomerNotFound) {
-			return nil, status.Error(codes.NotFound, err.Error())
-		}
-		log.Printf("GetCustomer: internal error: %v", err)
-		return nil, status.Error(codes.Internal, "internal error")
+		return nil, mapCustomerError(err, "GetCustomer")
 	}
 
 	return &customerv1.GetCustomerResponse{
-		CustomerId: customer.ID().String(),
-		Name:       customer.Name().String(),
-		GroupId:    customer.GroupID().String(),
-		NameKana:   customer.NameKana().String(),
-		Gender:     toProtoGender(customer.Gender()),
-		BirthDate:  toProtoBirthDate(customer.BirthDate()),
+		Customer: toProtoCustomer(customer),
 	}, nil
 }
 
@@ -140,26 +254,12 @@ func (h *CustomerHandler) ListCustomers(ctx context.Context, req *customerv1.Lis
 
 	customers, err := h.customerUsecase.ListCustomers(ctx, groupID)
 	if err != nil {
-		if _, ok := status.FromError(err); ok {
-			return nil, err
-		}
-		if errors.Is(err, appuser.ErrNotGroupMember) {
-			return nil, status.Error(codes.PermissionDenied, err.Error())
-		}
-		log.Printf("ListCustomers: internal error: %v", err)
-		return nil, status.Error(codes.Internal, "internal error")
+		return nil, mapCustomerError(err, "ListCustomers")
 	}
 
 	customerMessages := make([]*customerv1.Customer, 0, len(customers))
 	for _, c := range customers {
-		customerMessages = append(customerMessages, &customerv1.Customer{
-			CustomerId: c.ID().String(),
-			Name:       c.Name().String(),
-			GroupId:    c.GroupID().String(),
-			NameKana:   c.NameKana().String(),
-			Gender:     toProtoGender(c.Gender()),
-			BirthDate:  toProtoBirthDate(c.BirthDate()),
-		})
+		customerMessages = append(customerMessages, toProtoCustomer(c))
 	}
 
 	return &customerv1.ListCustomersResponse{
@@ -172,45 +272,18 @@ func (h *CustomerHandler) UpdateCustomer(ctx context.Context, req *customerv1.Up
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	name, err := domaincustomer.NewName(req.GetName())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	nameKana, err := domaincustomer.NewNameKana(req.GetNameKana())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	gender, err := toDomainGender(req.GetGender())
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	birthDate, err := domaincustomer.NewBirthDate(req.GetBirthDate().GetYear(), req.GetBirthDate().GetMonth(), req.GetBirthDate().GetDay())
+	fields, err := parseCustomerFields(req)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	customer, err := h.customerUsecase.UpdateCustomer(ctx, customerID, name, nameKana, gender, birthDate)
+	customer, err := h.customerUsecase.UpdateCustomer(ctx, customerID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.postalCode, fields.prefecture, fields.city, fields.street, fields.building, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone)
 	if err != nil {
-		if _, ok := status.FromError(err); ok {
-			return nil, err
-		}
-		if errors.Is(err, appuser.ErrNotGroupMember) {
-			return nil, status.Error(codes.PermissionDenied, err.Error())
-		}
-		if errors.Is(err, domaincustomer.ErrCustomerNotFound) {
-			return nil, status.Error(codes.NotFound, err.Error())
-		}
-		log.Printf("UpdateCustomer: internal error: %v", err)
-		return nil, status.Error(codes.Internal, "internal error")
+		return nil, mapCustomerError(err, "UpdateCustomer")
 	}
 
 	return &customerv1.UpdateCustomerResponse{
-		CustomerId: customer.ID().String(),
-		Name:       customer.Name().String(),
-		GroupId:    customer.GroupID().String(),
-		NameKana:   customer.NameKana().String(),
-		Gender:     toProtoGender(customer.Gender()),
-		BirthDate:  toProtoBirthDate(customer.BirthDate()),
+		Customer: toProtoCustomer(customer),
 	}, nil
 }
 
@@ -221,17 +294,7 @@ func (h *CustomerHandler) DeleteCustomer(ctx context.Context, req *customerv1.De
 	}
 
 	if err := h.customerUsecase.DeleteCustomer(ctx, customerID); err != nil {
-		if _, ok := status.FromError(err); ok {
-			return nil, err
-		}
-		if errors.Is(err, appuser.ErrNotGroupMember) {
-			return nil, status.Error(codes.PermissionDenied, err.Error())
-		}
-		if errors.Is(err, domaincustomer.ErrCustomerNotFound) {
-			return nil, status.Error(codes.NotFound, err.Error())
-		}
-		log.Printf("DeleteCustomer: internal error: %v", err)
-		return nil, status.Error(codes.Internal, "internal error")
+		return nil, mapCustomerError(err, "DeleteCustomer")
 	}
 
 	return &customerv1.DeleteCustomerResponse{}, nil
