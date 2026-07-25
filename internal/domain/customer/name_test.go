@@ -1,6 +1,9 @@
 package customer
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestNewName(t *testing.T) {
 	t.Parallel()
@@ -11,6 +14,7 @@ func TestNewName(t *testing.T) {
 	}{
 		{"success new name", true, "test customer"},
 		{"failure empty name", false, ""},
+		{"failure too long", false, strings.Repeat("あ", 256)},
 	}
 	for _, tt := range tests {
 		tt := tt
