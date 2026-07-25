@@ -1,0 +1,10 @@
+ALTER TABLE customers ADD COLUMN phone VARCHAR(16);
+ALTER TABLE customers ADD COLUMN email VARCHAR(255);
+ALTER TABLE customers ADD COLUMN postal_code VARCHAR(16);
+ALTER TABLE customers ADD COLUMN prefecture VARCHAR(16);
+ALTER TABLE customers ADD COLUMN city VARCHAR(255);
+ALTER TABLE customers ADD COLUMN street VARCHAR(255);
+ALTER TABLE customers ADD COLUMN building VARCHAR(255);
+ALTER TABLE customers ADD COLUMN emergency_contact_name VARCHAR(255);
+ALTER TABLE customers ADD COLUMN emergency_contact_relationship VARCHAR(255);
+ALTER TABLE customers ADD COLUMN emergency_contact_phone VARCHAR(16);
