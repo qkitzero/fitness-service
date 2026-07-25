@@ -22,7 +22,7 @@ service CustomerService {
   }
   rpc UpdateCustomer(UpdateCustomerRequest) returns (UpdateCustomerResponse) {
     option (google.api.http) = {
-      patch: "/v1/customer/{customer_id}"
+      put: "/v1/customer/{customer_id}"
       body: "*"
     };
   }
@@ -38,12 +38,41 @@ enum Gender {
   GENDER_OTHER = 3;
 }
 
+message Customer {
+  string customer_id = 1;
+  string name = 2;
+  string group_id = 3;
+  string name_kana = 4;
+  Gender gender = 5;
+  google.type.Date birth_date = 6;
+  optional string phone = 7;
+  optional string email = 8;
+  optional string postal_code = 9;
+  optional string prefecture = 10;
+  optional string city = 11;
+  optional string street = 12;
+  optional string building = 13;
+  optional string emergency_contact_name = 14;
+  optional string emergency_contact_relationship = 15;
+  optional string emergency_contact_phone = 16;
+}
+
 message CreateCustomerRequest {
   string name = 1;
   string group_id = 2;
   string name_kana = 3;
   Gender gender = 4;
   google.type.Date birth_date = 5;
+  optional string phone = 6;
+  optional string email = 7;
+  optional string postal_code = 8;
+  optional string prefecture = 9;
+  optional string city = 10;
+  optional string street = 11;
+  optional string building = 12;
+  optional string emergency_contact_name = 13;
+  optional string emergency_contact_relationship = 14;
+  optional string emergency_contact_phone = 15;
 }
 
 message CreateCustomerResponse {
@@ -55,12 +84,7 @@ message GetCustomerRequest {
 }
 
 message GetCustomerResponse {
-  string customer_id = 1;
-  string name = 2;
-  string group_id = 3;
-  string name_kana = 4;
-  Gender gender = 5;
-  google.type.Date birth_date = 6;
+  Customer customer = 1;
 }
 
 message ListCustomersRequest {
@@ -71,30 +95,26 @@ message ListCustomersResponse {
   repeated Customer customers = 1;
 }
 
-message Customer {
-  string customer_id = 1;
-  string name = 2;
-  string group_id = 3;
-  string name_kana = 4;
-  Gender gender = 5;
-  google.type.Date birth_date = 6;
-}
-
 message UpdateCustomerRequest {
   string customer_id = 1;
   string name = 2;
   string name_kana = 3;
   Gender gender = 4;
   google.type.Date birth_date = 5;
+  optional string phone = 6;
+  optional string email = 7;
+  optional string postal_code = 8;
+  optional string prefecture = 9;
+  optional string city = 10;
+  optional string street = 11;
+  optional string building = 12;
+  optional string emergency_contact_name = 13;
+  optional string emergency_contact_relationship = 14;
+  optional string emergency_contact_phone = 15;
 }
 
 message UpdateCustomerResponse {
-  string customer_id = 1;
-  string name = 2;
-  string group_id = 3;
-  string name_kana = 4;
-  Gender gender = 5;
-  google.type.Date birth_date = 6;
+  Customer customer = 1;
 }
 
 message DeleteCustomerRequest {

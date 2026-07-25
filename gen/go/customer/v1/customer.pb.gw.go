@@ -274,7 +274,7 @@ func RegisterCustomerServiceHandlerServer(ctx context.Context, mux *runtime.Serv
 		}
 		forward_CustomerService_ListCustomers_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPatch, pattern_CustomerService_UpdateCustomer_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPut, pattern_CustomerService_UpdateCustomer_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
@@ -405,7 +405,7 @@ func RegisterCustomerServiceHandlerClient(ctx context.Context, mux *runtime.Serv
 		}
 		forward_CustomerService_ListCustomers_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodPatch, pattern_CustomerService_UpdateCustomer_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodPut, pattern_CustomerService_UpdateCustomer_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)

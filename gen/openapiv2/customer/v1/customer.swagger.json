@@ -105,7 +105,7 @@
           "CustomerService"
         ]
       },
-      "patch": {
+      "put": {
         "operationId": "CustomerService_UpdateCustomer",
         "responses": {
           "200": {
@@ -188,6 +188,36 @@
         },
         "birthDate": {
           "$ref": "#/definitions/typeDate"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "postalCode": {
+          "type": "string"
+        },
+        "prefecture": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "street": {
+          "type": "string"
+        },
+        "building": {
+          "type": "string"
+        },
+        "emergencyContactName": {
+          "type": "string"
+        },
+        "emergencyContactRelationship": {
+          "type": "string"
+        },
+        "emergencyContactPhone": {
+          "type": "string"
         }
       }
     },
@@ -258,6 +288,36 @@
         },
         "birthDate": {
           "$ref": "#/definitions/typeDate"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "postalCode": {
+          "type": "string"
+        },
+        "prefecture": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "street": {
+          "type": "string"
+        },
+        "building": {
+          "type": "string"
+        },
+        "emergencyContactName": {
+          "type": "string"
+        },
+        "emergencyContactRelationship": {
+          "type": "string"
+        },
+        "emergencyContactPhone": {
+          "type": "string"
         }
       }
     },
@@ -289,6 +349,36 @@
         },
         "birthDate": {
           "$ref": "#/definitions/typeDate"
+        },
+        "phone": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "postalCode": {
+          "type": "string"
+        },
+        "prefecture": {
+          "type": "string"
+        },
+        "city": {
+          "type": "string"
+        },
+        "street": {
+          "type": "string"
+        },
+        "building": {
+          "type": "string"
+        },
+        "emergencyContactName": {
+          "type": "string"
+        },
+        "emergencyContactRelationship": {
+          "type": "string"
+        },
+        "emergencyContactPhone": {
+          "type": "string"
         }
       }
     },
@@ -308,23 +398,8 @@
     "v1GetCustomerResponse": {
       "type": "object",
       "properties": {
-        "customerId": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "groupId": {
-          "type": "string"
-        },
-        "nameKana": {
-          "type": "string"
-        },
-        "gender": {
-          "$ref": "#/definitions/v1Gender"
-        },
-        "birthDate": {
-          "$ref": "#/definitions/typeDate"
+        "customer": {
+          "$ref": "#/definitions/v1Customer"
         }
       }
     },
@@ -343,23 +418,8 @@
     "v1UpdateCustomerResponse": {
       "type": "object",
       "properties": {
-        "customerId": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "groupId": {
-          "type": "string"
-        },
-        "nameKana": {
-          "type": "string"
-        },
-        "gender": {
-          "$ref": "#/definitions/v1Gender"
-        },
-        "birthDate": {
-          "$ref": "#/definitions/typeDate"
+        "customer": {
+          "$ref": "#/definitions/v1Customer"
         }
       }
     }

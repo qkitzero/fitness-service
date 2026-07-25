@@ -1,0 +1,10 @@
+ALTER TABLE customers DROP COLUMN IF EXISTS emergency_contact_phone;
+ALTER TABLE customers DROP COLUMN IF EXISTS emergency_contact_relationship;
+ALTER TABLE customers DROP COLUMN IF EXISTS emergency_contact_name;
+ALTER TABLE customers DROP COLUMN IF EXISTS building;
+ALTER TABLE customers DROP COLUMN IF EXISTS street;
+ALTER TABLE customers DROP COLUMN IF EXISTS city;
+ALTER TABLE customers DROP COLUMN IF EXISTS prefecture;
+ALTER TABLE customers DROP COLUMN IF EXISTS postal_code;
+ALTER TABLE customers DROP COLUMN IF EXISTS email;
+ALTER TABLE customers DROP COLUMN IF EXISTS phone;

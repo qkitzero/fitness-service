@@ -1,6 +1,9 @@
 package customer
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestNewNameKana(t *testing.T) {
 	t.Parallel()
@@ -21,6 +24,7 @@ func TestNewNameKana(t *testing.T) {
 		{"failure romaji", false, "Yamada", ""},
 		{"failure hiragana", false, "やまだ", ""},
 		{"failure digits and emoji", false, "123😀", ""},
+		{"failure too long", false, strings.Repeat("ア", 256), ""},
 	}
 	for _, tt := range tests {
 		tt := tt

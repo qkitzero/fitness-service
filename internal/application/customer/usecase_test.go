@@ -54,7 +54,7 @@ func TestCreateCustomer(t *testing.T) {
 
 			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository)
 
-			_, err := u.CreateCustomer(tt.ctx, groupID, name, nameKana, gender, birthDate)
+			_, err := u.CreateCustomer(tt.ctx, groupID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}
@@ -204,7 +204,7 @@ func TestUpdateCustomer(t *testing.T) {
 			mockUserService := mocksappuser.NewMockUserService(ctrl)
 			mockCustomer := mockscustomer.NewMockCustomer(ctrl)
 			mockCustomer.EXPECT().GroupID().Return(groupID).AnyTimes()
-			mockCustomer.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+			mockCustomer.EXPECT().Update(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 			mockCustomerRepository := mockscustomer.NewMockCustomerRepository(ctrl)
 			mockAuthService.EXPECT().VerifyToken(tt.ctx).Return(tt.userID, tt.verifyTokenErr).AnyTimes()
 			mockCustomerRepository.EXPECT().FindByID(tt.ctx, gomock.Any()).Return(mockCustomer, tt.findByIDErr).AnyTimes()
@@ -213,7 +213,7 @@ func TestUpdateCustomer(t *testing.T) {
 
 			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository)
 
-			_, err := u.UpdateCustomer(tt.ctx, customer.NewCustomerID(), name, nameKana, gender, birthDate)
+			_, err := u.UpdateCustomer(tt.ctx, customer.NewCustomerID(), name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}
