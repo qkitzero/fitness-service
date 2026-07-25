@@ -22,9 +22,11 @@ import (
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
 	appcustomer "github.com/qkitzero/fitness-service/internal/application/customer"
 	apiauth "github.com/qkitzero/fitness-service/internal/infrastructure/api/auth"
+	apiuser "github.com/qkitzero/fitness-service/internal/infrastructure/api/user"
 	infracustomer "github.com/qkitzero/fitness-service/internal/infrastructure/customer"
 	"github.com/qkitzero/fitness-service/internal/infrastructure/db"
 	grpccustomer "github.com/qkitzero/fitness-service/internal/interface/grpc/customer"
+	groupv1 "github.com/qkitzero/user-service/gen/go/group/v1"
 )
 
 const shutdownTimeout = 15 * time.Second
@@ -40,6 +42,8 @@ type config struct {
 	DBSSLMode       string
 	AuthServiceHost string
 	AuthServicePort string
+	UserServiceHost string
+	UserServicePort string
 }
 
 func loadConfig() (config, error) {
@@ -61,6 +65,8 @@ func loadConfig() (config, error) {
 		{"DB_SSL_MODE", &cfg.DBSSLMode},
 		{"AUTH_SERVICE_HOST", &cfg.AuthServiceHost},
 		{"AUTH_SERVICE_PORT", &cfg.AuthServicePort},
+		{"USER_SERVICE_HOST", &cfg.UserServiceHost},
+		{"USER_SERVICE_PORT", &cfg.UserServicePort},
 	}
 	var missing []string
 	for _, r := range required {
@@ -112,19 +118,27 @@ func run() error {
 		dialOpt = grpc.WithTransportCredentials(insecure.NewCredentials())
 	}
 
-	conn, err := grpc.NewClient(cfg.AuthServiceHost+":"+cfg.AuthServicePort, dialOpt)
+	authConn, err := grpc.NewClient(cfg.AuthServiceHost+":"+cfg.AuthServicePort, dialOpt)
 	if err != nil {
 		return fmt.Errorf("auth client: %w", err)
 	}
-	defer func() { _ = conn.Close() }()
+	defer func() { _ = authConn.Close() }()
+
+	userConn, err := grpc.NewClient(cfg.UserServiceHost+":"+cfg.UserServicePort, dialOpt)
+	if err != nil {
+		return fmt.Errorf("user client: %w", err)
+	}
+	defer func() { _ = userConn.Close() }()
 
 	server := grpc.NewServer()
 
-	authServiceClient := authv1.NewAuthServiceClient(conn)
+	authServiceClient := authv1.NewAuthServiceClient(authConn)
+	groupServiceClient := groupv1.NewGroupServiceClient(userConn)
 	customerRepository := infracustomer.NewCustomerRepository(gormDB)
 
 	authService := apiauth.NewAuthService(authServiceClient)
-	customerUsecase := appcustomer.NewCustomerUsecase(authService, customerRepository)
+	userService := apiuser.NewUserService(groupServiceClient)
+	customerUsecase := appcustomer.NewCustomerUsecase(authService, userService, customerRepository)
 
 	healthServer := health.NewServer()
 	customerHandler := grpccustomer.NewCustomerHandler(customerUsecase)

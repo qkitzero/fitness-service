@@ -1,0 +1,3 @@
+ALTER TABLE customers DROP COLUMN IF EXISTS birth_date;
+ALTER TABLE customers DROP COLUMN IF EXISTS gender;
+ALTER TABLE customers DROP COLUMN IF EXISTS name_kana;

@@ -42,18 +42,18 @@ func (m *MockCustomerUsecase) EXPECT() *MockCustomerUsecaseMockRecorder {
 }
 
 // CreateCustomer mocks base method.
-func (m *MockCustomerUsecase) CreateCustomer(ctx context.Context, name customer.Name) (customer.Customer, error) {
+func (m *MockCustomerUsecase) CreateCustomer(ctx context.Context, groupID customer.GroupID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone) (customer.Customer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateCustomer", ctx, name)
+	ret := m.ctrl.Call(m, "CreateCustomer", ctx, groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone)
 	ret0, _ := ret[0].(customer.Customer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateCustomer indicates an expected call of CreateCustomer.
-func (mr *MockCustomerUsecaseMockRecorder) CreateCustomer(ctx, name any) *gomock.Call {
+func (mr *MockCustomerUsecaseMockRecorder) CreateCustomer(ctx, groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomer", reflect.TypeOf((*MockCustomerUsecase)(nil).CreateCustomer), ctx, name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomer", reflect.TypeOf((*MockCustomerUsecase)(nil).CreateCustomer), ctx, groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone)
 }
 
 // DeleteCustomer mocks base method.
@@ -85,17 +85,32 @@ func (mr *MockCustomerUsecaseMockRecorder) GetCustomer(ctx, customerID any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCustomer", reflect.TypeOf((*MockCustomerUsecase)(nil).GetCustomer), ctx, customerID)
 }
 
-// UpdateCustomer mocks base method.
-func (m *MockCustomerUsecase) UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name) (customer.Customer, error) {
+// ListCustomers mocks base method.
+func (m *MockCustomerUsecase) ListCustomers(ctx context.Context, groupID customer.GroupID) ([]customer.Customer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateCustomer", ctx, customerID, name)
+	ret := m.ctrl.Call(m, "ListCustomers", ctx, groupID)
+	ret0, _ := ret[0].([]customer.Customer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListCustomers indicates an expected call of ListCustomers.
+func (mr *MockCustomerUsecaseMockRecorder) ListCustomers(ctx, groupID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCustomers", reflect.TypeOf((*MockCustomerUsecase)(nil).ListCustomers), ctx, groupID)
+}
+
+// UpdateCustomer mocks base method.
+func (m *MockCustomerUsecase) UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone) (customer.Customer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateCustomer", ctx, customerID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone)
 	ret0, _ := ret[0].(customer.Customer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // UpdateCustomer indicates an expected call of UpdateCustomer.
-func (mr *MockCustomerUsecaseMockRecorder) UpdateCustomer(ctx, customerID, name any) *gomock.Call {
+func (mr *MockCustomerUsecaseMockRecorder) UpdateCustomer(ctx, customerID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCustomer", reflect.TypeOf((*MockCustomerUsecase)(nil).UpdateCustomer), ctx, customerID, name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCustomer", reflect.TypeOf((*MockCustomerUsecase)(nil).UpdateCustomer), ctx, customerID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone)
 }
