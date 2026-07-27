@@ -3,6 +3,7 @@ package customer
 import (
 	"fmt"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -21,6 +22,11 @@ func NewName(s string) (Name, error) {
 	}
 	if utf8.RuneCountInString(s) > nameMaxLen {
 		return Name(""), fmt.Errorf("invalid name")
+	}
+	for _, r := range s {
+		if unicode.IsControl(r) {
+			return Name(""), fmt.Errorf("invalid name")
+		}
 	}
 	return Name(s), nil
 }

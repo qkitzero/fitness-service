@@ -3,6 +3,7 @@ package customer
 import (
 	"fmt"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -21,6 +22,11 @@ func NewCity(s string) (*City, error) {
 	}
 	if utf8.RuneCountInString(t) > cityMaxLen {
 		return nil, fmt.Errorf("invalid city")
+	}
+	for _, r := range t {
+		if unicode.IsControl(r) {
+			return nil, fmt.Errorf("invalid city")
+		}
 	}
 	c := City(t)
 	return &c, nil
