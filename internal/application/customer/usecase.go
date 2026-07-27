@@ -2,6 +2,7 @@ package customer
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/qkitzero/fitness-service/internal/application/auth"
@@ -51,7 +52,7 @@ func (u *customerUsecase) CreateCustomer(ctx context.Context, groupID customer.G
 		return nil, err
 	}
 
-	now := time.Now()
+	now := time.Now().UTC()
 
 	newCustomer := customer.NewCustomer(customer.NewCustomerID(), groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, now, now)
 
@@ -73,6 +74,9 @@ func (u *customerUsecase) GetCustomer(ctx context.Context, customerID customer.C
 	}
 
 	if err := u.verifyGroupMembership(ctx, foundCustomer.GroupID()); err != nil {
+		if errors.Is(err, user.ErrNotGroupMember) {
+			return nil, customer.ErrCustomerNotFound
+		}
 		return nil, err
 	}
 
@@ -107,6 +111,9 @@ func (u *customerUsecase) UpdateCustomer(ctx context.Context, customerID custome
 	}
 
 	if err := u.verifyGroupMembership(ctx, foundCustomer.GroupID()); err != nil {
+		if errors.Is(err, user.ErrNotGroupMember) {
+			return nil, customer.ErrCustomerNotFound
+		}
 		return nil, err
 	}
 
@@ -130,6 +137,9 @@ func (u *customerUsecase) DeleteCustomer(ctx context.Context, customerID custome
 	}
 
 	if err := u.verifyGroupMembership(ctx, foundCustomer.GroupID()); err != nil {
+		if errors.Is(err, user.ErrNotGroupMember) {
+			return customer.ErrCustomerNotFound
+		}
 		return err
 	}
 

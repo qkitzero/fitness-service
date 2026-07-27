@@ -2,6 +2,7 @@ package customer
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -16,7 +17,7 @@ func NewCustomerID() CustomerID {
 }
 
 func NewCustomerIDFromString(s string) (CustomerID, error) {
-	id, err := uuid.Parse(s)
+	id, err := uuid.Parse(strings.TrimSpace(s))
 	if err != nil {
 		return CustomerID{}, fmt.Errorf("invalid UUID format: %w", err)
 	}

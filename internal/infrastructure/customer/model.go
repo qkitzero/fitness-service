@@ -23,8 +23,8 @@ type CustomerModel struct {
 	EmergencyContactName         *customer.EmergencyContactName
 	EmergencyContactRelationship *customer.EmergencyContactRelationship
 	EmergencyContactPhone        *customer.Phone
-	CreatedAt                    time.Time
-	UpdatedAt                    time.Time
+	CreatedAt                    time.Time `gorm:"autoCreateTime:false"`
+	UpdatedAt                    time.Time `gorm:"autoUpdateTime:false"`
 }
 
 func (CustomerModel) TableName() string {

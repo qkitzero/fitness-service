@@ -92,7 +92,8 @@ func TestUpdateCustomer(t *testing.T) {
 	nameKana, _ := NewNameKana("テストカナ")
 	gender, _ := NewGender("male")
 	birthDate, _ := NewBirthDate(2000, 1, 1)
-	c := NewCustomer(id, groupID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, time.Now(), time.Now())
+	past := time.Now().UTC().Add(-time.Hour)
+	c := NewCustomer(id, groupID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, past, past)
 
 	if c.Phone() != nil || c.Email() != nil || c.PostalCode() != nil || c.Prefecture() != nil || c.City() != nil || c.Street() != nil || c.Building() != nil || c.EmergencyContactName() != nil || c.EmergencyContactRelationship() != nil || c.EmergencyContactPhone() != nil {
 		t.Errorf("expected nil optional fields before update")
@@ -157,7 +158,13 @@ func TestUpdateCustomer(t *testing.T) {
 	if c.EmergencyContactPhone() == nil || c.EmergencyContactPhone().String() != "08012345678" {
 		t.Errorf("EmergencyContactPhone() = %v, want 08012345678", c.EmergencyContactPhone())
 	}
-	if !c.CreatedAt().Before(c.UpdatedAt()) {
-		t.Errorf("CreatedAt() = %v, UpdatedAt() = %v, want CreatedAt < UpdatedAt", c.CreatedAt(), c.UpdatedAt())
+	if !c.CreatedAt().Equal(past) {
+		t.Errorf("CreatedAt() = %v, want %v", c.CreatedAt(), past)
+	}
+	if !c.UpdatedAt().After(past) {
+		t.Errorf("UpdatedAt() = %v, want after %v", c.UpdatedAt(), past)
+	}
+	if c.UpdatedAt().Location() != time.UTC {
+		t.Errorf("UpdatedAt().Location() = %v, want %v", c.UpdatedAt().Location(), time.UTC)
 	}
 }

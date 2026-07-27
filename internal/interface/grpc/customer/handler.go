@@ -197,14 +197,17 @@ func parseCustomerFields(req customerFieldsRequest) (customerFields, error) {
 }
 
 func mapCustomerError(err error, op string) error {
-	if _, ok := status.FromError(err); ok {
-		return err
-	}
 	if errors.Is(err, appuser.ErrNotGroupMember) {
 		return status.Error(codes.PermissionDenied, err.Error())
 	}
 	if errors.Is(err, domaincustomer.ErrCustomerNotFound) {
 		return status.Error(codes.NotFound, err.Error())
+	}
+	if s, ok := status.FromError(err); ok {
+		switch s.Code() {
+		case codes.Unauthenticated, codes.PermissionDenied:
+			return err
+		}
 	}
 	log.Printf("%s: internal error: %v", op, err)
 	return status.Error(codes.Internal, "internal error")

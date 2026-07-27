@@ -3,6 +3,7 @@ package customer
 import (
 	"fmt"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -21,6 +22,11 @@ func NewBuilding(s string) (*Building, error) {
 	}
 	if utf8.RuneCountInString(t) > buildingMaxLen {
 		return nil, fmt.Errorf("invalid building")
+	}
+	for _, r := range t {
+		if unicode.IsControl(r) {
+			return nil, fmt.Errorf("invalid building")
+		}
 	}
 	b := Building(t)
 	return &b, nil

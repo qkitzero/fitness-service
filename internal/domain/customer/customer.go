@@ -174,7 +174,7 @@ func (c *customer) Update(name Name, nameKana NameKana, gender Gender, birthDate
 	c.emergencyContactName = emergencyContactName
 	c.emergencyContactRelationship = emergencyContactRelationship
 	c.emergencyContactPhone = emergencyContactPhone
-	c.updatedAt = time.Now()
+	c.updatedAt = time.Now().UTC()
 }
 
 func NewCustomer(

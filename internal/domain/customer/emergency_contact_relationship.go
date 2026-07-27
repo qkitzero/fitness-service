@@ -3,6 +3,7 @@ package customer
 import (
 	"fmt"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -21,6 +22,11 @@ func NewEmergencyContactRelationship(s string) (*EmergencyContactRelationship, e
 	}
 	if utf8.RuneCountInString(t) > emergencyContactRelationshipMaxLen {
 		return nil, fmt.Errorf("invalid emergency contact relationship")
+	}
+	for _, r := range t {
+		if unicode.IsControl(r) {
+			return nil, fmt.Errorf("invalid emergency contact relationship")
+		}
 	}
 	r := EmergencyContactRelationship(t)
 	return &r, nil
