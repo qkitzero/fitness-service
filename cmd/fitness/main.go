@@ -20,12 +20,16 @@ import (
 
 	authv1 "github.com/qkitzero/auth-service/gen/go/auth/v1"
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
+	organizationv1 "github.com/qkitzero/fitness-service/gen/go/organization/v1"
 	appcustomer "github.com/qkitzero/fitness-service/internal/application/customer"
+	apporganization "github.com/qkitzero/fitness-service/internal/application/organization"
 	apiauth "github.com/qkitzero/fitness-service/internal/infrastructure/api/auth"
 	apiuser "github.com/qkitzero/fitness-service/internal/infrastructure/api/user"
 	infracustomer "github.com/qkitzero/fitness-service/internal/infrastructure/customer"
 	"github.com/qkitzero/fitness-service/internal/infrastructure/db"
+	infraorganization "github.com/qkitzero/fitness-service/internal/infrastructure/organization"
 	grpccustomer "github.com/qkitzero/fitness-service/internal/interface/grpc/customer"
+	grpcorganization "github.com/qkitzero/fitness-service/internal/interface/grpc/organization"
 	groupv1 "github.com/qkitzero/user-service/gen/go/group/v1"
 )
 
@@ -135,19 +139,24 @@ func run() error {
 	authServiceClient := authv1.NewAuthServiceClient(authConn)
 	groupServiceClient := groupv1.NewGroupServiceClient(userConn)
 	customerRepository := infracustomer.NewCustomerRepository(gormDB)
+	organizationRepository := infraorganization.NewOrganizationRepository(gormDB)
 
 	authService := apiauth.NewAuthService(authServiceClient)
 	userService := apiuser.NewUserService(groupServiceClient)
 	customerUsecase := appcustomer.NewCustomerUsecase(authService, userService, customerRepository)
+	organizationUsecase := apporganization.NewOrganizationUsecase(authService, userService, organizationRepository)
 
 	healthServer := health.NewServer()
 	customerHandler := grpccustomer.NewCustomerHandler(customerUsecase)
+	organizationHandler := grpcorganization.NewOrganizationHandler(organizationUsecase)
 
 	grpc_health_v1.RegisterHealthServer(server, healthServer)
 	customerv1.RegisterCustomerServiceServer(server, customerHandler)
+	organizationv1.RegisterOrganizationServiceServer(server, organizationHandler)
 
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("customer", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("organization", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	if cfg.Env == "development" {
 		reflection.Register(server)
