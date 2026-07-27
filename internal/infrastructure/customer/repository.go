@@ -106,8 +106,33 @@ func (r *customerRepository) Update(ctx context.Context, c customer.Customer) er
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		customerModel := toModel(c)
 
-		if err := tx.Save(&customerModel).Error; err != nil {
-			return err
+		result := tx.Model(&CustomerModel{}).
+			Where("id = ?", customerModel.ID).
+			Select(
+				"group_id",
+				"name",
+				"name_kana",
+				"gender",
+				"birth_date",
+				"phone",
+				"email",
+				"postal_code",
+				"prefecture",
+				"city",
+				"street",
+				"building",
+				"emergency_contact_name",
+				"emergency_contact_relationship",
+				"emergency_contact_phone",
+				"created_at",
+				"updated_at",
+			).
+			Updates(customerModel)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return customer.ErrCustomerNotFound
 		}
 
 		return nil
@@ -116,8 +141,12 @@ func (r *customerRepository) Update(ctx context.Context, c customer.Customer) er
 
 func (r *customerRepository) Delete(ctx context.Context, id customer.CustomerID) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("id = ?", id).Delete(&CustomerModel{}).Error; err != nil {
-			return err
+		result := tx.Where("id = ?", id).Delete(&CustomerModel{})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return customer.ErrCustomerNotFound
 		}
 
 		return nil
