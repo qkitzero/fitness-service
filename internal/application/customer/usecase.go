@@ -51,7 +51,7 @@ func (u *customerUsecase) CreateCustomer(ctx context.Context, groupID customer.G
 		return nil, err
 	}
 
-	now := time.Now()
+	now := time.Now().UTC()
 
 	newCustomer := customer.NewCustomer(customer.NewCustomerID(), groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, now, now)
 
