@@ -142,6 +142,44 @@
         ]
       }
     },
+    "/v1/customer/{customerId}/active": {
+      "put": {
+        "operationId": "CustomerService_SetCustomerActive",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1SetCustomerActiveResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "customerId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CustomerServiceSetCustomerActiveBody"
+            }
+          }
+        ],
+        "tags": [
+          "CustomerService"
+        ]
+      }
+    },
     "/v1/customers": {
       "get": {
         "operationId": "CustomerService_ListCustomers",
@@ -165,6 +203,12 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "includeInactive",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
           }
         ],
         "tags": [
@@ -174,6 +218,14 @@
     }
   },
   "definitions": {
+    "CustomerServiceSetCustomerActiveBody": {
+      "type": "object",
+      "properties": {
+        "isActive": {
+          "type": "boolean"
+        }
+      }
+    },
     "CustomerServiceUpdateCustomerBody": {
       "type": "object",
       "properties": {
@@ -379,6 +431,9 @@
         },
         "emergencyContactPhone": {
           "type": "string"
+        },
+        "isActive": {
+          "type": "boolean"
         }
       }
     },
@@ -412,6 +467,14 @@
             "type": "object",
             "$ref": "#/definitions/v1Customer"
           }
+        }
+      }
+    },
+    "v1SetCustomerActiveResponse": {
+      "type": "object",
+      "properties": {
+        "customer": {
+          "$ref": "#/definitions/v1Customer"
         }
       }
     },

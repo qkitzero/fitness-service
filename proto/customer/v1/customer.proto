@@ -26,6 +26,12 @@ service CustomerService {
       body: "*"
     };
   }
+  rpc SetCustomerActive(SetCustomerActiveRequest) returns (SetCustomerActiveResponse) {
+    option (google.api.http) = {
+      put: "/v1/customer/{customer_id}/active"
+      body: "*"
+    };
+  }
   rpc DeleteCustomer(DeleteCustomerRequest) returns (DeleteCustomerResponse) {
     option (google.api.http) = {delete: "/v1/customer/{customer_id}"};
   }
@@ -55,6 +61,7 @@ message Customer {
   optional string emergency_contact_name = 14;
   optional string emergency_contact_relationship = 15;
   optional string emergency_contact_phone = 16;
+  bool is_active = 17;
 }
 
 message CreateCustomerRequest {
@@ -89,6 +96,7 @@ message GetCustomerResponse {
 
 message ListCustomersRequest {
   string group_id = 1;
+  bool include_inactive = 2;
 }
 
 message ListCustomersResponse {
@@ -114,6 +122,15 @@ message UpdateCustomerRequest {
 }
 
 message UpdateCustomerResponse {
+  Customer customer = 1;
+}
+
+message SetCustomerActiveRequest {
+  string customer_id = 1;
+  bool is_active = 2;
+}
+
+message SetCustomerActiveResponse {
   Customer customer = 1;
 }
 
