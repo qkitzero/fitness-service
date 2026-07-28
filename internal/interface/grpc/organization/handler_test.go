@@ -32,7 +32,7 @@ func TestCreateOrganization(t *testing.T) {
 		wantCode    codes.Code
 	}{
 		{"success create organization", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: "テスト株式会社"}, true, nil, codes.OK},
-		{"failure invalid group id", &organizationv1.CreateOrganizationRequest{TenantId: "", Name: "テスト株式会社"}, false, nil, codes.InvalidArgument},
+		{"failure invalid tenant id", &organizationv1.CreateOrganizationRequest{TenantId: "", Name: "テスト株式会社"}, false, nil, codes.InvalidArgument},
 		{"failure invalid name", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: ""}, false, nil, codes.InvalidArgument},
 		{"failure too long name", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: tooLong}, false, nil, codes.InvalidArgument},
 		{"failure null character name", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: "テスト\x00株式会社"}, false, nil, codes.InvalidArgument},
@@ -150,7 +150,7 @@ func TestListOrganizations(t *testing.T) {
 		wantCode             codes.Code
 	}{
 		{"success list organizations", tid, true, nil, codes.OK},
-		{"failure invalid group id", "", false, nil, codes.InvalidArgument},
+		{"failure invalid tenant id", "", false, nil, codes.InvalidArgument},
 		{"failure not tenant member", tid, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure usecase error", tid, true, fmt.Errorf("list organizations error"), codes.Internal},
 		{"failure unauthenticated is preserved", tid, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
