@@ -33,7 +33,7 @@ func TestCreate(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock, organization organization.Organization) {
 				mock.ExpectBegin()
 
-				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "organizations" ("id","group_id","name","created_at","updated_at") VALUES ($1,$2,$3,$4,$5)`)).
+				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "organizations" ("id","tenant_id","name","created_at","updated_at") VALUES ($1,$2,$3,$4,$5)`)).
 					WithArgs(organization.ID(), organization.TenantID(), organization.Name(), createdAt, updatedAt).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 
@@ -46,7 +46,7 @@ func TestCreate(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock, organization organization.Organization) {
 				mock.ExpectBegin()
 
-				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "organizations" ("id","group_id","name","created_at","updated_at") VALUES ($1,$2,$3,$4,$5)`)).
+				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "organizations" ("id","tenant_id","name","created_at","updated_at") VALUES ($1,$2,$3,$4,$5)`)).
 					WithArgs(organization.ID(), organization.TenantID(), organization.Name(), createdAt, updatedAt).
 					WillReturnError(errors.New("create organization error"))
 
@@ -100,7 +100,7 @@ func TestCreate(t *testing.T) {
 
 func TestFindByID(t *testing.T) {
 	t.Parallel()
-	columns := []string{"id", "group_id", "name", "created_at", "updated_at"}
+	columns := []string{"id", "tenant_id", "name", "created_at", "updated_at"}
 	tests := []struct {
 		name           string
 		success        bool
@@ -194,7 +194,7 @@ func TestFindByID(t *testing.T) {
 
 func TestListByTenantID(t *testing.T) {
 	t.Parallel()
-	columns := []string{"id", "group_id", "name", "created_at", "updated_at"}
+	columns := []string{"id", "tenant_id", "name", "created_at", "updated_at"}
 	tests := []struct {
 		name      string
 		success   bool
@@ -211,7 +211,7 @@ func TestListByTenantID(t *testing.T) {
 				organizationRows := sqlmock.NewRows(columns).
 					AddRow(uuid.New().String(), tenantID, "テスト株式会社", time.Now(), time.Now()).
 					AddRow(uuid.New().String(), tenantID, "テスト工業株式会社", time.Now(), time.Now())
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE group_id = $1 ORDER BY created_at, id`)).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE tenant_id = $1 ORDER BY created_at, id`)).
 					WithArgs(tenantID).
 					WillReturnRows(organizationRows)
 			},
@@ -223,7 +223,7 @@ func TestListByTenantID(t *testing.T) {
 			tenantID:  tenant.TenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
 			setup: func(mock sqlmock.Sqlmock, tenantID tenant.TenantID) {
 				organizationRows := sqlmock.NewRows(columns)
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE group_id = $1 ORDER BY created_at, id`)).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE tenant_id = $1 ORDER BY created_at, id`)).
 					WithArgs(tenantID).
 					WillReturnRows(organizationRows)
 			},
@@ -234,7 +234,7 @@ func TestListByTenantID(t *testing.T) {
 			wantNames: nil,
 			tenantID:  tenant.TenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
 			setup: func(mock sqlmock.Sqlmock, tenantID tenant.TenantID) {
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE group_id = $1 ORDER BY created_at, id`)).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE tenant_id = $1 ORDER BY created_at, id`)).
 					WithArgs(tenantID).
 					WillReturnError(errors.New("list organizations error"))
 			},
@@ -307,7 +307,7 @@ func TestUpdate(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock, organization organization.Organization) {
 				mock.ExpectBegin()
 
-				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "organizations" SET "group_id"=$1,"name"=$2,"created_at"=$3,"updated_at"=$4 WHERE id = $5`)).
+				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "organizations" SET "tenant_id"=$1,"name"=$2,"created_at"=$3,"updated_at"=$4 WHERE id = $5`)).
 					WithArgs(organization.TenantID(), organization.Name(), createdAt, updatedAt, organization.ID()).
 					WillReturnResult(sqlmock.NewResult(0, 1))
 
@@ -321,7 +321,7 @@ func TestUpdate(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock, organization organization.Organization) {
 				mock.ExpectBegin()
 
-				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "organizations" SET "group_id"=$1,"name"=$2,"created_at"=$3,"updated_at"=$4 WHERE id = $5`)).
+				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "organizations" SET "tenant_id"=$1,"name"=$2,"created_at"=$3,"updated_at"=$4 WHERE id = $5`)).
 					WithArgs(organization.TenantID(), organization.Name(), createdAt, updatedAt, organization.ID()).
 					WillReturnResult(sqlmock.NewResult(0, 0))
 
@@ -335,7 +335,7 @@ func TestUpdate(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock, organization organization.Organization) {
 				mock.ExpectBegin()
 
-				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "organizations" SET "group_id"=$1,"name"=$2,"created_at"=$3,"updated_at"=$4 WHERE id = $5`)).
+				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "organizations" SET "tenant_id"=$1,"name"=$2,"created_at"=$3,"updated_at"=$4 WHERE id = $5`)).
 					WithArgs(organization.TenantID(), organization.Name(), createdAt, updatedAt, organization.ID()).
 					WillReturnError(errors.New("update organization error"))
 

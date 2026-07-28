@@ -9,7 +9,7 @@ import (
 
 type CustomerModel struct {
 	ID                           customer.CustomerID
-	GroupID                      tenant.TenantID
+	TenantID                     tenant.TenantID
 	Name                         customer.Name
 	NameKana                     customer.NameKana
 	Gender                       customer.Gender

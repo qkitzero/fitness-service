@@ -9,7 +9,7 @@ import (
 
 type OrganizationModel struct {
 	ID        organization.OrganizationID
-	GroupID   tenant.TenantID
+	TenantID  tenant.TenantID
 	Name      organization.Name
 	CreatedAt time.Time `gorm:"autoCreateTime:false"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime:false"`
