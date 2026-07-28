@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strings"
 
 	"google.golang.org/genproto/googleapis/type/date"
 	"google.golang.org/grpc/codes"
@@ -12,6 +13,7 @@ import (
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
 	appcustomer "github.com/qkitzero/fitness-service/internal/application/customer"
 	domaincustomer "github.com/qkitzero/fitness-service/internal/domain/customer"
+	domainorganization "github.com/qkitzero/fitness-service/internal/domain/organization"
 	domaintenant "github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
@@ -112,6 +114,10 @@ func toProtoCustomer(c domaincustomer.Customer) *customerv1.Customer {
 		s := v.String()
 		msg.EmergencyContactPhone = &s
 	}
+	if v := c.OrganizationID(); v != nil {
+		s := v.String()
+		msg.OrganizationId = &s
+	}
 	return msg
 }
 
@@ -130,6 +136,7 @@ type customerFieldsRequest interface {
 	GetEmergencyContactName() string
 	GetEmergencyContactRelationship() string
 	GetEmergencyContactPhone() string
+	GetOrganizationId() string
 }
 
 type customerFields struct {
@@ -147,6 +154,7 @@ type customerFields struct {
 	emergencyContactName         *domaincustomer.EmergencyContactName
 	emergencyContactRelationship *domaincustomer.EmergencyContactRelationship
 	emergencyContactPhone        *domaincustomer.Phone
+	organizationID               *domainorganization.OrganizationID
 }
 
 func parseCustomerFields(req customerFieldsRequest) (customerFields, error) {
@@ -194,6 +202,13 @@ func parseCustomerFields(req customerFieldsRequest) (customerFields, error) {
 	if f.emergencyContactPhone, err = domaincustomer.NewPhone(req.GetEmergencyContactPhone()); err != nil {
 		return f, err
 	}
+	if s := strings.TrimSpace(req.GetOrganizationId()); s != "" {
+		organizationID, err := domainorganization.NewOrganizationIDFromString(s)
+		if err != nil {
+			return f, err
+		}
+		f.organizationID = &organizationID
+	}
 	return f, nil
 }
 
@@ -203,6 +218,9 @@ func mapCustomerError(err error, op string) error {
 	}
 	if errors.Is(err, domaincustomer.ErrCustomerNotFound) {
 		return status.Error(codes.NotFound, err.Error())
+	}
+	if errors.Is(err, domaincustomer.ErrOrganizationNotInTenant) {
+		return status.Error(codes.InvalidArgument, err.Error())
 	}
 	if s, ok := status.FromError(err); ok {
 		switch s.Code() {
@@ -224,7 +242,7 @@ func (h *CustomerHandler) CreateCustomer(ctx context.Context, req *customerv1.Cr
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	customer, err := h.customerUsecase.CreateCustomer(ctx, tenantID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.postalCode, fields.prefecture, fields.city, fields.street, fields.building, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone)
+	customer, err := h.customerUsecase.CreateCustomer(ctx, tenantID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.postalCode, fields.prefecture, fields.city, fields.street, fields.building, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone, fields.organizationID)
 	if err != nil {
 		return nil, mapCustomerError(err, "CreateCustomer")
 	}
@@ -281,7 +299,7 @@ func (h *CustomerHandler) UpdateCustomer(ctx context.Context, req *customerv1.Up
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	customer, err := h.customerUsecase.UpdateCustomer(ctx, customerID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.postalCode, fields.prefecture, fields.city, fields.street, fields.building, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone)
+	customer, err := h.customerUsecase.UpdateCustomer(ctx, customerID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.postalCode, fields.prefecture, fields.city, fields.street, fields.building, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone, fields.organizationID)
 	if err != nil {
 		return nil, mapCustomerError(err, "UpdateCustomer")
 	}

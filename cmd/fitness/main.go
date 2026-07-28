@@ -143,7 +143,7 @@ func run() error {
 
 	authService := apiauth.NewAuthService(authServiceClient)
 	userService := apiuser.NewUserService(groupServiceClient)
-	customerUsecase := appcustomer.NewCustomerUsecase(authService, userService, customerRepository)
+	customerUsecase := appcustomer.NewCustomerUsecase(authService, userService, customerRepository, organizationRepository)
 	organizationUsecase := apporganization.NewOrganizationUsecase(authService, userService, organizationRepository)
 
 	healthServer := health.NewServer()

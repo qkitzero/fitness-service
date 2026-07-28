@@ -14,14 +14,16 @@ import (
 
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
+	"github.com/qkitzero/fitness-service/internal/domain/organization"
 	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 	mocksappcustomer "github.com/qkitzero/fitness-service/mocks/application/customer"
 	mockscustomer "github.com/qkitzero/fitness-service/mocks/domain/customer"
 )
 
 const (
-	sampleCustomerID = "fe8c2263-bbac-4bb9-a41d-b04f5afc4425"
-	sampleTenantID   = "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"
+	sampleCustomerID     = "fe8c2263-bbac-4bb9-a41d-b04f5afc4425"
+	sampleTenantID       = "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"
+	sampleOrganizationID = "3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"
 )
 
 func customerSample(ctrl *gomock.Controller, active bool) *mockscustomer.MockCustomer {
@@ -41,6 +43,7 @@ func customerSample(ctrl *gomock.Controller, active bool) *mockscustomer.MockCus
 	emergencyContactName, _ := customer.NewEmergencyContactName("緊急 太郎")
 	emergencyContactRelationship, _ := customer.NewEmergencyContactRelationship("父")
 	emergencyContactPhone, _ := customer.NewPhone("090-1234-5678")
+	organizationID, _ := organization.NewOrganizationIDFromString(sampleOrganizationID)
 	m.EXPECT().ID().Return(id).AnyTimes()
 	m.EXPECT().Name().Return(name).AnyTimes()
 	m.EXPECT().TenantID().Return(tenantID).AnyTimes()
@@ -57,6 +60,7 @@ func customerSample(ctrl *gomock.Controller, active bool) *mockscustomer.MockCus
 	m.EXPECT().EmergencyContactName().Return(emergencyContactName).AnyTimes()
 	m.EXPECT().EmergencyContactRelationship().Return(emergencyContactRelationship).AnyTimes()
 	m.EXPECT().EmergencyContactPhone().Return(emergencyContactPhone).AnyTimes()
+	m.EXPECT().OrganizationID().Return(&organizationID).AnyTimes()
 	m.EXPECT().IsActive().Return(active).AnyTimes()
 	return m
 }
@@ -76,6 +80,7 @@ func TestCreateCustomer(t *testing.T) {
 	ecName := "緊急 太郎"
 	ecRelationship := "父"
 	ecPhone := "090-1234-5678"
+	organizationID := sampleOrganizationID
 	invalid := "invalid"
 	invalidPref := "存在しない県"
 	tooLong := strings.Repeat("あ", 256)
@@ -88,8 +93,8 @@ func TestCreateCustomer(t *testing.T) {
 		createErr   error
 		wantCode    codes.Code
 	}{
-		{"success", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, Phone: &phone, Email: &email, PostalCode: &postalCode, Prefecture: &prefecture, City: &city, Street: &street, Building: &building, EmergencyContactName: &ecName, EmergencyContactRelationship: &ecRelationship, EmergencyContactPhone: &ecPhone}, true, nil, codes.OK},
-		{"failure invalid group id", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: "", NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
+		{"success", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, Phone: &phone, Email: &email, PostalCode: &postalCode, Prefecture: &prefecture, City: &city, Street: &street, Building: &building, EmergencyContactName: &ecName, EmergencyContactRelationship: &ecRelationship, EmergencyContactPhone: &ecPhone, OrganizationId: &organizationID}, true, nil, codes.OK},
+		{"failure invalid tenant id", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: "", NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
 		{"failure invalid name", &customerv1.CreateCustomerRequest{Name: "", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
 		{"failure null character name", &customerv1.CreateCustomerRequest{Name: withNull, TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
 		{"failure invalid name kana", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
@@ -106,6 +111,8 @@ func TestCreateCustomer(t *testing.T) {
 		{"failure invalid emergency contact name", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, EmergencyContactName: &tooLong}, false, nil, codes.InvalidArgument},
 		{"failure invalid emergency contact relationship", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, EmergencyContactRelationship: &tooLong}, false, nil, codes.InvalidArgument},
 		{"failure invalid emergency contact phone", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, EmergencyContactPhone: &invalid}, false, nil, codes.InvalidArgument},
+		{"failure invalid organization id", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, OrganizationId: &invalid}, false, nil, codes.InvalidArgument},
+		{"failure organization not in tenant", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, OrganizationId: &organizationID}, true, customer.ErrOrganizationNotInTenant, codes.InvalidArgument},
 		{"failure not tenant member", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure usecase error", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, fmt.Errorf("create customer error"), codes.Internal},
 		{"failure unauthenticated is preserved", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
@@ -123,7 +130,7 @@ func TestCreateCustomer(t *testing.T) {
 			mockUsecase := mocksappcustomer.NewMockCustomerUsecase(ctrl)
 			if tt.callUsecase {
 				tenantID, _ := tenant.NewTenantID(tid)
-				mockUsecase.EXPECT().CreateCustomer(gomock.Any(), tenantID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(customerSample(ctrl, true), tt.createErr).Times(1)
+				mockUsecase.EXPECT().CreateCustomer(gomock.Any(), tenantID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(customerSample(ctrl, true), tt.createErr).Times(1)
 			}
 
 			handler := NewCustomerHandler(mockUsecase)
@@ -187,6 +194,9 @@ func TestGetCustomer(t *testing.T) {
 				if res.GetCustomer().GetName() != "test customer" {
 					t.Errorf("Name = %v, want test customer", res.GetCustomer().GetName())
 				}
+				if res.GetCustomer().GetOrganizationId() != sampleOrganizationID {
+					t.Errorf("OrganizationId = %v, want %v", res.GetCustomer().GetOrganizationId(), sampleOrganizationID)
+				}
 			}
 		})
 	}
@@ -204,7 +214,7 @@ func TestListCustomers(t *testing.T) {
 	}{
 		{"success list customers", sampleTenantID, false, true, nil, codes.OK},
 		{"success list customers including inactive", sampleTenantID, true, true, nil, codes.OK},
-		{"failure invalid group id", "", false, false, nil, codes.InvalidArgument},
+		{"failure invalid tenant id", "", false, false, nil, codes.InvalidArgument},
 		{"failure not tenant member", sampleTenantID, false, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure usecase error", sampleTenantID, false, true, fmt.Errorf("list customers error"), codes.Internal},
 		{"failure unauthenticated is preserved", sampleTenantID, false, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
@@ -258,6 +268,7 @@ func TestUpdateCustomer(t *testing.T) {
 	cid := sampleCustomerID
 	validDate := &date.Date{Year: 1999, Month: 12, Day: 31}
 	futureDate := &date.Date{Year: 2500, Month: 1, Day: 1}
+	organizationID := sampleOrganizationID
 	invalid := "invalid"
 	withNull := "コウシン\x00顧客"
 
@@ -268,7 +279,7 @@ func TestUpdateCustomer(t *testing.T) {
 		updateErr   error
 		wantCode    codes.Code
 	}{
-		{"success update customer", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, nil, codes.OK},
+		{"success update customer", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate, OrganizationId: &organizationID}, true, nil, codes.OK},
 		{"failure invalid customer id", &customerv1.UpdateCustomerRequest{CustomerId: "", Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
 		{"failure invalid name", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
 		{"failure null character name", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: withNull, NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
@@ -276,6 +287,8 @@ func TestUpdateCustomer(t *testing.T) {
 		{"failure invalid gender", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_UNSPECIFIED, BirthDate: validDate}, false, nil, codes.InvalidArgument},
 		{"failure invalid birth date", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: futureDate}, false, nil, codes.InvalidArgument},
 		{"failure invalid phone", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate, Phone: &invalid}, false, nil, codes.InvalidArgument},
+		{"failure invalid organization id", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate, OrganizationId: &invalid}, false, nil, codes.InvalidArgument},
+		{"failure organization not in tenant", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate, OrganizationId: &organizationID}, true, customer.ErrOrganizationNotInTenant, codes.InvalidArgument},
 		{"failure usecase error", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, fmt.Errorf("update customer error"), codes.Internal},
 		{"failure not tenant member", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure customer not found", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, customer.ErrCustomerNotFound, codes.NotFound},
@@ -294,7 +307,7 @@ func TestUpdateCustomer(t *testing.T) {
 			mockUsecase := mocksappcustomer.NewMockCustomerUsecase(ctrl)
 			if tt.callUsecase {
 				customerID, _ := customer.NewCustomerIDFromString(cid)
-				mockUsecase.EXPECT().UpdateCustomer(gomock.Any(), customerID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(customerSample(ctrl, true), tt.updateErr).Times(1)
+				mockUsecase.EXPECT().UpdateCustomer(gomock.Any(), customerID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(customerSample(ctrl, true), tt.updateErr).Times(1)
 			}
 
 			handler := NewCustomerHandler(mockUsecase)
@@ -309,6 +322,9 @@ func TestUpdateCustomer(t *testing.T) {
 				}
 				if res.GetCustomer().GetName() != "test customer" {
 					t.Errorf("Name = %v, want test customer", res.GetCustomer().GetName())
+				}
+				if res.GetCustomer().GetOrganizationId() != sampleOrganizationID {
+					t.Errorf("OrganizationId = %v, want %v", res.GetCustomer().GetOrganizationId(), sampleOrganizationID)
 				}
 			}
 		})
@@ -421,6 +437,7 @@ func TestParseCustomerFields(t *testing.T) {
 	ecName := "緊急 太郎"
 	ecRelationship := "父"
 	ecPhone := "090-1234-5678"
+	organizationID := sampleOrganizationID
 
 	got, err := parseCustomerFields(&customerv1.CreateCustomerRequest{
 		Name:                         "test customer",
@@ -437,6 +454,7 @@ func TestParseCustomerFields(t *testing.T) {
 		EmergencyContactName:         &ecName,
 		EmergencyContactRelationship: &ecRelationship,
 		EmergencyContactPhone:        &ecPhone,
+		OrganizationId:               &organizationID,
 	})
 	if err != nil {
 		t.Fatalf("expected no error, but got %v", err)
@@ -483,6 +501,9 @@ func TestParseCustomerFields(t *testing.T) {
 	if got.emergencyContactPhone == nil || got.emergencyContactPhone.String() != "09012345678" {
 		t.Errorf("emergencyContactPhone = %v, want 09012345678", got.emergencyContactPhone)
 	}
+	if got.organizationID == nil || got.organizationID.String() != sampleOrganizationID {
+		t.Errorf("organizationID = %v, want %v", got.organizationID, sampleOrganizationID)
+	}
 
 	gotEmpty, err := parseCustomerFields(&customerv1.CreateCustomerRequest{
 		Name:      "test customer",
@@ -493,7 +514,7 @@ func TestParseCustomerFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, but got %v", err)
 	}
-	if gotEmpty.phone != nil || gotEmpty.email != nil || gotEmpty.postalCode != nil || gotEmpty.prefecture != nil || gotEmpty.city != nil || gotEmpty.street != nil || gotEmpty.building != nil || gotEmpty.emergencyContactName != nil || gotEmpty.emergencyContactRelationship != nil || gotEmpty.emergencyContactPhone != nil {
+	if gotEmpty.phone != nil || gotEmpty.email != nil || gotEmpty.postalCode != nil || gotEmpty.prefecture != nil || gotEmpty.city != nil || gotEmpty.street != nil || gotEmpty.building != nil || gotEmpty.emergencyContactName != nil || gotEmpty.emergencyContactRelationship != nil || gotEmpty.emergencyContactPhone != nil || gotEmpty.organizationID != nil {
 		t.Errorf("expected nil optional fields")
 	}
 }
@@ -572,9 +593,10 @@ func TestToProtoCustomer(t *testing.T) {
 	emergencyContactName, _ := customer.NewEmergencyContactName("緊急 太郎")
 	emergencyContactRelationship, _ := customer.NewEmergencyContactRelationship("父")
 	emergencyContactPhone, _ := customer.NewPhone("090-1234-5678")
+	organizationID, _ := organization.NewOrganizationIDFromString(sampleOrganizationID)
 	now := time.Now().UTC()
 
-	full := customer.NewCustomer(id, tenantID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, true, now, now)
+	full := customer.NewCustomer(id, tenantID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, &organizationID, true, now, now)
 	got := toProtoCustomer(full)
 	if got.GetCustomerId() != id.String() {
 		t.Errorf("CustomerId = %v, want %v", got.GetCustomerId(), id.String())
@@ -624,13 +646,16 @@ func TestToProtoCustomer(t *testing.T) {
 	if got.GetEmergencyContactPhone() != "09012345678" {
 		t.Errorf("EmergencyContactPhone = %v, want 09012345678", got.GetEmergencyContactPhone())
 	}
+	if got.GetOrganizationId() != sampleOrganizationID {
+		t.Errorf("OrganizationId = %v, want %v", got.GetOrganizationId(), sampleOrganizationID)
+	}
 	if !got.GetIsActive() {
 		t.Errorf("IsActive = %v, want %v", got.GetIsActive(), true)
 	}
 
-	empty := customer.NewCustomer(id, tenantID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, now, now)
+	empty := customer.NewCustomer(id, tenantID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, now, now)
 	gotEmpty := toProtoCustomer(empty)
-	if gotEmpty.Phone != nil || gotEmpty.Email != nil || gotEmpty.PostalCode != nil || gotEmpty.Prefecture != nil || gotEmpty.City != nil || gotEmpty.Street != nil || gotEmpty.Building != nil || gotEmpty.EmergencyContactName != nil || gotEmpty.EmergencyContactRelationship != nil || gotEmpty.EmergencyContactPhone != nil {
+	if gotEmpty.Phone != nil || gotEmpty.Email != nil || gotEmpty.PostalCode != nil || gotEmpty.Prefecture != nil || gotEmpty.City != nil || gotEmpty.Street != nil || gotEmpty.Building != nil || gotEmpty.EmergencyContactName != nil || gotEmpty.EmergencyContactRelationship != nil || gotEmpty.EmergencyContactPhone != nil || gotEmpty.OrganizationId != nil {
 		t.Errorf("expected nil optional proto fields for empty customer")
 	}
 	if gotEmpty.GetIsActive() {

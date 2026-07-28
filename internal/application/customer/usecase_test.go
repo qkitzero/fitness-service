@@ -9,37 +9,51 @@ import (
 	"go.uber.org/mock/gomock"
 
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
+	"github.com/qkitzero/fitness-service/internal/domain/organization"
 	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 	mocksappauth "github.com/qkitzero/fitness-service/mocks/application/auth"
 	mocksappuser "github.com/qkitzero/fitness-service/mocks/application/user"
 	mockscustomer "github.com/qkitzero/fitness-service/mocks/domain/customer"
+	mocksorganization "github.com/qkitzero/fitness-service/mocks/domain/organization"
 )
 
 func TestCreateCustomer(t *testing.T) {
 	t.Parallel()
 	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	otherTenantID, _ := tenant.NewTenantID("9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d")
+	organizationTenantID, _ := tenant.NewTenantID(tenantID.String())
+	foundOrganizationID, _ := organization.NewOrganizationIDFromString("3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d")
+	organizationID := &foundOrganizationID
 	name, _ := customer.NewName("test customer")
 	nameKana, _ := customer.NewNameKana("テストカナ")
 	gender, _ := customer.NewGender("male")
 	birthDate, _ := customer.NewBirthDate(2000, 1, 1)
 
 	tests := []struct {
-		name            string
-		success         bool
-		wantErr         error
-		callCreate      bool
-		ctx             context.Context
-		userID          string
-		verifyTokenErr  error
-		myTenantIDs     []string
-		listMyGroupsErr error
-		createErr       error
+		name                 string
+		success              bool
+		wantErr              error
+		organizationID       *organization.OrganizationID
+		callFindOrganization bool
+		organizationTenantID tenant.TenantID
+		findOrganizationErr  error
+		callCreate           bool
+		ctx                  context.Context
+		userID               string
+		verifyTokenErr       error
+		myTenantIDs          []string
+		listMyGroupsErr      error
+		createErr            error
 	}{
-		{"success create customer", true, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, nil},
-		{"failure verify token error", false, nil, false, context.Background(), "", errors.New("verify token error"), []string{tenantID.String()}, nil, nil},
-		{"failure not tenant member", false, tenant.ErrNotMember, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
-		{"failure list my groups error", false, nil, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, errors.New("list my groups error"), nil},
-		{"failure create error", false, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, errors.New("create error")},
+		{"success create customer", true, nil, nil, false, "", nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, nil},
+		{"success create customer with organization", true, nil, organizationID, true, organizationTenantID, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, nil},
+		{"failure organization of another tenant", false, customer.ErrOrganizationNotInTenant, organizationID, true, otherTenantID, nil, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, nil},
+		{"failure organization not found", false, customer.ErrOrganizationNotInTenant, organizationID, true, "", organization.ErrOrganizationNotFound, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, nil},
+		{"failure find organization error", false, nil, organizationID, true, "", errors.New("find organization error"), false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, nil},
+		{"failure verify token error", false, nil, nil, false, "", nil, false, context.Background(), "", errors.New("verify token error"), []string{tenantID.String()}, nil, nil},
+		{"failure not tenant member", false, tenant.ErrNotMember, nil, false, "", nil, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
+		{"failure list my groups error", false, nil, nil, false, "", nil, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, errors.New("list my groups error"), nil},
+		{"failure create error", false, nil, nil, false, "", nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, errors.New("create error")},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -52,15 +66,25 @@ func TestCreateCustomer(t *testing.T) {
 			mockAuthService := mocksappauth.NewMockAuthService(ctrl)
 			mockUserService := mocksappuser.NewMockUserService(ctrl)
 			mockCustomerRepository := mockscustomer.NewMockCustomerRepository(ctrl)
+			mockOrganizationRepository := mocksorganization.NewMockOrganizationRepository(ctrl)
 			mockAuthService.EXPECT().VerifyToken(tt.ctx).Return(tt.userID, tt.verifyTokenErr).AnyTimes()
 			mockUserService.EXPECT().ListMyGroups(tt.ctx).Return(tt.myTenantIDs, tt.listMyGroupsErr).AnyTimes()
+			if tt.callFindOrganization {
+				var foundOrganization organization.Organization
+				if tt.findOrganizationErr == nil {
+					mockOrganization := mocksorganization.NewMockOrganization(ctrl)
+					mockOrganization.EXPECT().TenantID().Return(tt.organizationTenantID).AnyTimes()
+					foundOrganization = mockOrganization
+				}
+				mockOrganizationRepository.EXPECT().FindByID(tt.ctx, *tt.organizationID).Return(foundOrganization, tt.findOrganizationErr).Times(1)
+			}
 			if tt.callCreate {
 				mockCustomerRepository.EXPECT().Create(tt.ctx, gomock.Any()).Return(tt.createErr).Times(1)
 			}
 
-			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository)
+			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository, mockOrganizationRepository)
 
-			createdCustomer, err := u.CreateCustomer(tt.ctx, tenantID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+			createdCustomer, err := u.CreateCustomer(tt.ctx, tenantID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tt.organizationID)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}
@@ -79,6 +103,12 @@ func TestCreateCustomer(t *testing.T) {
 				}
 				if createdCustomer.ID().UUID == uuid.Nil {
 					t.Errorf("expected generated customer id, but got a nil UUID")
+				}
+				if tt.organizationID == nil && createdCustomer.OrganizationID() != nil {
+					t.Errorf("OrganizationID() = %v, want nil", createdCustomer.OrganizationID())
+				}
+				if tt.organizationID != nil && (createdCustomer.OrganizationID() == nil || *createdCustomer.OrganizationID() != *tt.organizationID) {
+					t.Errorf("OrganizationID() = %v, want %v", createdCustomer.OrganizationID(), tt.organizationID)
 				}
 				if !createdCustomer.CreatedAt().Equal(createdCustomer.UpdatedAt()) {
 					t.Errorf("CreatedAt() = %v, UpdatedAt() = %v, want equal", createdCustomer.CreatedAt(), createdCustomer.UpdatedAt())
@@ -135,7 +165,7 @@ func TestGetCustomer(t *testing.T) {
 				mockCustomerRepository.EXPECT().FindByID(tt.ctx, customerID).Return(mockCustomer, tt.findByIDErr).Times(1)
 			}
 
-			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository)
+			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository, mocksorganization.NewMockOrganizationRepository(ctrl))
 
 			foundCustomer, err := u.GetCustomer(tt.ctx, customerID)
 			if tt.success && err != nil {
@@ -196,7 +226,7 @@ func TestListCustomers(t *testing.T) {
 				mockCustomerRepository.EXPECT().ListByTenantID(tt.ctx, tenantID, tt.includeInactive).Return([]customer.Customer{mockCustomer}, tt.listByTenantIDErr).Times(1)
 			}
 
-			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository)
+			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository, mocksorganization.NewMockOrganizationRepository(ctrl))
 
 			customers, err := u.ListCustomers(tt.ctx, tenantID, tt.includeInactive)
 			if tt.success && err != nil {
@@ -223,32 +253,44 @@ func TestListCustomers(t *testing.T) {
 func TestUpdateCustomer(t *testing.T) {
 	t.Parallel()
 	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	otherTenantID, _ := tenant.NewTenantID("9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d")
+	organizationTenantID, _ := tenant.NewTenantID(tenantID.String())
+	foundOrganizationID, _ := organization.NewOrganizationIDFromString("3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d")
+	organizationID := &foundOrganizationID
 	name, _ := customer.NewName("updated test customer")
 	nameKana, _ := customer.NewNameKana("コウシンカナ")
 	gender, _ := customer.NewGender("female")
 	birthDate, _ := customer.NewBirthDate(1999, 12, 31)
 
 	tests := []struct {
-		name            string
-		success         bool
-		wantErr         error
-		callFindByID    bool
-		callUpdate      bool
-		ctx             context.Context
-		userID          string
-		verifyTokenErr  error
-		findByIDErr     error
-		myTenantIDs     []string
-		listMyGroupsErr error
-		updateErr       error
+		name                 string
+		success              bool
+		wantErr              error
+		organizationID       *organization.OrganizationID
+		callFindOrganization bool
+		organizationTenantID tenant.TenantID
+		findOrganizationErr  error
+		callFindByID         bool
+		callUpdate           bool
+		ctx                  context.Context
+		userID               string
+		verifyTokenErr       error
+		findByIDErr          error
+		myTenantIDs          []string
+		listMyGroupsErr      error
+		updateErr            error
 	}{
-		{"success update customer", true, nil, true, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{tenantID.String()}, nil, nil},
-		{"failure verify token error", false, nil, false, false, context.Background(), "", errors.New("verify token error"), nil, []string{tenantID.String()}, nil, nil},
-		{"failure find by id error", false, nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, errors.New("find by id error"), []string{tenantID.String()}, nil, nil},
-		{"failure customer not found", false, customer.ErrCustomerNotFound, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, customer.ErrCustomerNotFound, []string{tenantID.String()}, nil, nil},
-		{"failure other tenant is hidden as not found", false, customer.ErrCustomerNotFound, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
-		{"failure list my groups error", false, nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, nil, errors.New("list my groups error"), nil},
-		{"failure update error", false, nil, true, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{tenantID.String()}, nil, errors.New("update error")},
+		{"success update customer", true, nil, nil, false, "", nil, true, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{tenantID.String()}, nil, nil},
+		{"success update customer with organization", true, nil, organizationID, true, organizationTenantID, nil, true, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{tenantID.String()}, nil, nil},
+		{"failure organization of another tenant", false, customer.ErrOrganizationNotInTenant, organizationID, true, otherTenantID, nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{tenantID.String()}, nil, nil},
+		{"failure organization not found", false, customer.ErrOrganizationNotInTenant, organizationID, true, "", organization.ErrOrganizationNotFound, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{tenantID.String()}, nil, nil},
+		{"failure find organization error", false, nil, organizationID, true, "", errors.New("find organization error"), true, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{tenantID.String()}, nil, nil},
+		{"failure verify token error", false, nil, nil, false, "", nil, false, false, context.Background(), "", errors.New("verify token error"), nil, []string{tenantID.String()}, nil, nil},
+		{"failure find by id error", false, nil, nil, false, "", nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, errors.New("find by id error"), []string{tenantID.String()}, nil, nil},
+		{"failure customer not found", false, customer.ErrCustomerNotFound, nil, false, "", nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, customer.ErrCustomerNotFound, []string{tenantID.String()}, nil, nil},
+		{"failure other tenant is hidden as not found", false, customer.ErrCustomerNotFound, nil, false, "", nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
+		{"failure list my groups error", false, nil, nil, false, "", nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, nil, errors.New("list my groups error"), nil},
+		{"failure update error", false, nil, nil, false, "", nil, true, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{tenantID.String()}, nil, errors.New("update error")},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -265,19 +307,29 @@ func TestUpdateCustomer(t *testing.T) {
 			mockCustomer := mockscustomer.NewMockCustomer(ctrl)
 			mockCustomer.EXPECT().TenantID().Return(tenantID).AnyTimes()
 			mockCustomerRepository := mockscustomer.NewMockCustomerRepository(ctrl)
+			mockOrganizationRepository := mocksorganization.NewMockOrganizationRepository(ctrl)
 			mockAuthService.EXPECT().VerifyToken(tt.ctx).Return(tt.userID, tt.verifyTokenErr).AnyTimes()
 			mockUserService.EXPECT().ListMyGroups(tt.ctx).Return(tt.myTenantIDs, tt.listMyGroupsErr).AnyTimes()
 			if tt.callFindByID {
 				mockCustomerRepository.EXPECT().FindByID(tt.ctx, customerID).Return(mockCustomer, tt.findByIDErr).Times(1)
 			}
+			if tt.callFindOrganization {
+				var foundOrganization organization.Organization
+				if tt.findOrganizationErr == nil {
+					mockOrganization := mocksorganization.NewMockOrganization(ctrl)
+					mockOrganization.EXPECT().TenantID().Return(tt.organizationTenantID).AnyTimes()
+					foundOrganization = mockOrganization
+				}
+				mockOrganizationRepository.EXPECT().FindByID(tt.ctx, *tt.organizationID).Return(foundOrganization, tt.findOrganizationErr).Times(1)
+			}
 			if tt.callUpdate {
-				mockCustomer.EXPECT().Update(name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil).Times(1)
+				mockCustomer.EXPECT().Update(name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tt.organizationID).Times(1)
 				mockCustomerRepository.EXPECT().Update(tt.ctx, mockCustomer).Return(tt.updateErr).Times(1)
 			}
 
-			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository)
+			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository, mockOrganizationRepository)
 
-			updatedCustomer, err := u.UpdateCustomer(tt.ctx, customerID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil)
+			updatedCustomer, err := u.UpdateCustomer(tt.ctx, customerID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tt.organizationID)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}
@@ -347,7 +399,7 @@ func TestSetCustomerActive(t *testing.T) {
 				mockCustomerRepository.EXPECT().UpdateActive(tt.ctx, mockCustomer).Return(tt.updateActiveErr).Times(1)
 			}
 
-			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository)
+			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository, mocksorganization.NewMockOrganizationRepository(ctrl))
 
 			updatedCustomer, err := u.SetCustomerActive(tt.ctx, customerID, tt.active)
 			if tt.success && err != nil {
@@ -416,7 +468,7 @@ func TestDeleteCustomer(t *testing.T) {
 				mockCustomerRepository.EXPECT().Delete(tt.ctx, customerID).Return(tt.deleteErr).Times(1)
 			}
 
-			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository)
+			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository, mocksorganization.NewMockOrganizationRepository(ctrl))
 
 			err := u.DeleteCustomer(tt.ctx, customerID)
 			if tt.success && err != nil {

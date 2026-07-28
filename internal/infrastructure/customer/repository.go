@@ -36,6 +36,7 @@ func toModel(c customer.Customer) CustomerModel {
 		EmergencyContactName:         c.EmergencyContactName(),
 		EmergencyContactRelationship: c.EmergencyContactRelationship(),
 		EmergencyContactPhone:        c.EmergencyContactPhone(),
+		OrganizationID:               c.OrganizationID(),
 		IsActive:                     c.IsActive(),
 		CreatedAt:                    c.CreatedAt(),
 		UpdatedAt:                    c.UpdatedAt(),
@@ -60,6 +61,7 @@ func toDomain(m CustomerModel) customer.Customer {
 		m.EmergencyContactName,
 		m.EmergencyContactRelationship,
 		m.EmergencyContactPhone,
+		m.OrganizationID,
 		m.IsActive,
 		m.CreatedAt,
 		m.UpdatedAt,
@@ -131,6 +133,7 @@ func (r *customerRepository) Update(ctx context.Context, c customer.Customer) er
 				"emergency_contact_name",
 				"emergency_contact_relationship",
 				"emergency_contact_phone",
+				"organization_id",
 				"created_at",
 				"updated_at",
 			).
