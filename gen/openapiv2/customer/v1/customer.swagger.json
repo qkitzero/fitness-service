@@ -199,7 +199,7 @@
         },
         "parameters": [
           {
-            "name": "groupId",
+            "name": "tenantId",
             "in": "query",
             "required": false,
             "type": "string"
@@ -270,6 +270,9 @@
         },
         "emergencyContactPhone": {
           "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
         }
       }
     },
@@ -329,7 +332,7 @@
         "name": {
           "type": "string"
         },
-        "groupId": {
+        "tenantId": {
           "type": "string"
         },
         "nameKana": {
@@ -370,6 +373,9 @@
         },
         "emergencyContactPhone": {
           "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
         }
       }
     },
@@ -390,7 +396,7 @@
         "name": {
           "type": "string"
         },
-        "groupId": {
+        "tenantId": {
           "type": "string"
         },
         "nameKana": {
@@ -434,6 +440,9 @@
         },
         "isActive": {
           "type": "boolean"
+        },
+        "organizationId": {
+          "type": "string"
         }
       }
     },

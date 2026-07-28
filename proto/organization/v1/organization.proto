@@ -32,12 +32,12 @@ service OrganizationService {
 
 message Organization {
   string organization_id = 1;
-  string group_id = 2;
+  string tenant_id = 2;
   string name = 3;
 }
 
 message CreateOrganizationRequest {
-  string group_id = 1;
+  string tenant_id = 1;
   string name = 2;
 }
 
@@ -54,7 +54,7 @@ message GetOrganizationResponse {
 }
 
 message ListOrganizationsRequest {
-  string group_id = 1;
+  string tenant_id = 1;
 }
 
 message ListOrganizationsResponse {

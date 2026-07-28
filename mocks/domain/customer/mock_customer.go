@@ -14,6 +14,8 @@ import (
 	time "time"
 
 	customer "github.com/qkitzero/fitness-service/internal/domain/customer"
+	organization "github.com/qkitzero/fitness-service/internal/domain/organization"
+	tenant "github.com/qkitzero/fitness-service/internal/domain/tenant"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -167,20 +169,6 @@ func (mr *MockCustomerMockRecorder) Gender() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Gender", reflect.TypeOf((*MockCustomer)(nil).Gender))
 }
 
-// GroupID mocks base method.
-func (m *MockCustomer) GroupID() customer.GroupID {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GroupID")
-	ret0, _ := ret[0].(customer.GroupID)
-	return ret0
-}
-
-// GroupID indicates an expected call of GroupID.
-func (mr *MockCustomerMockRecorder) GroupID() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupID", reflect.TypeOf((*MockCustomer)(nil).GroupID))
-}
-
 // ID mocks base method.
 func (m *MockCustomer) ID() customer.CustomerID {
 	m.ctrl.T.Helper()
@@ -235,6 +223,20 @@ func (m *MockCustomer) NameKana() customer.NameKana {
 func (mr *MockCustomerMockRecorder) NameKana() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NameKana", reflect.TypeOf((*MockCustomer)(nil).NameKana))
+}
+
+// OrganizationID mocks base method.
+func (m *MockCustomer) OrganizationID() *organization.OrganizationID {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "OrganizationID")
+	ret0, _ := ret[0].(*organization.OrganizationID)
+	return ret0
+}
+
+// OrganizationID indicates an expected call of OrganizationID.
+func (mr *MockCustomerMockRecorder) OrganizationID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OrganizationID", reflect.TypeOf((*MockCustomer)(nil).OrganizationID))
 }
 
 // Phone mocks base method.
@@ -305,16 +307,30 @@ func (mr *MockCustomerMockRecorder) Street() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Street", reflect.TypeOf((*MockCustomer)(nil).Street))
 }
 
-// Update mocks base method.
-func (m *MockCustomer) Update(name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone) {
+// TenantID mocks base method.
+func (m *MockCustomer) TenantID() tenant.TenantID {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "Update", name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone)
+	ret := m.ctrl.Call(m, "TenantID")
+	ret0, _ := ret[0].(tenant.TenantID)
+	return ret0
+}
+
+// TenantID indicates an expected call of TenantID.
+func (mr *MockCustomerMockRecorder) TenantID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TenantID", reflect.TypeOf((*MockCustomer)(nil).TenantID))
+}
+
+// Update mocks base method.
+func (m *MockCustomer) Update(name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone, organizationID *organization.OrganizationID) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Update", name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, organizationID)
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockCustomerMockRecorder) Update(name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone any) *gomock.Call {
+func (mr *MockCustomerMockRecorder) Update(name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, organizationID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockCustomer)(nil).Update), name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockCustomer)(nil).Update), name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, organizationID)
 }
 
 // UpdatedAt mocks base method.

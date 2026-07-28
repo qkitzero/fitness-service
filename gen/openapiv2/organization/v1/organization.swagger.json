@@ -161,7 +161,7 @@
         },
         "parameters": [
           {
-            "name": "groupId",
+            "name": "tenantId",
             "in": "query",
             "required": false,
             "type": "string"
@@ -213,7 +213,7 @@
     "v1CreateOrganizationRequest": {
       "type": "object",
       "properties": {
-        "groupId": {
+        "tenantId": {
           "type": "string"
         },
         "name": {
@@ -258,7 +258,7 @@
         "organizationId": {
           "type": "string"
         },
-        "groupId": {
+        "tenantId": {
           "type": "string"
         },
         "name": {

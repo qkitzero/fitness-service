@@ -2,11 +2,14 @@ package customer
 
 import (
 	"time"
+
+	"github.com/qkitzero/fitness-service/internal/domain/organization"
+	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 type Customer interface {
 	ID() CustomerID
-	GroupID() GroupID
+	TenantID() tenant.TenantID
 	Name() Name
 	NameKana() NameKana
 	Gender() Gender
@@ -21,16 +24,17 @@ type Customer interface {
 	EmergencyContactName() *EmergencyContactName
 	EmergencyContactRelationship() *EmergencyContactRelationship
 	EmergencyContactPhone() *Phone
+	OrganizationID() *organization.OrganizationID
 	IsActive() bool
 	CreatedAt() time.Time
 	UpdatedAt() time.Time
-	Update(name Name, nameKana NameKana, gender Gender, birthDate BirthDate, phone *Phone, email *Email, postalCode *PostalCode, prefecture *Prefecture, city *City, street *Street, building *Building, emergencyContactName *EmergencyContactName, emergencyContactRelationship *EmergencyContactRelationship, emergencyContactPhone *Phone)
+	Update(name Name, nameKana NameKana, gender Gender, birthDate BirthDate, phone *Phone, email *Email, postalCode *PostalCode, prefecture *Prefecture, city *City, street *Street, building *Building, emergencyContactName *EmergencyContactName, emergencyContactRelationship *EmergencyContactRelationship, emergencyContactPhone *Phone, organizationID *organization.OrganizationID)
 	SetActive(active bool)
 }
 
 type customer struct {
 	id                           CustomerID
-	groupID                      GroupID
+	tenantID                     tenant.TenantID
 	name                         Name
 	nameKana                     NameKana
 	gender                       Gender
@@ -45,6 +49,7 @@ type customer struct {
 	emergencyContactName         *EmergencyContactName
 	emergencyContactRelationship *EmergencyContactRelationship
 	emergencyContactPhone        *Phone
+	organizationID               *organization.OrganizationID
 	active                       bool
 	createdAt                    time.Time
 	updatedAt                    time.Time
@@ -54,8 +59,8 @@ func (c customer) ID() CustomerID {
 	return c.id
 }
 
-func (c customer) GroupID() GroupID {
-	return c.groupID
+func (c customer) TenantID() tenant.TenantID {
+	return c.tenantID
 }
 
 func (c customer) Name() Name {
@@ -154,6 +159,14 @@ func (c customer) EmergencyContactPhone() *Phone {
 	return &p
 }
 
+func (c customer) OrganizationID() *organization.OrganizationID {
+	if c.organizationID == nil {
+		return nil
+	}
+	o := *c.organizationID
+	return &o
+}
+
 func (c customer) IsActive() bool {
 	return c.active
 }
@@ -166,7 +179,7 @@ func (c customer) UpdatedAt() time.Time {
 	return c.updatedAt
 }
 
-func (c *customer) Update(name Name, nameKana NameKana, gender Gender, birthDate BirthDate, phone *Phone, email *Email, postalCode *PostalCode, prefecture *Prefecture, city *City, street *Street, building *Building, emergencyContactName *EmergencyContactName, emergencyContactRelationship *EmergencyContactRelationship, emergencyContactPhone *Phone) {
+func (c *customer) Update(name Name, nameKana NameKana, gender Gender, birthDate BirthDate, phone *Phone, email *Email, postalCode *PostalCode, prefecture *Prefecture, city *City, street *Street, building *Building, emergencyContactName *EmergencyContactName, emergencyContactRelationship *EmergencyContactRelationship, emergencyContactPhone *Phone, organizationID *organization.OrganizationID) {
 	c.name = name
 	c.nameKana = nameKana
 	c.gender = gender
@@ -181,6 +194,7 @@ func (c *customer) Update(name Name, nameKana NameKana, gender Gender, birthDate
 	c.emergencyContactName = emergencyContactName
 	c.emergencyContactRelationship = emergencyContactRelationship
 	c.emergencyContactPhone = emergencyContactPhone
+	c.organizationID = organizationID
 	c.updatedAt = time.Now().UTC()
 }
 
@@ -194,7 +208,7 @@ func (c *customer) SetActive(active bool) {
 
 func NewCustomer(
 	id CustomerID,
-	groupID GroupID,
+	tenantID tenant.TenantID,
 	name Name,
 	nameKana NameKana,
 	gender Gender,
@@ -209,13 +223,14 @@ func NewCustomer(
 	emergencyContactName *EmergencyContactName,
 	emergencyContactRelationship *EmergencyContactRelationship,
 	emergencyContactPhone *Phone,
+	organizationID *organization.OrganizationID,
 	active bool,
 	createdAt time.Time,
 	updatedAt time.Time,
 ) Customer {
 	return &customer{
 		id:                           id,
-		groupID:                      groupID,
+		tenantID:                     tenantID,
 		name:                         name,
 		nameKana:                     nameKana,
 		gender:                       gender,
@@ -230,6 +245,7 @@ func NewCustomer(
 		emergencyContactName:         emergencyContactName,
 		emergencyContactRelationship: emergencyContactRelationship,
 		emergencyContactPhone:        emergencyContactPhone,
+		organizationID:               organizationID,
 		active:                       active,
 		createdAt:                    createdAt,
 		updatedAt:                    updatedAt,

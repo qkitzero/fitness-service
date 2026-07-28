@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
+	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 type customerRepository struct {
@@ -20,7 +21,7 @@ func NewCustomerRepository(db *gorm.DB) customer.CustomerRepository {
 func toModel(c customer.Customer) CustomerModel {
 	return CustomerModel{
 		ID:                           c.ID(),
-		GroupID:                      c.GroupID(),
+		TenantID:                     c.TenantID(),
 		Name:                         c.Name(),
 		NameKana:                     c.NameKana(),
 		Gender:                       c.Gender(),
@@ -35,6 +36,7 @@ func toModel(c customer.Customer) CustomerModel {
 		EmergencyContactName:         c.EmergencyContactName(),
 		EmergencyContactRelationship: c.EmergencyContactRelationship(),
 		EmergencyContactPhone:        c.EmergencyContactPhone(),
+		OrganizationID:               c.OrganizationID(),
 		IsActive:                     c.IsActive(),
 		CreatedAt:                    c.CreatedAt(),
 		UpdatedAt:                    c.UpdatedAt(),
@@ -44,7 +46,7 @@ func toModel(c customer.Customer) CustomerModel {
 func toDomain(m CustomerModel) customer.Customer {
 	return customer.NewCustomer(
 		m.ID,
-		m.GroupID,
+		m.TenantID,
 		m.Name,
 		m.NameKana,
 		m.Gender,
@@ -59,6 +61,7 @@ func toDomain(m CustomerModel) customer.Customer {
 		m.EmergencyContactName,
 		m.EmergencyContactRelationship,
 		m.EmergencyContactPhone,
+		m.OrganizationID,
 		m.IsActive,
 		m.CreatedAt,
 		m.UpdatedAt,
@@ -90,9 +93,9 @@ func (r *customerRepository) FindByID(ctx context.Context, id customer.CustomerI
 	return toDomain(customerModel), nil
 }
 
-func (r *customerRepository) ListByGroupID(ctx context.Context, groupID customer.GroupID, includeInactive bool) ([]customer.Customer, error) {
+func (r *customerRepository) ListByTenantID(ctx context.Context, tenantID tenant.TenantID, includeInactive bool) ([]customer.Customer, error) {
 	var customerModels []CustomerModel
-	query := r.db.WithContext(ctx).Where("group_id = ?", groupID)
+	query := r.db.WithContext(ctx).Where("tenant_id = ?", tenantID)
 	if !includeInactive {
 		query = query.Where("is_active = ?", true)
 	}
@@ -115,7 +118,7 @@ func (r *customerRepository) Update(ctx context.Context, c customer.Customer) er
 		result := tx.Model(&CustomerModel{}).
 			Where("id = ?", customerModel.ID).
 			Select(
-				"group_id",
+				"tenant_id",
 				"name",
 				"name_kana",
 				"gender",
@@ -130,6 +133,7 @@ func (r *customerRepository) Update(ctx context.Context, c customer.Customer) er
 				"emergency_contact_name",
 				"emergency_contact_relationship",
 				"emergency_contact_phone",
+				"organization_id",
 				"created_at",
 				"updated_at",
 			).

@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/qkitzero/fitness-service/internal/domain/organization"
+	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 type organizationRepository struct {
@@ -20,7 +21,7 @@ func NewOrganizationRepository(db *gorm.DB) organization.OrganizationRepository 
 func toModel(o organization.Organization) OrganizationModel {
 	return OrganizationModel{
 		ID:        o.ID(),
-		GroupID:   o.GroupID(),
+		TenantID:  o.TenantID(),
 		Name:      o.Name(),
 		CreatedAt: o.CreatedAt(),
 		UpdatedAt: o.UpdatedAt(),
@@ -30,7 +31,7 @@ func toModel(o organization.Organization) OrganizationModel {
 func toDomain(m OrganizationModel) organization.Organization {
 	return organization.NewOrganization(
 		m.ID,
-		m.GroupID,
+		m.TenantID,
 		m.Name,
 		m.CreatedAt,
 		m.UpdatedAt,
@@ -62,9 +63,9 @@ func (r *organizationRepository) FindByID(ctx context.Context, id organization.O
 	return toDomain(organizationModel), nil
 }
 
-func (r *organizationRepository) ListByGroupID(ctx context.Context, groupID organization.GroupID) ([]organization.Organization, error) {
+func (r *organizationRepository) ListByTenantID(ctx context.Context, tenantID tenant.TenantID) ([]organization.Organization, error) {
 	var organizationModels []OrganizationModel
-	if err := r.db.WithContext(ctx).Where("group_id = ?", groupID).Order("created_at, id").Find(&organizationModels).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("tenant_id = ?", tenantID).Order("created_at, id").Find(&organizationModels).Error; err != nil {
 		return nil, err
 	}
 
@@ -82,7 +83,7 @@ func (r *organizationRepository) Update(ctx context.Context, o organization.Orga
 
 		result := tx.Model(&OrganizationModel{}).
 			Where("id = ?", organizationModel.ID).
-			Select("group_id", "name", "created_at", "updated_at").
+			Select("tenant_id", "name", "created_at", "updated_at").
 			Updates(organizationModel)
 		if result.Error != nil {
 			return result.Error
