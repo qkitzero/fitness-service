@@ -85,18 +85,18 @@ func (mr *MockCustomerRepositoryMockRecorder) FindByID(ctx, customerID any) *gom
 }
 
 // ListByGroupID mocks base method.
-func (m *MockCustomerRepository) ListByGroupID(ctx context.Context, groupID customer.GroupID) ([]customer.Customer, error) {
+func (m *MockCustomerRepository) ListByGroupID(ctx context.Context, groupID customer.GroupID, includeInactive bool) ([]customer.Customer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByGroupID", ctx, groupID)
+	ret := m.ctrl.Call(m, "ListByGroupID", ctx, groupID, includeInactive)
 	ret0, _ := ret[0].([]customer.Customer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListByGroupID indicates an expected call of ListByGroupID.
-func (mr *MockCustomerRepositoryMockRecorder) ListByGroupID(ctx, groupID any) *gomock.Call {
+func (mr *MockCustomerRepositoryMockRecorder) ListByGroupID(ctx, groupID, includeInactive any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByGroupID", reflect.TypeOf((*MockCustomerRepository)(nil).ListByGroupID), ctx, groupID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByGroupID", reflect.TypeOf((*MockCustomerRepository)(nil).ListByGroupID), ctx, groupID, includeInactive)
 }
 
 // Update mocks base method.

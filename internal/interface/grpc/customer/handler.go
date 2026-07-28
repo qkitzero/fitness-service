@@ -70,6 +70,7 @@ func toProtoCustomer(c domaincustomer.Customer) *customerv1.Customer {
 		NameKana:   c.NameKana().String(),
 		Gender:     toProtoGender(c.Gender()),
 		BirthDate:  toProtoBirthDate(c.BirthDate()),
+		IsActive:   c.IsActive(),
 	}
 	if v := c.Phone(); v != nil {
 		s := v.String()
@@ -255,7 +256,7 @@ func (h *CustomerHandler) ListCustomers(ctx context.Context, req *customerv1.Lis
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	customers, err := h.customerUsecase.ListCustomers(ctx, groupID)
+	customers, err := h.customerUsecase.ListCustomers(ctx, groupID, req.GetIncludeInactive())
 	if err != nil {
 		return nil, mapCustomerError(err, "ListCustomers")
 	}

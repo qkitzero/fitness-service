@@ -13,7 +13,7 @@ import (
 type CustomerUsecase interface {
 	CreateCustomer(ctx context.Context, groupID customer.GroupID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone) (customer.Customer, error)
 	GetCustomer(ctx context.Context, customerID customer.CustomerID) (customer.Customer, error)
-	ListCustomers(ctx context.Context, groupID customer.GroupID) ([]customer.Customer, error)
+	ListCustomers(ctx context.Context, groupID customer.GroupID, includeInactive bool) ([]customer.Customer, error)
 	UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone) (customer.Customer, error)
 	DeleteCustomer(ctx context.Context, customerID customer.CustomerID) error
 }
@@ -74,7 +74,7 @@ func (u *customerUsecase) CreateCustomer(ctx context.Context, groupID customer.G
 
 	now := time.Now().UTC()
 
-	newCustomer := customer.NewCustomer(customer.NewCustomerID(), groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, now, now)
+	newCustomer := customer.NewCustomer(customer.NewCustomerID(), groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, true, now, now)
 
 	if err := u.customerRepo.Create(ctx, newCustomer); err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (u *customerUsecase) GetCustomer(ctx context.Context, customerID customer.C
 	return u.findOwnedCustomer(ctx, customerID)
 }
 
-func (u *customerUsecase) ListCustomers(ctx context.Context, groupID customer.GroupID) ([]customer.Customer, error) {
+func (u *customerUsecase) ListCustomers(ctx context.Context, groupID customer.GroupID, includeInactive bool) ([]customer.Customer, error) {
 	if _, err := u.authService.VerifyToken(ctx); err != nil {
 		return nil, err
 	}
@@ -96,7 +96,7 @@ func (u *customerUsecase) ListCustomers(ctx context.Context, groupID customer.Gr
 		return nil, err
 	}
 
-	customers, err := u.customerRepo.ListByGroupID(ctx, groupID)
+	customers, err := u.customerRepo.ListByGroupID(ctx, groupID, includeInactive)
 	if err != nil {
 		return nil, err
 	}

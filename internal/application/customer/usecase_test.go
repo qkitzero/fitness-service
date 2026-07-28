@@ -83,6 +83,9 @@ func TestCreateCustomer(t *testing.T) {
 				if !createdCustomer.CreatedAt().Equal(createdCustomer.UpdatedAt()) {
 					t.Errorf("CreatedAt() = %v, UpdatedAt() = %v, want equal", createdCustomer.CreatedAt(), createdCustomer.UpdatedAt())
 				}
+				if !createdCustomer.IsActive() {
+					t.Errorf("IsActive() = %v, want %v", createdCustomer.IsActive(), true)
+				}
 			}
 		})
 	}
@@ -160,6 +163,7 @@ func TestListCustomers(t *testing.T) {
 		success           bool
 		wantErr           error
 		callListByGroupID bool
+		includeInactive   bool
 		ctx               context.Context
 		userID            string
 		verifyTokenErr    error
@@ -167,11 +171,12 @@ func TestListCustomers(t *testing.T) {
 		listMyGroupsErr   error
 		listByGroupIDErr  error
 	}{
-		{"success list customers", true, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{groupID.String()}, nil, nil},
-		{"failure verify token error", false, nil, false, context.Background(), "", errors.New("verify token error"), []string{groupID.String()}, nil, nil},
-		{"failure not group member", false, user.ErrNotGroupMember, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
-		{"failure list my groups error", false, nil, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, errors.New("list my groups error"), nil},
-		{"failure list by group id error", false, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{groupID.String()}, nil, errors.New("list by group id error")},
+		{"success list customers", true, nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{groupID.String()}, nil, nil},
+		{"success list customers including inactive", true, nil, true, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{groupID.String()}, nil, nil},
+		{"failure verify token error", false, nil, false, false, context.Background(), "", errors.New("verify token error"), []string{groupID.String()}, nil, nil},
+		{"failure not group member", false, user.ErrNotGroupMember, false, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
+		{"failure list my groups error", false, nil, false, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, errors.New("list my groups error"), nil},
+		{"failure list by group id error", false, nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{groupID.String()}, nil, errors.New("list by group id error")},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -188,12 +193,12 @@ func TestListCustomers(t *testing.T) {
 			mockAuthService.EXPECT().VerifyToken(tt.ctx).Return(tt.userID, tt.verifyTokenErr).AnyTimes()
 			mockUserService.EXPECT().ListMyGroups(tt.ctx).Return(tt.myGroupIDs, tt.listMyGroupsErr).AnyTimes()
 			if tt.callListByGroupID {
-				mockCustomerRepository.EXPECT().ListByGroupID(tt.ctx, groupID).Return([]customer.Customer{mockCustomer}, tt.listByGroupIDErr).Times(1)
+				mockCustomerRepository.EXPECT().ListByGroupID(tt.ctx, groupID, tt.includeInactive).Return([]customer.Customer{mockCustomer}, tt.listByGroupIDErr).Times(1)
 			}
 
 			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository)
 
-			customers, err := u.ListCustomers(tt.ctx, groupID)
+			customers, err := u.ListCustomers(tt.ctx, groupID, tt.includeInactive)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}

@@ -24,7 +24,7 @@ const (
 	sampleGroupID    = "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"
 )
 
-func customerSample(ctrl *gomock.Controller) *mockscustomer.MockCustomer {
+func customerSample(ctrl *gomock.Controller, active bool) *mockscustomer.MockCustomer {
 	m := mockscustomer.NewMockCustomer(ctrl)
 	id, _ := customer.NewCustomerIDFromString(sampleCustomerID)
 	groupID, _ := customer.NewGroupID(sampleGroupID)
@@ -57,6 +57,7 @@ func customerSample(ctrl *gomock.Controller) *mockscustomer.MockCustomer {
 	m.EXPECT().EmergencyContactName().Return(emergencyContactName).AnyTimes()
 	m.EXPECT().EmergencyContactRelationship().Return(emergencyContactRelationship).AnyTimes()
 	m.EXPECT().EmergencyContactPhone().Return(emergencyContactPhone).AnyTimes()
+	m.EXPECT().IsActive().Return(active).AnyTimes()
 	return m
 }
 
@@ -122,7 +123,7 @@ func TestCreateCustomer(t *testing.T) {
 			mockUsecase := mocksappcustomer.NewMockCustomerUsecase(ctrl)
 			if tt.callUsecase {
 				groupID, _ := customer.NewGroupID(gid)
-				mockUsecase.EXPECT().CreateCustomer(gomock.Any(), groupID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(customerSample(ctrl), tt.createErr).Times(1)
+				mockUsecase.EXPECT().CreateCustomer(gomock.Any(), groupID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(customerSample(ctrl, true), tt.createErr).Times(1)
 			}
 
 			handler := NewCustomerHandler(mockUsecase)
@@ -167,7 +168,7 @@ func TestGetCustomer(t *testing.T) {
 			mockUsecase := mocksappcustomer.NewMockCustomerUsecase(ctrl)
 			if tt.callUsecase {
 				customerID, _ := customer.NewCustomerIDFromString(sampleCustomerID)
-				mockUsecase.EXPECT().GetCustomer(gomock.Any(), customerID).Return(customerSample(ctrl), tt.getCustomerErr).Times(1)
+				mockUsecase.EXPECT().GetCustomer(gomock.Any(), customerID).Return(customerSample(ctrl, true), tt.getCustomerErr).Times(1)
 			}
 
 			handler := NewCustomerHandler(mockUsecase)
@@ -196,16 +197,18 @@ func TestListCustomers(t *testing.T) {
 	tests := []struct {
 		name             string
 		groupID          string
+		includeInactive  bool
 		callUsecase      bool
 		listCustomersErr error
 		wantCode         codes.Code
 	}{
-		{"success list customers", sampleGroupID, true, nil, codes.OK},
-		{"failure invalid group id", "", false, nil, codes.InvalidArgument},
-		{"failure not group member", sampleGroupID, true, user.ErrNotGroupMember, codes.PermissionDenied},
-		{"failure usecase error", sampleGroupID, true, fmt.Errorf("list customers error"), codes.Internal},
-		{"failure unauthenticated is preserved", sampleGroupID, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
-		{"failure downstream code is not forwarded", sampleGroupID, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
+		{"success list customers", sampleGroupID, false, true, nil, codes.OK},
+		{"success list customers including inactive", sampleGroupID, true, true, nil, codes.OK},
+		{"failure invalid group id", "", false, false, nil, codes.InvalidArgument},
+		{"failure not group member", sampleGroupID, false, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure usecase error", sampleGroupID, false, true, fmt.Errorf("list customers error"), codes.Internal},
+		{"failure unauthenticated is preserved", sampleGroupID, false, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
+		{"failure downstream code is not forwarded", sampleGroupID, false, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -219,19 +222,20 @@ func TestListCustomers(t *testing.T) {
 			mockUsecase := mocksappcustomer.NewMockCustomerUsecase(ctrl)
 			if tt.callUsecase {
 				groupID, _ := customer.NewGroupID(sampleGroupID)
-				customers := []customer.Customer{customerSample(ctrl), customerSample(ctrl)}
-				mockUsecase.EXPECT().ListCustomers(gomock.Any(), groupID).Return(customers, tt.listCustomersErr).Times(1)
+				customers := []customer.Customer{customerSample(ctrl, true), customerSample(ctrl, false)}
+				mockUsecase.EXPECT().ListCustomers(gomock.Any(), groupID, tt.includeInactive).Return(customers, tt.listCustomersErr).Times(1)
 			}
 
 			handler := NewCustomerHandler(mockUsecase)
 
-			res, err := handler.ListCustomers(ctx, &customerv1.ListCustomersRequest{GroupId: tt.groupID})
+			res, err := handler.ListCustomers(ctx, &customerv1.ListCustomersRequest{GroupId: tt.groupID, IncludeInactive: tt.includeInactive})
 			if got := status.Code(err); got != tt.wantCode {
 				t.Errorf("expected code %v, got %v (err=%v)", tt.wantCode, got, err)
 			}
 			if tt.wantCode == codes.OK {
-				if len(res.GetCustomers()) != 2 {
-					t.Errorf("len(customers) = %v, want %v", len(res.GetCustomers()), 2)
+				wantActive := []bool{true, false}
+				if len(res.GetCustomers()) != len(wantActive) {
+					t.Fatalf("len(customers) = %v, want %v", len(res.GetCustomers()), len(wantActive))
 				}
 				for i, c := range res.GetCustomers() {
 					if c.GetCustomerId() != sampleCustomerID {
@@ -239,6 +243,9 @@ func TestListCustomers(t *testing.T) {
 					}
 					if c.GetGroupId() != sampleGroupID {
 						t.Errorf("customers[%d].GroupId = %v, want %v", i, c.GetGroupId(), sampleGroupID)
+					}
+					if c.GetIsActive() != wantActive[i] {
+						t.Errorf("customers[%d].IsActive = %v, want %v", i, c.GetIsActive(), wantActive[i])
 					}
 				}
 			}
@@ -287,7 +294,7 @@ func TestUpdateCustomer(t *testing.T) {
 			mockUsecase := mocksappcustomer.NewMockCustomerUsecase(ctrl)
 			if tt.callUsecase {
 				customerID, _ := customer.NewCustomerIDFromString(cid)
-				mockUsecase.EXPECT().UpdateCustomer(gomock.Any(), customerID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(customerSample(ctrl), tt.updateErr).Times(1)
+				mockUsecase.EXPECT().UpdateCustomer(gomock.Any(), customerID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(customerSample(ctrl, true), tt.updateErr).Times(1)
 			}
 
 			handler := NewCustomerHandler(mockUsecase)
@@ -515,7 +522,7 @@ func TestToProtoCustomer(t *testing.T) {
 	emergencyContactPhone, _ := customer.NewPhone("090-1234-5678")
 	now := time.Now().UTC()
 
-	full := customer.NewCustomer(id, groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, now, now)
+	full := customer.NewCustomer(id, groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, true, now, now)
 	got := toProtoCustomer(full)
 	if got.GetCustomerId() != id.String() {
 		t.Errorf("CustomerId = %v, want %v", got.GetCustomerId(), id.String())
@@ -565,10 +572,16 @@ func TestToProtoCustomer(t *testing.T) {
 	if got.GetEmergencyContactPhone() != "09012345678" {
 		t.Errorf("EmergencyContactPhone = %v, want 09012345678", got.GetEmergencyContactPhone())
 	}
+	if !got.GetIsActive() {
+		t.Errorf("IsActive = %v, want %v", got.GetIsActive(), true)
+	}
 
-	empty := customer.NewCustomer(id, groupID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, now, now)
+	empty := customer.NewCustomer(id, groupID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, now, now)
 	gotEmpty := toProtoCustomer(empty)
 	if gotEmpty.Phone != nil || gotEmpty.Email != nil || gotEmpty.PostalCode != nil || gotEmpty.Prefecture != nil || gotEmpty.City != nil || gotEmpty.Street != nil || gotEmpty.Building != nil || gotEmpty.EmergencyContactName != nil || gotEmpty.EmergencyContactRelationship != nil || gotEmpty.EmergencyContactPhone != nil {
 		t.Errorf("expected nil optional proto fields for empty customer")
+	}
+	if gotEmpty.GetIsActive() {
+		t.Errorf("IsActive = %v, want %v", gotEmpty.GetIsActive(), false)
 	}
 }

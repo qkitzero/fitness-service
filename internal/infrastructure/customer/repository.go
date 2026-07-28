@@ -35,6 +35,7 @@ func toModel(c customer.Customer) CustomerModel {
 		EmergencyContactName:         c.EmergencyContactName(),
 		EmergencyContactRelationship: c.EmergencyContactRelationship(),
 		EmergencyContactPhone:        c.EmergencyContactPhone(),
+		IsActive:                     c.IsActive(),
 		CreatedAt:                    c.CreatedAt(),
 		UpdatedAt:                    c.UpdatedAt(),
 	}
@@ -58,6 +59,7 @@ func toDomain(m CustomerModel) customer.Customer {
 		m.EmergencyContactName,
 		m.EmergencyContactRelationship,
 		m.EmergencyContactPhone,
+		m.IsActive,
 		m.CreatedAt,
 		m.UpdatedAt,
 	)
@@ -88,9 +90,13 @@ func (r *customerRepository) FindByID(ctx context.Context, id customer.CustomerI
 	return toDomain(customerModel), nil
 }
 
-func (r *customerRepository) ListByGroupID(ctx context.Context, groupID customer.GroupID) ([]customer.Customer, error) {
+func (r *customerRepository) ListByGroupID(ctx context.Context, groupID customer.GroupID, includeInactive bool) ([]customer.Customer, error) {
 	var customerModels []CustomerModel
-	if err := r.db.WithContext(ctx).Where("group_id = ?", groupID).Order("created_at, id").Find(&customerModels).Error; err != nil {
+	query := r.db.WithContext(ctx).Where("group_id = ?", groupID)
+	if !includeInactive {
+		query = query.Where("is_active = ?", true)
+	}
+	if err := query.Order("created_at, id").Find(&customerModels).Error; err != nil {
 		return nil, err
 	}
 

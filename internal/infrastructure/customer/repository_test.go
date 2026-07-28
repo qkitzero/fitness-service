@@ -36,8 +36,8 @@ func TestCreate(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
 				mock.ExpectBegin()
 
-				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "customers" ("id","group_id","name","name_kana","gender","birth_date","phone","email","postal_code","prefecture","city","street","building","emergency_contact_name","emergency_contact_relationship","emergency_contact_phone","created_at","updated_at") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`)).
-					WithArgs(customer.ID(), customer.GroupID(), customer.Name(), customer.NameKana(), customer.Gender(), testBirthDate, "0312345678", "test@example.com", "1234567", "東京都", "千代田区", "1-1-1", "テストビル", "緊急 太郎", "父", "09012345678", testCreatedAt, testUpdatedAt).
+				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "customers" ("id","group_id","name","name_kana","gender","birth_date","phone","email","postal_code","prefecture","city","street","building","emergency_contact_name","emergency_contact_relationship","emergency_contact_phone","is_active","created_at","updated_at") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`)).
+					WithArgs(customer.ID(), customer.GroupID(), customer.Name(), customer.NameKana(), customer.Gender(), testBirthDate, "0312345678", "test@example.com", "1234567", "東京都", "千代田区", "1-1-1", "テストビル", "緊急 太郎", "父", "09012345678", true, testCreatedAt, testUpdatedAt).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 
 				mock.ExpectCommit()
@@ -49,8 +49,8 @@ func TestCreate(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
 				mock.ExpectBegin()
 
-				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "customers" ("id","group_id","name","name_kana","gender","birth_date","phone","email","postal_code","prefecture","city","street","building","emergency_contact_name","emergency_contact_relationship","emergency_contact_phone","created_at","updated_at") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`)).
-					WithArgs(customer.ID(), customer.GroupID(), customer.Name(), customer.NameKana(), customer.Gender(), testBirthDate, "0312345678", "test@example.com", "1234567", "東京都", "千代田区", "1-1-1", "テストビル", "緊急 太郎", "父", "09012345678", testCreatedAt, testUpdatedAt).
+				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "customers" ("id","group_id","name","name_kana","gender","birth_date","phone","email","postal_code","prefecture","city","street","building","emergency_contact_name","emergency_contact_relationship","emergency_contact_phone","is_active","created_at","updated_at") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`)).
+					WithArgs(customer.ID(), customer.GroupID(), customer.Name(), customer.NameKana(), customer.Gender(), testBirthDate, "0312345678", "test@example.com", "1234567", "東京都", "千代田区", "1-1-1", "テストビル", "緊急 太郎", "父", "09012345678", true, testCreatedAt, testUpdatedAt).
 					WillReturnError(errors.New("create customer error"))
 
 				mock.ExpectRollback()
@@ -93,6 +93,7 @@ func TestCreate(t *testing.T) {
 			mockCustomer.EXPECT().NameKana().Return(customer.NameKana("テストカナ")).AnyTimes()
 			mockCustomer.EXPECT().Gender().Return(customer.GenderMale).AnyTimes()
 			mockCustomer.EXPECT().BirthDate().Return(customer.BirthDate{Time: testBirthDate}).AnyTimes()
+			mockCustomer.EXPECT().IsActive().Return(true).AnyTimes()
 			mockCustomer.EXPECT().Phone().Return(phone).AnyTimes()
 			mockCustomer.EXPECT().Email().Return(email).AnyTimes()
 			mockCustomer.EXPECT().PostalCode().Return(postalCode).AnyTimes()
@@ -148,6 +149,7 @@ func TestCreateNilOptionals(t *testing.T) {
 	mockCustomer.EXPECT().NameKana().Return(customer.NameKana("テストカナ")).AnyTimes()
 	mockCustomer.EXPECT().Gender().Return(customer.GenderMale).AnyTimes()
 	mockCustomer.EXPECT().BirthDate().Return(customer.BirthDate{Time: testBirthDate}).AnyTimes()
+	mockCustomer.EXPECT().IsActive().Return(true).AnyTimes()
 	mockCustomer.EXPECT().Phone().Return(nil).AnyTimes()
 	mockCustomer.EXPECT().Email().Return(nil).AnyTimes()
 	mockCustomer.EXPECT().PostalCode().Return(nil).AnyTimes()
@@ -162,8 +164,8 @@ func TestCreateNilOptionals(t *testing.T) {
 	mockCustomer.EXPECT().UpdatedAt().Return(testUpdatedAt).AnyTimes()
 
 	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "customers" ("id","group_id","name","name_kana","gender","birth_date","phone","email","postal_code","prefecture","city","street","building","emergency_contact_name","emergency_contact_relationship","emergency_contact_phone","created_at","updated_at") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`)).
-		WithArgs(mockCustomer.ID(), mockCustomer.GroupID(), mockCustomer.Name(), mockCustomer.NameKana(), mockCustomer.Gender(), testBirthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, testCreatedAt, testUpdatedAt).
+	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "customers" ("id","group_id","name","name_kana","gender","birth_date","phone","email","postal_code","prefecture","city","street","building","emergency_contact_name","emergency_contact_relationship","emergency_contact_phone","is_active","created_at","updated_at") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`)).
+		WithArgs(mockCustomer.ID(), mockCustomer.GroupID(), mockCustomer.Name(), mockCustomer.NameKana(), mockCustomer.Gender(), testBirthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, testCreatedAt, testUpdatedAt).
 		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
@@ -180,7 +182,7 @@ func TestCreateNilOptionals(t *testing.T) {
 
 func TestFindByIDNilOptionals(t *testing.T) {
 	t.Parallel()
-	columns := []string{"id", "group_id", "name", "name_kana", "gender", "birth_date", "phone", "email", "postal_code", "prefecture", "city", "street", "building", "emergency_contact_name", "emergency_contact_relationship", "emergency_contact_phone", "created_at", "updated_at"}
+	columns := []string{"id", "group_id", "name", "name_kana", "gender", "birth_date", "phone", "email", "postal_code", "prefecture", "city", "street", "building", "emergency_contact_name", "emergency_contact_relationship", "emergency_contact_phone", "is_active", "created_at", "updated_at"}
 	customerID := customer.CustomerID{UUID: uuid.New()}
 
 	sqlDB, mock, err := sqlmock.New()
@@ -194,7 +196,7 @@ func TestFindByIDNilOptionals(t *testing.T) {
 	}
 
 	customerRows := sqlmock.NewRows(columns).
-		AddRow(customerID, "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b", "test customer", "テストカナ", "male", testBirthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, testCreatedAt, testUpdatedAt)
+		AddRow(customerID, "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b", "test customer", "テストカナ", "male", testBirthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, testCreatedAt, testUpdatedAt)
 	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE id = $1 ORDER BY "customers"."id" LIMIT $2`)).
 		WithArgs(customerID, 1).
 		WillReturnRows(customerRows)
@@ -216,7 +218,7 @@ func TestFindByIDNilOptionals(t *testing.T) {
 
 func TestFindByID(t *testing.T) {
 	t.Parallel()
-	columns := []string{"id", "group_id", "name", "name_kana", "gender", "birth_date", "phone", "email", "postal_code", "prefecture", "city", "street", "building", "emergency_contact_name", "emergency_contact_relationship", "emergency_contact_phone", "created_at", "updated_at"}
+	columns := []string{"id", "group_id", "name", "name_kana", "gender", "birth_date", "phone", "email", "postal_code", "prefecture", "city", "street", "building", "emergency_contact_name", "emergency_contact_relationship", "emergency_contact_phone", "is_active", "created_at", "updated_at"}
 	tests := []struct {
 		name       string
 		success    bool
@@ -231,7 +233,7 @@ func TestFindByID(t *testing.T) {
 			customerID: customer.CustomerID{UUID: uuid.New()},
 			setup: func(mock sqlmock.Sqlmock, customerID customer.CustomerID) {
 				customerRows := sqlmock.NewRows(columns).
-					AddRow(customerID, "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b", "test customer", "テストカナ", "male", testBirthDate, "0312345678", "test@example.com", "1234567", "東京都", "千代田区", "1-1-1", "テストビル", "緊急 太郎", "父", "09012345678", testCreatedAt, testUpdatedAt)
+					AddRow(customerID, "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b", "test customer", "テストカナ", "male", testBirthDate, "0312345678", "test@example.com", "1234567", "東京都", "千代田区", "1-1-1", "テストビル", "緊急 太郎", "父", "09012345678", false, testCreatedAt, testUpdatedAt)
 				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE id = $1 ORDER BY "customers"."id" LIMIT $2`)).
 					WithArgs(customerID, 1).
 					WillReturnRows(customerRows)
@@ -296,6 +298,9 @@ func TestFindByID(t *testing.T) {
 				if c.Name().String() != "test customer" {
 					t.Errorf("Name() = %v, want test customer", c.Name().String())
 				}
+				if c.IsActive() {
+					t.Errorf("IsActive() = %v, want %v", c.IsActive(), false)
+				}
 				if !c.CreatedAt().Equal(testCreatedAt) || !c.UpdatedAt().Equal(testUpdatedAt) {
 					t.Errorf("timestamps = %v/%v, want %v/%v", c.CreatedAt(), c.UpdatedAt(), testCreatedAt, testUpdatedAt)
 				}
@@ -310,48 +315,72 @@ func TestFindByID(t *testing.T) {
 
 func TestListByGroupID(t *testing.T) {
 	t.Parallel()
-	columns := []string{"id", "group_id", "name", "name_kana", "gender", "birth_date", "phone", "email", "postal_code", "prefecture", "city", "street", "building", "emergency_contact_name", "emergency_contact_relationship", "emergency_contact_phone", "created_at", "updated_at"}
+	columns := []string{"id", "group_id", "name", "name_kana", "gender", "birth_date", "phone", "email", "postal_code", "prefecture", "city", "street", "building", "emergency_contact_name", "emergency_contact_relationship", "emergency_contact_phone", "is_active", "created_at", "updated_at"}
 	tests := []struct {
-		name      string
-		success   bool
-		wantNames []string
-		groupID   customer.GroupID
-		setup     func(mock sqlmock.Sqlmock, groupID customer.GroupID)
+		name            string
+		success         bool
+		wantNames       []string
+		wantActive      []bool
+		includeInactive bool
+		groupID         customer.GroupID
+		setup           func(mock sqlmock.Sqlmock, groupID customer.GroupID)
 	}{
 		{
-			name:      "success list customers by group id",
-			success:   true,
-			wantNames: []string{"test customer 1", "test customer 2"},
-			groupID:   customer.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
+			name:            "success list active customers by group id",
+			success:         true,
+			wantNames:       []string{"test customer 1", "test customer 2"},
+			wantActive:      []bool{true, true},
+			includeInactive: false,
+			groupID:         customer.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
 			setup: func(mock sqlmock.Sqlmock, groupID customer.GroupID) {
 				customerRows := sqlmock.NewRows(columns).
-					AddRow(uuid.New().String(), groupID, "test customer 1", "テストカナ", "male", testBirthDate, "0312345678", "test1@example.com", "1234567", "東京都", "千代田区", "1-1-1", "テストビル", "緊急 太郎", "父", "09012345678", testCreatedAt, testUpdatedAt).
-					AddRow(uuid.New().String(), groupID, "test customer 2", "テストカナ", "female", testBirthDate, "0312345679", "test2@example.com", "1234568", "大阪府", "大阪市", "2-2-2", "更新ビル", "緊急 花子", "母", "08012345678", testCreatedAt, testUpdatedAt)
+					AddRow(uuid.New().String(), groupID, "test customer 1", "テストカナ", "male", testBirthDate, "0312345678", "test1@example.com", "1234567", "東京都", "千代田区", "1-1-1", "テストビル", "緊急 太郎", "父", "09012345678", true, testCreatedAt, testUpdatedAt).
+					AddRow(uuid.New().String(), groupID, "test customer 2", "テストカナ", "female", testBirthDate, "0312345679", "test2@example.com", "1234568", "大阪府", "大阪市", "2-2-2", "更新ビル", "緊急 花子", "母", "08012345678", true, testCreatedAt, testUpdatedAt)
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE group_id = $1 AND is_active = $2 ORDER BY created_at, id`)).
+					WithArgs(groupID, true).
+					WillReturnRows(customerRows)
+			},
+		},
+		{
+			name:            "success list customers including inactive",
+			success:         true,
+			wantNames:       []string{"test customer 1", "test customer 2"},
+			wantActive:      []bool{true, false},
+			includeInactive: true,
+			groupID:         customer.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
+			setup: func(mock sqlmock.Sqlmock, groupID customer.GroupID) {
+				customerRows := sqlmock.NewRows(columns).
+					AddRow(uuid.New().String(), groupID, "test customer 1", "テストカナ", "male", testBirthDate, "0312345678", "test1@example.com", "1234567", "東京都", "千代田区", "1-1-1", "テストビル", "緊急 太郎", "父", "09012345678", true, testCreatedAt, testUpdatedAt).
+					AddRow(uuid.New().String(), groupID, "test customer 2", "テストカナ", "female", testBirthDate, "0312345679", "test2@example.com", "1234568", "大阪府", "大阪市", "2-2-2", "更新ビル", "緊急 花子", "母", "08012345678", false, testCreatedAt, testUpdatedAt)
 				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE group_id = $1 ORDER BY created_at, id`)).
 					WithArgs(groupID).
 					WillReturnRows(customerRows)
 			},
 		},
 		{
-			name:      "success list no customers",
-			success:   true,
-			wantNames: []string{},
-			groupID:   customer.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
+			name:            "success list no customers",
+			success:         true,
+			wantNames:       []string{},
+			wantActive:      []bool{},
+			includeInactive: false,
+			groupID:         customer.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
 			setup: func(mock sqlmock.Sqlmock, groupID customer.GroupID) {
 				customerRows := sqlmock.NewRows(columns)
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE group_id = $1 ORDER BY created_at, id`)).
-					WithArgs(groupID).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE group_id = $1 AND is_active = $2 ORDER BY created_at, id`)).
+					WithArgs(groupID, true).
 					WillReturnRows(customerRows)
 			},
 		},
 		{
-			name:      "failure list customers error",
-			success:   false,
-			wantNames: nil,
-			groupID:   customer.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
+			name:            "failure list customers error",
+			success:         false,
+			wantNames:       nil,
+			wantActive:      nil,
+			includeInactive: false,
+			groupID:         customer.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
 			setup: func(mock sqlmock.Sqlmock, groupID customer.GroupID) {
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE group_id = $1 ORDER BY created_at, id`)).
-					WithArgs(groupID).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE group_id = $1 AND is_active = $2 ORDER BY created_at, id`)).
+					WithArgs(groupID, true).
 					WillReturnError(errors.New("list customers error"))
 			},
 		},
@@ -375,7 +404,7 @@ func TestListByGroupID(t *testing.T) {
 
 			repo := NewCustomerRepository(gormDB)
 
-			customers, err := repo.ListByGroupID(context.Background(), tt.groupID)
+			customers, err := repo.ListByGroupID(context.Background(), tt.groupID, tt.includeInactive)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}
@@ -395,6 +424,9 @@ func TestListByGroupID(t *testing.T) {
 					}
 					if customers[i].GroupID() != tt.groupID {
 						t.Errorf("customers[%d].GroupID() = %v, want %v", i, customers[i].GroupID(), tt.groupID)
+					}
+					if customers[i].IsActive() != tt.wantActive[i] {
+						t.Errorf("customers[%d].IsActive() = %v, want %v", i, customers[i].IsActive(), tt.wantActive[i])
 					}
 				}
 			}
@@ -494,6 +526,7 @@ func TestUpdate(t *testing.T) {
 			mockCustomer.EXPECT().NameKana().Return(customer.NameKana("コウシンカナ")).AnyTimes()
 			mockCustomer.EXPECT().Gender().Return(customer.GenderFemale).AnyTimes()
 			mockCustomer.EXPECT().BirthDate().Return(customer.BirthDate{Time: updatedBirthDate}).AnyTimes()
+			mockCustomer.EXPECT().IsActive().Return(false).AnyTimes()
 			mockCustomer.EXPECT().Phone().Return(phone).AnyTimes()
 			mockCustomer.EXPECT().Email().Return(email).AnyTimes()
 			mockCustomer.EXPECT().PostalCode().Return(postalCode).AnyTimes()
@@ -552,6 +585,7 @@ func TestUpdateNilOptionals(t *testing.T) {
 	mockCustomer.EXPECT().NameKana().Return(customer.NameKana("コウシンカナ")).AnyTimes()
 	mockCustomer.EXPECT().Gender().Return(customer.GenderFemale).AnyTimes()
 	mockCustomer.EXPECT().BirthDate().Return(customer.BirthDate{Time: testBirthDate}).AnyTimes()
+	mockCustomer.EXPECT().IsActive().Return(true).AnyTimes()
 	mockCustomer.EXPECT().Phone().Return(nil).AnyTimes()
 	mockCustomer.EXPECT().Email().Return(nil).AnyTimes()
 	mockCustomer.EXPECT().PostalCode().Return(nil).AnyTimes()

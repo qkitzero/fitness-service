@@ -23,6 +23,7 @@ type CustomerModel struct {
 	EmergencyContactName         *customer.EmergencyContactName
 	EmergencyContactRelationship *customer.EmergencyContactRelationship
 	EmergencyContactPhone        *customer.Phone
+	IsActive                     bool
 	CreatedAt                    time.Time `gorm:"autoCreateTime:false"`
 	UpdatedAt                    time.Time `gorm:"autoUpdateTime:false"`
 }

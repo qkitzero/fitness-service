@@ -26,7 +26,7 @@ func TestNewCustomer(t *testing.T) {
 
 	createdAt := time.Now()
 	updatedAt := time.Now()
-	c := NewCustomer(id, groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, createdAt, updatedAt)
+	c := NewCustomer(id, groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, true, createdAt, updatedAt)
 
 	if c.ID() != id {
 		t.Errorf("ID() = %v, want %v", c.ID(), id)
@@ -76,6 +76,9 @@ func TestNewCustomer(t *testing.T) {
 	if c.EmergencyContactPhone() == nil || c.EmergencyContactPhone().String() != "09012345678" {
 		t.Errorf("EmergencyContactPhone() = %v, want 09012345678", c.EmergencyContactPhone())
 	}
+	if !c.IsActive() {
+		t.Errorf("IsActive() = %v, want %v", c.IsActive(), true)
+	}
 	if !c.CreatedAt().Equal(createdAt) {
 		t.Errorf("CreatedAt() = %v, want %v", c.CreatedAt(), createdAt)
 	}
@@ -93,7 +96,7 @@ func TestUpdateCustomer(t *testing.T) {
 	gender, _ := NewGender("male")
 	birthDate, _ := NewBirthDate(2000, 1, 1)
 	past := time.Now().UTC().Add(-time.Hour)
-	c := NewCustomer(id, groupID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, past, past)
+	c := NewCustomer(id, groupID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, past, past)
 
 	if c.Phone() != nil || c.Email() != nil || c.PostalCode() != nil || c.Prefecture() != nil || c.City() != nil || c.Street() != nil || c.Building() != nil || c.EmergencyContactName() != nil || c.EmergencyContactRelationship() != nil || c.EmergencyContactPhone() != nil {
 		t.Errorf("expected nil optional fields before update")
@@ -166,5 +169,8 @@ func TestUpdateCustomer(t *testing.T) {
 	}
 	if c.UpdatedAt().Location() != time.UTC {
 		t.Errorf("UpdatedAt().Location() = %v, want %v", c.UpdatedAt().Location(), time.UTC)
+	}
+	if !c.IsActive() {
+		t.Errorf("IsActive() = %v, want %v", c.IsActive(), true)
 	}
 }

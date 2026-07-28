@@ -86,18 +86,18 @@ func (mr *MockCustomerUsecaseMockRecorder) GetCustomer(ctx, customerID any) *gom
 }
 
 // ListCustomers mocks base method.
-func (m *MockCustomerUsecase) ListCustomers(ctx context.Context, groupID customer.GroupID) ([]customer.Customer, error) {
+func (m *MockCustomerUsecase) ListCustomers(ctx context.Context, groupID customer.GroupID, includeInactive bool) ([]customer.Customer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListCustomers", ctx, groupID)
+	ret := m.ctrl.Call(m, "ListCustomers", ctx, groupID, includeInactive)
 	ret0, _ := ret[0].([]customer.Customer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListCustomers indicates an expected call of ListCustomers.
-func (mr *MockCustomerUsecaseMockRecorder) ListCustomers(ctx, groupID any) *gomock.Call {
+func (mr *MockCustomerUsecaseMockRecorder) ListCustomers(ctx, groupID, includeInactive any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCustomers", reflect.TypeOf((*MockCustomerUsecase)(nil).ListCustomers), ctx, groupID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCustomers", reflect.TypeOf((*MockCustomerUsecase)(nil).ListCustomers), ctx, groupID, includeInactive)
 }
 
 // UpdateCustomer mocks base method.

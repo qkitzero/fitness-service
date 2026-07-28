@@ -21,6 +21,7 @@ type Customer interface {
 	EmergencyContactName() *EmergencyContactName
 	EmergencyContactRelationship() *EmergencyContactRelationship
 	EmergencyContactPhone() *Phone
+	IsActive() bool
 	CreatedAt() time.Time
 	UpdatedAt() time.Time
 	Update(name Name, nameKana NameKana, gender Gender, birthDate BirthDate, phone *Phone, email *Email, postalCode *PostalCode, prefecture *Prefecture, city *City, street *Street, building *Building, emergencyContactName *EmergencyContactName, emergencyContactRelationship *EmergencyContactRelationship, emergencyContactPhone *Phone)
@@ -43,6 +44,7 @@ type customer struct {
 	emergencyContactName         *EmergencyContactName
 	emergencyContactRelationship *EmergencyContactRelationship
 	emergencyContactPhone        *Phone
+	active                       bool
 	createdAt                    time.Time
 	updatedAt                    time.Time
 }
@@ -151,6 +153,10 @@ func (c customer) EmergencyContactPhone() *Phone {
 	return &p
 }
 
+func (c customer) IsActive() bool {
+	return c.active
+}
+
 func (c customer) CreatedAt() time.Time {
 	return c.createdAt
 }
@@ -194,6 +200,7 @@ func NewCustomer(
 	emergencyContactName *EmergencyContactName,
 	emergencyContactRelationship *EmergencyContactRelationship,
 	emergencyContactPhone *Phone,
+	active bool,
 	createdAt time.Time,
 	updatedAt time.Time,
 ) Customer {
@@ -214,6 +221,7 @@ func NewCustomer(
 		emergencyContactName:         emergencyContactName,
 		emergencyContactRelationship: emergencyContactRelationship,
 		emergencyContactPhone:        emergencyContactPhone,
+		active:                       active,
 		createdAt:                    createdAt,
 		updatedAt:                    updatedAt,
 	}
