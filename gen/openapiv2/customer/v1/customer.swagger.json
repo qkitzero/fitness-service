@@ -270,6 +270,9 @@
         },
         "emergencyContactPhone": {
           "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
         }
       }
     },
@@ -370,6 +373,9 @@
         },
         "emergencyContactPhone": {
           "type": "string"
+        },
+        "organizationId": {
+          "type": "string"
         }
       }
     },
@@ -434,6 +440,9 @@
         },
         "isActive": {
           "type": "boolean"
+        },
+        "organizationId": {
+          "type": "string"
         }
       }
     },
