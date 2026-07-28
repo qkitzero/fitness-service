@@ -15,6 +15,7 @@ type CustomerUsecase interface {
 	GetCustomer(ctx context.Context, customerID customer.CustomerID) (customer.Customer, error)
 	ListCustomers(ctx context.Context, groupID customer.GroupID, includeInactive bool) ([]customer.Customer, error)
 	UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone) (customer.Customer, error)
+	SetCustomerActive(ctx context.Context, customerID customer.CustomerID, active bool) (customer.Customer, error)
 	DeleteCustomer(ctx context.Context, customerID customer.CustomerID) error
 }
 
@@ -113,6 +114,21 @@ func (u *customerUsecase) UpdateCustomer(ctx context.Context, customerID custome
 	foundCustomer.Update(name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone)
 
 	if err := u.customerRepo.Update(ctx, foundCustomer); err != nil {
+		return nil, err
+	}
+
+	return foundCustomer, nil
+}
+
+func (u *customerUsecase) SetCustomerActive(ctx context.Context, customerID customer.CustomerID, active bool) (customer.Customer, error) {
+	foundCustomer, err := u.findOwnedCustomer(ctx, customerID)
+	if err != nil {
+		return nil, err
+	}
+
+	foundCustomer.SetActive(active)
+
+	if err := u.customerRepo.UpdateActive(ctx, foundCustomer); err != nil {
 		return nil, err
 	}
 

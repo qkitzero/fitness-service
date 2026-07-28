@@ -315,6 +315,58 @@ func TestUpdateCustomer(t *testing.T) {
 	}
 }
 
+func TestSetCustomerActive(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name                 string
+		customerID           string
+		active               bool
+		callUsecase          bool
+		setCustomerActiveErr error
+		wantCode             codes.Code
+	}{
+		{"success deactivate customer", sampleCustomerID, false, true, nil, codes.OK},
+		{"success activate customer", sampleCustomerID, true, true, nil, codes.OK},
+		{"failure invalid customer id", "", false, false, nil, codes.InvalidArgument},
+		{"failure usecase error", sampleCustomerID, false, true, fmt.Errorf("set customer active error"), codes.Internal},
+		{"failure not group member", sampleCustomerID, false, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure customer not found", sampleCustomerID, false, true, customer.ErrCustomerNotFound, codes.NotFound},
+		{"failure unauthenticated is preserved", sampleCustomerID, false, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
+		{"failure downstream code is not forwarded", sampleCustomerID, false, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			ctx := context.Background()
+			mockUsecase := mocksappcustomer.NewMockCustomerUsecase(ctrl)
+			if tt.callUsecase {
+				customerID, _ := customer.NewCustomerIDFromString(sampleCustomerID)
+				mockUsecase.EXPECT().SetCustomerActive(gomock.Any(), customerID, tt.active).Return(customerSample(ctrl, tt.active), tt.setCustomerActiveErr).Times(1)
+			}
+
+			handler := NewCustomerHandler(mockUsecase)
+
+			res, err := handler.SetCustomerActive(ctx, &customerv1.SetCustomerActiveRequest{CustomerId: tt.customerID, IsActive: tt.active})
+			if got := status.Code(err); got != tt.wantCode {
+				t.Errorf("expected code %v, got %v (err=%v)", tt.wantCode, got, err)
+			}
+			if tt.wantCode == codes.OK {
+				if res.GetCustomer().GetCustomerId() != sampleCustomerID {
+					t.Errorf("CustomerId = %v, want %v", res.GetCustomer().GetCustomerId(), sampleCustomerID)
+				}
+				if res.GetCustomer().GetIsActive() != tt.active {
+					t.Errorf("IsActive = %v, want %v", res.GetCustomer().GetIsActive(), tt.active)
+				}
+			}
+		})
+	}
+}
+
 func TestDeleteCustomer(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

@@ -279,6 +279,18 @@ func (mr *MockCustomerMockRecorder) Prefecture() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Prefecture", reflect.TypeOf((*MockCustomer)(nil).Prefecture))
 }
 
+// SetActive mocks base method.
+func (m *MockCustomer) SetActive(active bool) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetActive", active)
+}
+
+// SetActive indicates an expected call of SetActive.
+func (mr *MockCustomerMockRecorder) SetActive(active any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetActive", reflect.TypeOf((*MockCustomer)(nil).SetActive), active)
+}
+
 // Street mocks base method.
 func (m *MockCustomer) Street() *customer.Street {
 	m.ctrl.T.Helper()

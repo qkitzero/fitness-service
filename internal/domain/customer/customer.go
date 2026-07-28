@@ -25,6 +25,7 @@ type Customer interface {
 	CreatedAt() time.Time
 	UpdatedAt() time.Time
 	Update(name Name, nameKana NameKana, gender Gender, birthDate BirthDate, phone *Phone, email *Email, postalCode *PostalCode, prefecture *Prefecture, city *City, street *Street, building *Building, emergencyContactName *EmergencyContactName, emergencyContactRelationship *EmergencyContactRelationship, emergencyContactPhone *Phone)
+	SetActive(active bool)
 }
 
 type customer struct {
@@ -180,6 +181,14 @@ func (c *customer) Update(name Name, nameKana NameKana, gender Gender, birthDate
 	c.emergencyContactName = emergencyContactName
 	c.emergencyContactRelationship = emergencyContactRelationship
 	c.emergencyContactPhone = emergencyContactPhone
+	c.updatedAt = time.Now().UTC()
+}
+
+func (c *customer) SetActive(active bool) {
+	if c.active == active {
+		return
+	}
+	c.active = active
 	c.updatedAt = time.Now().UTC()
 }
 

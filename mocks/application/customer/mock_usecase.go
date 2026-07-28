@@ -100,6 +100,21 @@ func (mr *MockCustomerUsecaseMockRecorder) ListCustomers(ctx, groupID, includeIn
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCustomers", reflect.TypeOf((*MockCustomerUsecase)(nil).ListCustomers), ctx, groupID, includeInactive)
 }
 
+// SetCustomerActive mocks base method.
+func (m *MockCustomerUsecase) SetCustomerActive(ctx context.Context, customerID customer.CustomerID, active bool) (customer.Customer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetCustomerActive", ctx, customerID, active)
+	ret0, _ := ret[0].(customer.Customer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SetCustomerActive indicates an expected call of SetCustomerActive.
+func (mr *MockCustomerUsecaseMockRecorder) SetCustomerActive(ctx, customerID, active any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCustomerActive", reflect.TypeOf((*MockCustomerUsecase)(nil).SetCustomerActive), ctx, customerID, active)
+}
+
 // UpdateCustomer mocks base method.
 func (m *MockCustomerUsecase) UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone) (customer.Customer, error) {
 	m.ctrl.T.Helper()

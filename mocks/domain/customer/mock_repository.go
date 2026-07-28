@@ -112,3 +112,17 @@ func (mr *MockCustomerRepositoryMockRecorder) Update(ctx, arg1 any) *gomock.Call
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockCustomerRepository)(nil).Update), ctx, arg1)
 }
+
+// UpdateActive mocks base method.
+func (m *MockCustomerRepository) UpdateActive(ctx context.Context, arg1 customer.Customer) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateActive", ctx, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateActive indicates an expected call of UpdateActive.
+func (mr *MockCustomerRepositoryMockRecorder) UpdateActive(ctx, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateActive", reflect.TypeOf((*MockCustomerRepository)(nil).UpdateActive), ctx, arg1)
+}

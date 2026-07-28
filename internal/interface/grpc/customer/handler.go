@@ -291,6 +291,22 @@ func (h *CustomerHandler) UpdateCustomer(ctx context.Context, req *customerv1.Up
 	}, nil
 }
 
+func (h *CustomerHandler) SetCustomerActive(ctx context.Context, req *customerv1.SetCustomerActiveRequest) (*customerv1.SetCustomerActiveResponse, error) {
+	customerID, err := domaincustomer.NewCustomerIDFromString(req.GetCustomerId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	customer, err := h.customerUsecase.SetCustomerActive(ctx, customerID, req.GetIsActive())
+	if err != nil {
+		return nil, mapCustomerError(err, "SetCustomerActive")
+	}
+
+	return &customerv1.SetCustomerActiveResponse{
+		Customer: toProtoCustomer(customer),
+	}, nil
+}
+
 func (h *CustomerHandler) DeleteCustomer(ctx context.Context, req *customerv1.DeleteCustomerRequest) (*customerv1.DeleteCustomerResponse, error) {
 	customerID, err := domaincustomer.NewCustomerIDFromString(req.GetCustomerId())
 	if err != nil {

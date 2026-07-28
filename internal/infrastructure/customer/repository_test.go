@@ -616,6 +616,118 @@ func TestUpdateNilOptionals(t *testing.T) {
 	}
 }
 
+func TestUpdateActive(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		success bool
+		wantErr error
+		setup   func(mock sqlmock.Sqlmock, customer customer.Customer)
+	}{
+		{
+			name:    "success update active",
+			success: true,
+			wantErr: nil,
+			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
+				mock.ExpectBegin()
+
+				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "customers" SET "is_active"=$1,"updated_at"=$2 WHERE id = $3`)).
+					WithArgs(false, testUpdatedAt, customer.ID()).
+					WillReturnResult(sqlmock.NewResult(0, 1))
+
+				mock.ExpectCommit()
+			},
+		},
+		{
+			name:    "failure customer not found",
+			success: false,
+			wantErr: customer.ErrCustomerNotFound,
+			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
+				mock.ExpectBegin()
+
+				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "customers" SET "is_active"=$1,"updated_at"=$2 WHERE id = $3`)).
+					WithArgs(false, testUpdatedAt, customer.ID()).
+					WillReturnResult(sqlmock.NewResult(0, 0))
+
+				mock.ExpectRollback()
+			},
+		},
+		{
+			name:    "failure update active error",
+			success: false,
+			wantErr: nil,
+			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
+				mock.ExpectBegin()
+
+				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "customers" SET "is_active"=$1,"updated_at"=$2 WHERE id = $3`)).
+					WithArgs(false, testUpdatedAt, customer.ID()).
+					WillReturnError(errors.New("update active error"))
+
+				mock.ExpectRollback()
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			sqlDB, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("failed to new sqlmock: %s", err)
+			}
+
+			gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
+			if err != nil {
+				t.Fatalf("failed to open gorm: %s", err)
+			}
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockCustomer := mockscustomer.NewMockCustomer(ctrl)
+			mockCustomer.EXPECT().ID().Return(customer.CustomerID{UUID: uuid.New()}).AnyTimes()
+			mockCustomer.EXPECT().GroupID().Return(customer.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")).AnyTimes()
+			mockCustomer.EXPECT().Name().Return(customer.Name("test customer")).AnyTimes()
+			mockCustomer.EXPECT().NameKana().Return(customer.NameKana("テストカナ")).AnyTimes()
+			mockCustomer.EXPECT().Gender().Return(customer.GenderMale).AnyTimes()
+			mockCustomer.EXPECT().BirthDate().Return(customer.BirthDate{Time: testBirthDate}).AnyTimes()
+			mockCustomer.EXPECT().IsActive().Return(false).AnyTimes()
+			mockCustomer.EXPECT().Phone().Return(nil).AnyTimes()
+			mockCustomer.EXPECT().Email().Return(nil).AnyTimes()
+			mockCustomer.EXPECT().PostalCode().Return(nil).AnyTimes()
+			mockCustomer.EXPECT().Prefecture().Return(nil).AnyTimes()
+			mockCustomer.EXPECT().City().Return(nil).AnyTimes()
+			mockCustomer.EXPECT().Street().Return(nil).AnyTimes()
+			mockCustomer.EXPECT().Building().Return(nil).AnyTimes()
+			mockCustomer.EXPECT().EmergencyContactName().Return(nil).AnyTimes()
+			mockCustomer.EXPECT().EmergencyContactRelationship().Return(nil).AnyTimes()
+			mockCustomer.EXPECT().EmergencyContactPhone().Return(nil).AnyTimes()
+			mockCustomer.EXPECT().CreatedAt().Return(testCreatedAt).AnyTimes()
+			mockCustomer.EXPECT().UpdatedAt().Return(testUpdatedAt).AnyTimes()
+
+			tt.setup(mock, mockCustomer)
+
+			repo := NewCustomerRepository(gormDB)
+
+			err = repo.UpdateActive(context.Background(), mockCustomer)
+			if tt.success && err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+			if !tt.success && err == nil {
+				t.Errorf("expected error, but got nil")
+			}
+			if tt.wantErr != nil && !errors.Is(err, tt.wantErr) {
+				t.Errorf("err = %v, want %v", err, tt.wantErr)
+			}
+
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
 func TestDelete(t *testing.T) {
 	t.Parallel()
 	tests := []struct {

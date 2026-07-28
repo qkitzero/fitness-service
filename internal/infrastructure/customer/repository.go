@@ -145,6 +145,28 @@ func (r *customerRepository) Update(ctx context.Context, c customer.Customer) er
 	})
 }
 
+func (r *customerRepository) UpdateActive(ctx context.Context, c customer.Customer) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		customerModel := toModel(c)
+
+		result := tx.Model(&CustomerModel{}).
+			Where("id = ?", customerModel.ID).
+			Select(
+				"is_active",
+				"updated_at",
+			).
+			Updates(customerModel)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return customer.ErrCustomerNotFound
+		}
+
+		return nil
+	})
+}
+
 func (r *customerRepository) Delete(ctx context.Context, id customer.CustomerID) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		result := tx.Where("id = ?", id).Delete(&CustomerModel{})
