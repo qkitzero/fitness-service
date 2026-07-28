@@ -199,7 +199,7 @@
         },
         "parameters": [
           {
-            "name": "groupId",
+            "name": "tenantId",
             "in": "query",
             "required": false,
             "type": "string"
@@ -329,7 +329,7 @@
         "name": {
           "type": "string"
         },
-        "groupId": {
+        "tenantId": {
           "type": "string"
         },
         "nameKana": {
@@ -390,7 +390,7 @@
         "name": {
           "type": "string"
         },
-        "groupId": {
+        "tenantId": {
           "type": "string"
         },
         "nameKana": {

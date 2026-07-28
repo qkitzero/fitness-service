@@ -21,7 +21,7 @@ import (
 
 func TestCreateOrganization(t *testing.T) {
 	t.Parallel()
-	gid := "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"
+	tid := "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"
 	oid := "3d1e6a5c-7b8f-4c2d-9a0e-1f2b3c4d5e6f"
 	tooLong := strings.Repeat("あ", 256)
 
@@ -32,15 +32,15 @@ func TestCreateOrganization(t *testing.T) {
 		createErr   error
 		wantCode    codes.Code
 	}{
-		{"success create organization", &organizationv1.CreateOrganizationRequest{GroupId: gid, Name: "テスト株式会社"}, true, nil, codes.OK},
-		{"failure invalid group id", &organizationv1.CreateOrganizationRequest{GroupId: "", Name: "テスト株式会社"}, false, nil, codes.InvalidArgument},
-		{"failure invalid name", &organizationv1.CreateOrganizationRequest{GroupId: gid, Name: ""}, false, nil, codes.InvalidArgument},
-		{"failure too long name", &organizationv1.CreateOrganizationRequest{GroupId: gid, Name: tooLong}, false, nil, codes.InvalidArgument},
-		{"failure null character name", &organizationv1.CreateOrganizationRequest{GroupId: gid, Name: "テスト\x00株式会社"}, false, nil, codes.InvalidArgument},
-		{"failure not tenant member", &organizationv1.CreateOrganizationRequest{GroupId: gid, Name: "テスト株式会社"}, true, user.ErrNotGroupMember, codes.PermissionDenied},
-		{"failure usecase error", &organizationv1.CreateOrganizationRequest{GroupId: gid, Name: "テスト株式会社"}, true, fmt.Errorf("create organization error"), codes.Internal},
-		{"failure unauthenticated is preserved", &organizationv1.CreateOrganizationRequest{GroupId: gid, Name: "テスト株式会社"}, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
-		{"failure downstream code is not forwarded", &organizationv1.CreateOrganizationRequest{GroupId: gid, Name: "テスト株式会社"}, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
+		{"success create organization", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: "テスト株式会社"}, true, nil, codes.OK},
+		{"failure invalid group id", &organizationv1.CreateOrganizationRequest{TenantId: "", Name: "テスト株式会社"}, false, nil, codes.InvalidArgument},
+		{"failure invalid name", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: ""}, false, nil, codes.InvalidArgument},
+		{"failure too long name", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: tooLong}, false, nil, codes.InvalidArgument},
+		{"failure null character name", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: "テスト\x00株式会社"}, false, nil, codes.InvalidArgument},
+		{"failure not tenant member", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: "テスト株式会社"}, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure usecase error", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: "テスト株式会社"}, true, fmt.Errorf("create organization error"), codes.Internal},
+		{"failure unauthenticated is preserved", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: "テスト株式会社"}, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
+		{"failure downstream code is not forwarded", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: "テスト株式会社"}, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -54,7 +54,7 @@ func TestCreateOrganization(t *testing.T) {
 			mockUsecase := mocksapporganization.NewMockOrganizationUsecase(ctrl)
 			if tt.callUsecase {
 				organizationID, _ := organization.NewOrganizationIDFromString(oid)
-				tenantID, _ := tenant.NewTenantID(gid)
+				tenantID, _ := tenant.NewTenantID(tid)
 				name, _ := organization.NewName("テスト株式会社")
 				mockOrganization := mocksorganization.NewMockOrganization(ctrl)
 				mockOrganization.EXPECT().ID().Return(organizationID).AnyTimes()
@@ -78,7 +78,7 @@ func TestCreateOrganization(t *testing.T) {
 
 func TestGetOrganization(t *testing.T) {
 	t.Parallel()
-	gid := "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"
+	tid := "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"
 	oid := "3d1e6a5c-7b8f-4c2d-9a0e-1f2b3c4d5e6f"
 
 	tests := []struct {
@@ -108,7 +108,7 @@ func TestGetOrganization(t *testing.T) {
 			mockUsecase := mocksapporganization.NewMockOrganizationUsecase(ctrl)
 			if tt.callUsecase {
 				organizationID, _ := organization.NewOrganizationIDFromString(oid)
-				tenantID, _ := tenant.NewTenantID(gid)
+				tenantID, _ := tenant.NewTenantID(tid)
 				name, _ := organization.NewName("テスト株式会社")
 				mockOrganization := mocksorganization.NewMockOrganization(ctrl)
 				mockOrganization.EXPECT().ID().Return(organizationID).AnyTimes()
@@ -127,8 +127,8 @@ func TestGetOrganization(t *testing.T) {
 				if res.GetOrganization().GetOrganizationId() != oid {
 					t.Errorf("OrganizationId = %v, want %v", res.GetOrganization().GetOrganizationId(), oid)
 				}
-				if res.GetOrganization().GetGroupId() != gid {
-					t.Errorf("GroupId = %v, want %v", res.GetOrganization().GetGroupId(), gid)
+				if res.GetOrganization().GetTenantId() != tid {
+					t.Errorf("TenantId = %v, want %v", res.GetOrganization().GetTenantId(), tid)
 				}
 				if res.GetOrganization().GetName() != "テスト株式会社" {
 					t.Errorf("Name = %v, want テスト株式会社", res.GetOrganization().GetName())
@@ -140,7 +140,7 @@ func TestGetOrganization(t *testing.T) {
 
 func TestListOrganizations(t *testing.T) {
 	t.Parallel()
-	gid := "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"
+	tid := "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"
 	wantNames := []string{"テスト株式会社", "テスト工業株式会社"}
 
 	tests := []struct {
@@ -150,12 +150,12 @@ func TestListOrganizations(t *testing.T) {
 		listOrganizationsErr error
 		wantCode             codes.Code
 	}{
-		{"success list organizations", gid, true, nil, codes.OK},
+		{"success list organizations", tid, true, nil, codes.OK},
 		{"failure invalid group id", "", false, nil, codes.InvalidArgument},
-		{"failure not tenant member", gid, true, user.ErrNotGroupMember, codes.PermissionDenied},
-		{"failure usecase error", gid, true, fmt.Errorf("list organizations error"), codes.Internal},
-		{"failure unauthenticated is preserved", gid, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
-		{"failure downstream code is not forwarded", gid, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
+		{"failure not tenant member", tid, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure usecase error", tid, true, fmt.Errorf("list organizations error"), codes.Internal},
+		{"failure unauthenticated is preserved", tid, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
+		{"failure downstream code is not forwarded", tid, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -168,7 +168,7 @@ func TestListOrganizations(t *testing.T) {
 			ctx := context.Background()
 			mockUsecase := mocksapporganization.NewMockOrganizationUsecase(ctrl)
 			if tt.callUsecase {
-				tenantID, _ := tenant.NewTenantID(gid)
+				tenantID, _ := tenant.NewTenantID(tid)
 				organizations := make([]organization.Organization, 0, len(wantNames))
 				for _, wantName := range wantNames {
 					name, _ := organization.NewName(wantName)
@@ -183,7 +183,7 @@ func TestListOrganizations(t *testing.T) {
 
 			handler := NewOrganizationHandler(mockUsecase)
 
-			res, err := handler.ListOrganizations(ctx, &organizationv1.ListOrganizationsRequest{GroupId: tt.tenantID})
+			res, err := handler.ListOrganizations(ctx, &organizationv1.ListOrganizationsRequest{TenantId: tt.tenantID})
 			if got := status.Code(err); got != tt.wantCode {
 				t.Errorf("expected code %v, got %v (err=%v)", tt.wantCode, got, err)
 			}
@@ -198,8 +198,8 @@ func TestListOrganizations(t *testing.T) {
 					if res.GetOrganizations()[i].GetName() != wantName {
 						t.Errorf("organizations[%d].Name = %v, want %v", i, res.GetOrganizations()[i].GetName(), wantName)
 					}
-					if res.GetOrganizations()[i].GetGroupId() != gid {
-						t.Errorf("organizations[%d].GroupId = %v, want %v", i, res.GetOrganizations()[i].GetGroupId(), gid)
+					if res.GetOrganizations()[i].GetTenantId() != tid {
+						t.Errorf("organizations[%d].TenantId = %v, want %v", i, res.GetOrganizations()[i].GetTenantId(), tid)
 					}
 				}
 			}
@@ -209,7 +209,7 @@ func TestListOrganizations(t *testing.T) {
 
 func TestUpdateOrganization(t *testing.T) {
 	t.Parallel()
-	gid := "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"
+	tid := "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"
 	oid := "3d1e6a5c-7b8f-4c2d-9a0e-1f2b3c4d5e6f"
 	tooLong := strings.Repeat("あ", 256)
 
@@ -243,7 +243,7 @@ func TestUpdateOrganization(t *testing.T) {
 			mockUsecase := mocksapporganization.NewMockOrganizationUsecase(ctrl)
 			if tt.callUsecase {
 				organizationID, _ := organization.NewOrganizationIDFromString(oid)
-				tenantID, _ := tenant.NewTenantID(gid)
+				tenantID, _ := tenant.NewTenantID(tid)
 				name, _ := organization.NewName("更新株式会社")
 				mockOrganization := mocksorganization.NewMockOrganization(ctrl)
 				mockOrganization.EXPECT().ID().Return(organizationID).AnyTimes()
@@ -325,8 +325,8 @@ func TestToProtoOrganization(t *testing.T) {
 	if got.GetOrganizationId() != id.String() {
 		t.Errorf("OrganizationId = %v, want %v", got.GetOrganizationId(), id.String())
 	}
-	if got.GetGroupId() != tenantID.String() {
-		t.Errorf("GroupId = %v, want %v", got.GetGroupId(), tenantID.String())
+	if got.GetTenantId() != tenantID.String() {
+		t.Errorf("TenantId = %v, want %v", got.GetTenantId(), tenantID.String())
 	}
 	if got.GetName() != "テスト株式会社" {
 		t.Errorf("Name = %v, want テスト株式会社", got.GetName())

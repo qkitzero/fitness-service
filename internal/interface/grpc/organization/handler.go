@@ -31,7 +31,7 @@ func NewOrganizationHandler(
 func toProtoOrganization(o domainorganization.Organization) *organizationv1.Organization {
 	return &organizationv1.Organization{
 		OrganizationId: o.ID().String(),
-		GroupId:        o.TenantID().String(),
+		TenantId:       o.TenantID().String(),
 		Name:           o.Name().String(),
 	}
 }
@@ -54,7 +54,7 @@ func mapOrganizationError(err error, op string) error {
 }
 
 func (h *OrganizationHandler) CreateOrganization(ctx context.Context, req *organizationv1.CreateOrganizationRequest) (*organizationv1.CreateOrganizationResponse, error) {
-	tenantID, err := domaintenant.NewTenantID(req.GetGroupId())
+	tenantID, err := domaintenant.NewTenantID(req.GetTenantId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -90,7 +90,7 @@ func (h *OrganizationHandler) GetOrganization(ctx context.Context, req *organiza
 }
 
 func (h *OrganizationHandler) ListOrganizations(ctx context.Context, req *organizationv1.ListOrganizationsRequest) (*organizationv1.ListOrganizationsResponse, error) {
-	tenantID, err := domaintenant.NewTenantID(req.GetGroupId())
+	tenantID, err := domaintenant.NewTenantID(req.GetTenantId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}

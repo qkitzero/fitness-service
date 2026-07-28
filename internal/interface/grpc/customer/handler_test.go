@@ -22,13 +22,13 @@ import (
 
 const (
 	sampleCustomerID = "fe8c2263-bbac-4bb9-a41d-b04f5afc4425"
-	sampleGroupID    = "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"
+	sampleTenantID   = "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"
 )
 
 func customerSample(ctrl *gomock.Controller, active bool) *mockscustomer.MockCustomer {
 	m := mockscustomer.NewMockCustomer(ctrl)
 	id, _ := customer.NewCustomerIDFromString(sampleCustomerID)
-	tenantID, _ := tenant.NewTenantID(sampleGroupID)
+	tenantID, _ := tenant.NewTenantID(sampleTenantID)
 	name, _ := customer.NewName("test customer")
 	nameKana, _ := customer.NewNameKana("テストカナ")
 	birthDate, _ := customer.NewBirthDate(2000, 1, 1)
@@ -64,7 +64,7 @@ func customerSample(ctrl *gomock.Controller, active bool) *mockscustomer.MockCus
 
 func TestCreateCustomer(t *testing.T) {
 	t.Parallel()
-	gid := sampleGroupID
+	tid := sampleTenantID
 	validDate := &date.Date{Year: 2000, Month: 1, Day: 1}
 	futureDate := &date.Date{Year: 2500, Month: 1, Day: 1}
 	phone := "03-1234-5678"
@@ -89,28 +89,28 @@ func TestCreateCustomer(t *testing.T) {
 		createErr   error
 		wantCode    codes.Code
 	}{
-		{"success", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, Phone: &phone, Email: &email, PostalCode: &postalCode, Prefecture: &prefecture, City: &city, Street: &street, Building: &building, EmergencyContactName: &ecName, EmergencyContactRelationship: &ecRelationship, EmergencyContactPhone: &ecPhone}, true, nil, codes.OK},
-		{"failure invalid group id", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: "", NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
-		{"failure invalid name", &customerv1.CreateCustomerRequest{Name: "", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
-		{"failure null character name", &customerv1.CreateCustomerRequest{Name: withNull, GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
-		{"failure invalid name kana", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
-		{"failure invalid gender", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_UNSPECIFIED, BirthDate: validDate}, false, nil, codes.InvalidArgument},
-		{"failure invalid birth date", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: futureDate}, false, nil, codes.InvalidArgument},
-		{"failure invalid phone", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, Phone: &invalid}, false, nil, codes.InvalidArgument},
-		{"failure invalid email", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, Email: &invalid}, false, nil, codes.InvalidArgument},
-		{"failure invalid postal code", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, PostalCode: &invalid}, false, nil, codes.InvalidArgument},
-		{"failure invalid prefecture", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, Prefecture: &invalidPref}, false, nil, codes.InvalidArgument},
-		{"failure invalid city", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, City: &tooLong}, false, nil, codes.InvalidArgument},
-		{"failure null character city", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, City: &withNull}, false, nil, codes.InvalidArgument},
-		{"failure invalid street", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, Street: &tooLong}, false, nil, codes.InvalidArgument},
-		{"failure invalid building", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, Building: &tooLong}, false, nil, codes.InvalidArgument},
-		{"failure invalid emergency contact name", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, EmergencyContactName: &tooLong}, false, nil, codes.InvalidArgument},
-		{"failure invalid emergency contact relationship", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, EmergencyContactRelationship: &tooLong}, false, nil, codes.InvalidArgument},
-		{"failure invalid emergency contact phone", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, EmergencyContactPhone: &invalid}, false, nil, codes.InvalidArgument},
-		{"failure not tenant member", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, user.ErrNotGroupMember, codes.PermissionDenied},
-		{"failure usecase error", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, fmt.Errorf("create customer error"), codes.Internal},
-		{"failure unauthenticated is preserved", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
-		{"failure downstream code is not forwarded", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
+		{"success", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, Phone: &phone, Email: &email, PostalCode: &postalCode, Prefecture: &prefecture, City: &city, Street: &street, Building: &building, EmergencyContactName: &ecName, EmergencyContactRelationship: &ecRelationship, EmergencyContactPhone: &ecPhone}, true, nil, codes.OK},
+		{"failure invalid group id", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: "", NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
+		{"failure invalid name", &customerv1.CreateCustomerRequest{Name: "", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
+		{"failure null character name", &customerv1.CreateCustomerRequest{Name: withNull, TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
+		{"failure invalid name kana", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, false, nil, codes.InvalidArgument},
+		{"failure invalid gender", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_UNSPECIFIED, BirthDate: validDate}, false, nil, codes.InvalidArgument},
+		{"failure invalid birth date", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: futureDate}, false, nil, codes.InvalidArgument},
+		{"failure invalid phone", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, Phone: &invalid}, false, nil, codes.InvalidArgument},
+		{"failure invalid email", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, Email: &invalid}, false, nil, codes.InvalidArgument},
+		{"failure invalid postal code", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, PostalCode: &invalid}, false, nil, codes.InvalidArgument},
+		{"failure invalid prefecture", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, Prefecture: &invalidPref}, false, nil, codes.InvalidArgument},
+		{"failure invalid city", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, City: &tooLong}, false, nil, codes.InvalidArgument},
+		{"failure null character city", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, City: &withNull}, false, nil, codes.InvalidArgument},
+		{"failure invalid street", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, Street: &tooLong}, false, nil, codes.InvalidArgument},
+		{"failure invalid building", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, Building: &tooLong}, false, nil, codes.InvalidArgument},
+		{"failure invalid emergency contact name", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, EmergencyContactName: &tooLong}, false, nil, codes.InvalidArgument},
+		{"failure invalid emergency contact relationship", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, EmergencyContactRelationship: &tooLong}, false, nil, codes.InvalidArgument},
+		{"failure invalid emergency contact phone", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, EmergencyContactPhone: &invalid}, false, nil, codes.InvalidArgument},
+		{"failure not tenant member", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure usecase error", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, fmt.Errorf("create customer error"), codes.Internal},
+		{"failure unauthenticated is preserved", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
+		{"failure downstream code is not forwarded", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -123,7 +123,7 @@ func TestCreateCustomer(t *testing.T) {
 			ctx := context.Background()
 			mockUsecase := mocksappcustomer.NewMockCustomerUsecase(ctrl)
 			if tt.callUsecase {
-				tenantID, _ := tenant.NewTenantID(gid)
+				tenantID, _ := tenant.NewTenantID(tid)
 				mockUsecase.EXPECT().CreateCustomer(gomock.Any(), tenantID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(customerSample(ctrl, true), tt.createErr).Times(1)
 			}
 
@@ -182,8 +182,8 @@ func TestGetCustomer(t *testing.T) {
 				if res.GetCustomer().GetCustomerId() != sampleCustomerID {
 					t.Errorf("CustomerId = %v, want %v", res.GetCustomer().GetCustomerId(), sampleCustomerID)
 				}
-				if res.GetCustomer().GetGroupId() != sampleGroupID {
-					t.Errorf("GroupId = %v, want %v", res.GetCustomer().GetGroupId(), sampleGroupID)
+				if res.GetCustomer().GetTenantId() != sampleTenantID {
+					t.Errorf("TenantId = %v, want %v", res.GetCustomer().GetTenantId(), sampleTenantID)
 				}
 				if res.GetCustomer().GetName() != "test customer" {
 					t.Errorf("Name = %v, want test customer", res.GetCustomer().GetName())
@@ -203,13 +203,13 @@ func TestListCustomers(t *testing.T) {
 		listCustomersErr error
 		wantCode         codes.Code
 	}{
-		{"success list customers", sampleGroupID, false, true, nil, codes.OK},
-		{"success list customers including inactive", sampleGroupID, true, true, nil, codes.OK},
+		{"success list customers", sampleTenantID, false, true, nil, codes.OK},
+		{"success list customers including inactive", sampleTenantID, true, true, nil, codes.OK},
 		{"failure invalid group id", "", false, false, nil, codes.InvalidArgument},
-		{"failure not tenant member", sampleGroupID, false, true, user.ErrNotGroupMember, codes.PermissionDenied},
-		{"failure usecase error", sampleGroupID, false, true, fmt.Errorf("list customers error"), codes.Internal},
-		{"failure unauthenticated is preserved", sampleGroupID, false, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
-		{"failure downstream code is not forwarded", sampleGroupID, false, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
+		{"failure not tenant member", sampleTenantID, false, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure usecase error", sampleTenantID, false, true, fmt.Errorf("list customers error"), codes.Internal},
+		{"failure unauthenticated is preserved", sampleTenantID, false, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
+		{"failure downstream code is not forwarded", sampleTenantID, false, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -222,14 +222,14 @@ func TestListCustomers(t *testing.T) {
 			ctx := context.Background()
 			mockUsecase := mocksappcustomer.NewMockCustomerUsecase(ctrl)
 			if tt.callUsecase {
-				tenantID, _ := tenant.NewTenantID(sampleGroupID)
+				tenantID, _ := tenant.NewTenantID(sampleTenantID)
 				customers := []customer.Customer{customerSample(ctrl, true), customerSample(ctrl, false)}
 				mockUsecase.EXPECT().ListCustomers(gomock.Any(), tenantID, tt.includeInactive).Return(customers, tt.listCustomersErr).Times(1)
 			}
 
 			handler := NewCustomerHandler(mockUsecase)
 
-			res, err := handler.ListCustomers(ctx, &customerv1.ListCustomersRequest{GroupId: tt.tenantID, IncludeInactive: tt.includeInactive})
+			res, err := handler.ListCustomers(ctx, &customerv1.ListCustomersRequest{TenantId: tt.tenantID, IncludeInactive: tt.includeInactive})
 			if got := status.Code(err); got != tt.wantCode {
 				t.Errorf("expected code %v, got %v (err=%v)", tt.wantCode, got, err)
 			}
@@ -242,8 +242,8 @@ func TestListCustomers(t *testing.T) {
 					if c.GetCustomerId() != sampleCustomerID {
 						t.Errorf("customers[%d].CustomerId = %v, want %v", i, c.GetCustomerId(), sampleCustomerID)
 					}
-					if c.GetGroupId() != sampleGroupID {
-						t.Errorf("customers[%d].GroupId = %v, want %v", i, c.GetGroupId(), sampleGroupID)
+					if c.GetTenantId() != sampleTenantID {
+						t.Errorf("customers[%d].TenantId = %v, want %v", i, c.GetTenantId(), sampleTenantID)
 					}
 					if c.GetIsActive() != wantActive[i] {
 						t.Errorf("customers[%d].IsActive = %v, want %v", i, c.GetIsActive(), wantActive[i])
@@ -558,7 +558,7 @@ func TestToProtoGender(t *testing.T) {
 func TestToProtoCustomer(t *testing.T) {
 	t.Parallel()
 	id, _ := customer.NewCustomerIDFromString(sampleCustomerID)
-	tenantID, _ := tenant.NewTenantID(sampleGroupID)
+	tenantID, _ := tenant.NewTenantID(sampleTenantID)
 	name, _ := customer.NewName("test customer")
 	nameKana, _ := customer.NewNameKana("テストカナ")
 	gender, _ := customer.NewGender("male")
@@ -583,8 +583,8 @@ func TestToProtoCustomer(t *testing.T) {
 	if got.GetName() != "test customer" {
 		t.Errorf("Name = %v, want test customer", got.GetName())
 	}
-	if got.GetGroupId() != tenantID.String() {
-		t.Errorf("GroupId = %v, want %v", got.GetGroupId(), tenantID.String())
+	if got.GetTenantId() != tenantID.String() {
+		t.Errorf("TenantId = %v, want %v", got.GetTenantId(), tenantID.String())
 	}
 	if got.GetNameKana() != "テストカナ" {
 		t.Errorf("NameKana = %v, want テストカナ", got.GetNameKana())

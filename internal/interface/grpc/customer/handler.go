@@ -67,7 +67,7 @@ func toProtoCustomer(c domaincustomer.Customer) *customerv1.Customer {
 	msg := &customerv1.Customer{
 		CustomerId: c.ID().String(),
 		Name:       c.Name().String(),
-		GroupId:    c.TenantID().String(),
+		TenantId:   c.TenantID().String(),
 		NameKana:   c.NameKana().String(),
 		Gender:     toProtoGender(c.Gender()),
 		BirthDate:  toProtoBirthDate(c.BirthDate()),
@@ -216,7 +216,7 @@ func mapCustomerError(err error, op string) error {
 }
 
 func (h *CustomerHandler) CreateCustomer(ctx context.Context, req *customerv1.CreateCustomerRequest) (*customerv1.CreateCustomerResponse, error) {
-	tenantID, err := domaintenant.NewTenantID(req.GetGroupId())
+	tenantID, err := domaintenant.NewTenantID(req.GetTenantId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -252,7 +252,7 @@ func (h *CustomerHandler) GetCustomer(ctx context.Context, req *customerv1.GetCu
 }
 
 func (h *CustomerHandler) ListCustomers(ctx context.Context, req *customerv1.ListCustomersRequest) (*customerv1.ListCustomersResponse, error) {
-	tenantID, err := domaintenant.NewTenantID(req.GetGroupId())
+	tenantID, err := domaintenant.NewTenantID(req.GetTenantId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
