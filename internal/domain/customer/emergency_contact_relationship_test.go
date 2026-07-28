@@ -15,7 +15,10 @@ func TestNewEmergencyContactRelationship(t *testing.T) {
 	}{
 		{"success", true, "父", "父"},
 		{"success blank", true, "  ", ""},
+		{"success max length", true, strings.Repeat("あ", 255), strings.Repeat("あ", 255)},
 		{"failure too long", false, strings.Repeat("あ", 256), ""},
+		{"failure null character", false, "父\x00母", ""},
+		{"failure newline", false, "父\n母", ""},
 	}
 	for _, tt := range tests {
 		tt := tt

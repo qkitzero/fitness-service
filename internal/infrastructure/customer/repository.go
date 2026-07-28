@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
+	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 type customerRepository struct {
@@ -20,7 +21,7 @@ func NewCustomerRepository(db *gorm.DB) customer.CustomerRepository {
 func toModel(c customer.Customer) CustomerModel {
 	return CustomerModel{
 		ID:                           c.ID(),
-		GroupID:                      c.GroupID(),
+		TenantID:                     c.TenantID(),
 		Name:                         c.Name(),
 		NameKana:                     c.NameKana(),
 		Gender:                       c.Gender(),
@@ -35,6 +36,8 @@ func toModel(c customer.Customer) CustomerModel {
 		EmergencyContactName:         c.EmergencyContactName(),
 		EmergencyContactRelationship: c.EmergencyContactRelationship(),
 		EmergencyContactPhone:        c.EmergencyContactPhone(),
+		OrganizationID:               c.OrganizationID(),
+		IsActive:                     c.IsActive(),
 		CreatedAt:                    c.CreatedAt(),
 		UpdatedAt:                    c.UpdatedAt(),
 	}
@@ -43,7 +46,7 @@ func toModel(c customer.Customer) CustomerModel {
 func toDomain(m CustomerModel) customer.Customer {
 	return customer.NewCustomer(
 		m.ID,
-		m.GroupID,
+		m.TenantID,
 		m.Name,
 		m.NameKana,
 		m.Gender,
@@ -58,6 +61,8 @@ func toDomain(m CustomerModel) customer.Customer {
 		m.EmergencyContactName,
 		m.EmergencyContactRelationship,
 		m.EmergencyContactPhone,
+		m.OrganizationID,
+		m.IsActive,
 		m.CreatedAt,
 		m.UpdatedAt,
 	)
@@ -88,9 +93,13 @@ func (r *customerRepository) FindByID(ctx context.Context, id customer.CustomerI
 	return toDomain(customerModel), nil
 }
 
-func (r *customerRepository) ListByGroupID(ctx context.Context, groupID customer.GroupID) ([]customer.Customer, error) {
+func (r *customerRepository) ListByTenantID(ctx context.Context, tenantID tenant.TenantID, includeInactive bool) ([]customer.Customer, error) {
 	var customerModels []CustomerModel
-	if err := r.db.WithContext(ctx).Where("group_id = ?", groupID).Order("created_at, id").Find(&customerModels).Error; err != nil {
+	query := r.db.WithContext(ctx).Where("tenant_id = ?", tenantID)
+	if !includeInactive {
+		query = query.Where("is_active = ?", true)
+	}
+	if err := query.Order("created_at, id").Find(&customerModels).Error; err != nil {
 		return nil, err
 	}
 
@@ -106,8 +115,56 @@ func (r *customerRepository) Update(ctx context.Context, c customer.Customer) er
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		customerModel := toModel(c)
 
-		if err := tx.Save(&customerModel).Error; err != nil {
-			return err
+		result := tx.Model(&CustomerModel{}).
+			Where("id = ?", customerModel.ID).
+			Select(
+				"tenant_id",
+				"name",
+				"name_kana",
+				"gender",
+				"birth_date",
+				"phone",
+				"email",
+				"postal_code",
+				"prefecture",
+				"city",
+				"street",
+				"building",
+				"emergency_contact_name",
+				"emergency_contact_relationship",
+				"emergency_contact_phone",
+				"organization_id",
+				"created_at",
+				"updated_at",
+			).
+			Updates(customerModel)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return customer.ErrCustomerNotFound
+		}
+
+		return nil
+	})
+}
+
+func (r *customerRepository) UpdateActive(ctx context.Context, c customer.Customer) error {
+	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		customerModel := toModel(c)
+
+		result := tx.Model(&CustomerModel{}).
+			Where("id = ?", customerModel.ID).
+			Select(
+				"is_active",
+				"updated_at",
+			).
+			Updates(customerModel)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return customer.ErrCustomerNotFound
 		}
 
 		return nil
@@ -116,8 +173,12 @@ func (r *customerRepository) Update(ctx context.Context, c customer.Customer) er
 
 func (r *customerRepository) Delete(ctx context.Context, id customer.CustomerID) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Where("id = ?", id).Delete(&CustomerModel{}).Error; err != nil {
-			return err
+		result := tx.Where("id = ?", id).Delete(&CustomerModel{})
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return customer.ErrCustomerNotFound
 		}
 
 		return nil

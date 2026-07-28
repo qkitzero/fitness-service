@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"strings"
 
 	"google.golang.org/genproto/googleapis/type/date"
 	"google.golang.org/grpc/codes"
@@ -11,8 +12,9 @@ import (
 
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
 	appcustomer "github.com/qkitzero/fitness-service/internal/application/customer"
-	appuser "github.com/qkitzero/fitness-service/internal/application/user"
 	domaincustomer "github.com/qkitzero/fitness-service/internal/domain/customer"
+	domainorganization "github.com/qkitzero/fitness-service/internal/domain/organization"
+	domaintenant "github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 type CustomerHandler struct {
@@ -66,10 +68,11 @@ func toProtoCustomer(c domaincustomer.Customer) *customerv1.Customer {
 	msg := &customerv1.Customer{
 		CustomerId: c.ID().String(),
 		Name:       c.Name().String(),
-		GroupId:    c.GroupID().String(),
+		TenantId:   c.TenantID().String(),
 		NameKana:   c.NameKana().String(),
 		Gender:     toProtoGender(c.Gender()),
 		BirthDate:  toProtoBirthDate(c.BirthDate()),
+		IsActive:   c.IsActive(),
 	}
 	if v := c.Phone(); v != nil {
 		s := v.String()
@@ -111,6 +114,10 @@ func toProtoCustomer(c domaincustomer.Customer) *customerv1.Customer {
 		s := v.String()
 		msg.EmergencyContactPhone = &s
 	}
+	if v := c.OrganizationID(); v != nil {
+		s := v.String()
+		msg.OrganizationId = &s
+	}
 	return msg
 }
 
@@ -129,6 +136,7 @@ type customerFieldsRequest interface {
 	GetEmergencyContactName() string
 	GetEmergencyContactRelationship() string
 	GetEmergencyContactPhone() string
+	GetOrganizationId() string
 }
 
 type customerFields struct {
@@ -146,6 +154,7 @@ type customerFields struct {
 	emergencyContactName         *domaincustomer.EmergencyContactName
 	emergencyContactRelationship *domaincustomer.EmergencyContactRelationship
 	emergencyContactPhone        *domaincustomer.Phone
+	organizationID               *domainorganization.OrganizationID
 }
 
 func parseCustomerFields(req customerFieldsRequest) (customerFields, error) {
@@ -193,25 +202,38 @@ func parseCustomerFields(req customerFieldsRequest) (customerFields, error) {
 	if f.emergencyContactPhone, err = domaincustomer.NewPhone(req.GetEmergencyContactPhone()); err != nil {
 		return f, err
 	}
+	if s := strings.TrimSpace(req.GetOrganizationId()); s != "" {
+		organizationID, err := domainorganization.NewOrganizationIDFromString(s)
+		if err != nil {
+			return f, err
+		}
+		f.organizationID = &organizationID
+	}
 	return f, nil
 }
 
 func mapCustomerError(err error, op string) error {
-	if _, ok := status.FromError(err); ok {
-		return err
-	}
-	if errors.Is(err, appuser.ErrNotGroupMember) {
+	if errors.Is(err, domaintenant.ErrNotMember) {
 		return status.Error(codes.PermissionDenied, err.Error())
 	}
 	if errors.Is(err, domaincustomer.ErrCustomerNotFound) {
 		return status.Error(codes.NotFound, err.Error())
+	}
+	if errors.Is(err, domaincustomer.ErrOrganizationNotInTenant) {
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+	if s, ok := status.FromError(err); ok {
+		switch s.Code() {
+		case codes.Unauthenticated, codes.PermissionDenied:
+			return err
+		}
 	}
 	log.Printf("%s: internal error: %v", op, err)
 	return status.Error(codes.Internal, "internal error")
 }
 
 func (h *CustomerHandler) CreateCustomer(ctx context.Context, req *customerv1.CreateCustomerRequest) (*customerv1.CreateCustomerResponse, error) {
-	groupID, err := domaincustomer.NewGroupID(req.GetGroupId())
+	tenantID, err := domaintenant.NewTenantID(req.GetTenantId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -220,7 +242,7 @@ func (h *CustomerHandler) CreateCustomer(ctx context.Context, req *customerv1.Cr
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	customer, err := h.customerUsecase.CreateCustomer(ctx, groupID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.postalCode, fields.prefecture, fields.city, fields.street, fields.building, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone)
+	customer, err := h.customerUsecase.CreateCustomer(ctx, tenantID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.postalCode, fields.prefecture, fields.city, fields.street, fields.building, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone, fields.organizationID)
 	if err != nil {
 		return nil, mapCustomerError(err, "CreateCustomer")
 	}
@@ -247,12 +269,12 @@ func (h *CustomerHandler) GetCustomer(ctx context.Context, req *customerv1.GetCu
 }
 
 func (h *CustomerHandler) ListCustomers(ctx context.Context, req *customerv1.ListCustomersRequest) (*customerv1.ListCustomersResponse, error) {
-	groupID, err := domaincustomer.NewGroupID(req.GetGroupId())
+	tenantID, err := domaintenant.NewTenantID(req.GetTenantId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	customers, err := h.customerUsecase.ListCustomers(ctx, groupID)
+	customers, err := h.customerUsecase.ListCustomers(ctx, tenantID, req.GetIncludeInactive())
 	if err != nil {
 		return nil, mapCustomerError(err, "ListCustomers")
 	}
@@ -277,12 +299,28 @@ func (h *CustomerHandler) UpdateCustomer(ctx context.Context, req *customerv1.Up
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	customer, err := h.customerUsecase.UpdateCustomer(ctx, customerID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.postalCode, fields.prefecture, fields.city, fields.street, fields.building, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone)
+	customer, err := h.customerUsecase.UpdateCustomer(ctx, customerID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.postalCode, fields.prefecture, fields.city, fields.street, fields.building, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone, fields.organizationID)
 	if err != nil {
 		return nil, mapCustomerError(err, "UpdateCustomer")
 	}
 
 	return &customerv1.UpdateCustomerResponse{
+		Customer: toProtoCustomer(customer),
+	}, nil
+}
+
+func (h *CustomerHandler) SetCustomerActive(ctx context.Context, req *customerv1.SetCustomerActiveRequest) (*customerv1.SetCustomerActiveResponse, error) {
+	customerID, err := domaincustomer.NewCustomerIDFromString(req.GetCustomerId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	customer, err := h.customerUsecase.SetCustomerActive(ctx, customerID, req.GetIsActive())
+	if err != nil {
+		return nil, mapCustomerError(err, "SetCustomerActive")
+	}
+
+	return &customerv1.SetCustomerActiveResponse{
 		Customer: toProtoCustomer(customer),
 	}, nil
 }

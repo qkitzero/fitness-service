@@ -15,7 +15,10 @@ func TestNewEmergencyContactName(t *testing.T) {
 	}{
 		{"success", true, "緊急 太郎", "緊急 太郎"},
 		{"success blank", true, "  ", ""},
+		{"success max length", true, strings.Repeat("あ", 255), strings.Repeat("あ", 255)},
 		{"failure too long", false, strings.Repeat("あ", 256), ""},
+		{"failure null character", false, "緊急\x00太郎", ""},
+		{"failure newline", false, "緊急\n太郎", ""},
 	}
 	for _, tt := range tests {
 		tt := tt

@@ -26,6 +26,12 @@ service CustomerService {
       body: "*"
     };
   }
+  rpc SetCustomerActive(SetCustomerActiveRequest) returns (SetCustomerActiveResponse) {
+    option (google.api.http) = {
+      put: "/v1/customer/{customer_id}/active"
+      body: "*"
+    };
+  }
   rpc DeleteCustomer(DeleteCustomerRequest) returns (DeleteCustomerResponse) {
     option (google.api.http) = {delete: "/v1/customer/{customer_id}"};
   }
@@ -41,7 +47,7 @@ enum Gender {
 message Customer {
   string customer_id = 1;
   string name = 2;
-  string group_id = 3;
+  string tenant_id = 3;
   string name_kana = 4;
   Gender gender = 5;
   google.type.Date birth_date = 6;
@@ -55,11 +61,13 @@ message Customer {
   optional string emergency_contact_name = 14;
   optional string emergency_contact_relationship = 15;
   optional string emergency_contact_phone = 16;
+  bool is_active = 17;
+  optional string organization_id = 18;
 }
 
 message CreateCustomerRequest {
   string name = 1;
-  string group_id = 2;
+  string tenant_id = 2;
   string name_kana = 3;
   Gender gender = 4;
   google.type.Date birth_date = 5;
@@ -73,6 +81,7 @@ message CreateCustomerRequest {
   optional string emergency_contact_name = 13;
   optional string emergency_contact_relationship = 14;
   optional string emergency_contact_phone = 15;
+  optional string organization_id = 16;
 }
 
 message CreateCustomerResponse {
@@ -88,7 +97,8 @@ message GetCustomerResponse {
 }
 
 message ListCustomersRequest {
-  string group_id = 1;
+  string tenant_id = 1;
+  bool include_inactive = 2;
 }
 
 message ListCustomersResponse {
@@ -111,9 +121,19 @@ message UpdateCustomerRequest {
   optional string emergency_contact_name = 13;
   optional string emergency_contact_relationship = 14;
   optional string emergency_contact_phone = 15;
+  optional string organization_id = 16;
 }
 
 message UpdateCustomerResponse {
+  Customer customer = 1;
+}
+
+message SetCustomerActiveRequest {
+  string customer_id = 1;
+  bool is_active = 2;
+}
+
+message SetCustomerActiveResponse {
   Customer customer = 1;
 }
 

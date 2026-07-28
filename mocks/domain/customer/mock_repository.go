@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	customer "github.com/qkitzero/fitness-service/internal/domain/customer"
+	tenant "github.com/qkitzero/fitness-service/internal/domain/tenant"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -84,19 +85,19 @@ func (mr *MockCustomerRepositoryMockRecorder) FindByID(ctx, customerID any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByID", reflect.TypeOf((*MockCustomerRepository)(nil).FindByID), ctx, customerID)
 }
 
-// ListByGroupID mocks base method.
-func (m *MockCustomerRepository) ListByGroupID(ctx context.Context, groupID customer.GroupID) ([]customer.Customer, error) {
+// ListByTenantID mocks base method.
+func (m *MockCustomerRepository) ListByTenantID(ctx context.Context, tenantID tenant.TenantID, includeInactive bool) ([]customer.Customer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByGroupID", ctx, groupID)
+	ret := m.ctrl.Call(m, "ListByTenantID", ctx, tenantID, includeInactive)
 	ret0, _ := ret[0].([]customer.Customer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListByGroupID indicates an expected call of ListByGroupID.
-func (mr *MockCustomerRepositoryMockRecorder) ListByGroupID(ctx, groupID any) *gomock.Call {
+// ListByTenantID indicates an expected call of ListByTenantID.
+func (mr *MockCustomerRepositoryMockRecorder) ListByTenantID(ctx, tenantID, includeInactive any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByGroupID", reflect.TypeOf((*MockCustomerRepository)(nil).ListByGroupID), ctx, groupID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTenantID", reflect.TypeOf((*MockCustomerRepository)(nil).ListByTenantID), ctx, tenantID, includeInactive)
 }
 
 // Update mocks base method.
@@ -111,4 +112,18 @@ func (m *MockCustomerRepository) Update(ctx context.Context, arg1 customer.Custo
 func (mr *MockCustomerRepositoryMockRecorder) Update(ctx, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockCustomerRepository)(nil).Update), ctx, arg1)
+}
+
+// UpdateActive mocks base method.
+func (m *MockCustomerRepository) UpdateActive(ctx context.Context, arg1 customer.Customer) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateActive", ctx, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateActive indicates an expected call of UpdateActive.
+func (mr *MockCustomerRepositoryMockRecorder) UpdateActive(ctx, arg1 any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateActive", reflect.TypeOf((*MockCustomerRepository)(nil).UpdateActive), ctx, arg1)
 }

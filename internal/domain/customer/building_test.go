@@ -15,7 +15,10 @@ func TestNewBuilding(t *testing.T) {
 	}{
 		{"success", true, "テストビル", "テストビル"},
 		{"success blank", true, "  ", ""},
+		{"success max length", true, strings.Repeat("あ", 255), strings.Repeat("あ", 255)},
 		{"failure too long", false, strings.Repeat("あ", 256), ""},
+		{"failure null character", false, "テスト\x00ビル", ""},
+		{"failure newline", false, "テスト\nビル", ""},
 	}
 	for _, tt := range tests {
 		tt := tt

@@ -3,12 +3,15 @@ package customer
 import (
 	"testing"
 	"time"
+
+	"github.com/qkitzero/fitness-service/internal/domain/organization"
+	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 func TestNewCustomer(t *testing.T) {
 	t.Parallel()
 	id, _ := NewCustomerIDFromString("fe8c2263-bbac-4bb9-a41d-b04f5afc4425")
-	groupID, _ := NewGroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
 	name, _ := NewName("test customer")
 	nameKana, _ := NewNameKana("テストカナ")
 	gender, _ := NewGender("male")
@@ -23,16 +26,17 @@ func TestNewCustomer(t *testing.T) {
 	emergencyContactName, _ := NewEmergencyContactName("緊急 太郎")
 	emergencyContactRelationship, _ := NewEmergencyContactRelationship("父")
 	emergencyContactPhone, _ := NewPhone("090-1234-5678")
+	organizationID, _ := organization.NewOrganizationIDFromString("3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d")
 
 	createdAt := time.Now()
 	updatedAt := time.Now()
-	c := NewCustomer(id, groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, createdAt, updatedAt)
+	c := NewCustomer(id, tenantID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, &organizationID, true, createdAt, updatedAt)
 
 	if c.ID() != id {
 		t.Errorf("ID() = %v, want %v", c.ID(), id)
 	}
-	if c.GroupID() != groupID {
-		t.Errorf("GroupID() = %v, want %v", c.GroupID(), groupID)
+	if c.TenantID() != tenantID {
+		t.Errorf("TenantID() = %v, want %v", c.TenantID(), tenantID)
 	}
 	if c.Name() != name {
 		t.Errorf("Name() = %v, want %v", c.Name(), name)
@@ -76,6 +80,12 @@ func TestNewCustomer(t *testing.T) {
 	if c.EmergencyContactPhone() == nil || c.EmergencyContactPhone().String() != "09012345678" {
 		t.Errorf("EmergencyContactPhone() = %v, want 09012345678", c.EmergencyContactPhone())
 	}
+	if c.OrganizationID() == nil || c.OrganizationID().String() != "3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d" {
+		t.Errorf("OrganizationID() = %v, want 3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d", c.OrganizationID())
+	}
+	if !c.IsActive() {
+		t.Errorf("IsActive() = %v, want %v", c.IsActive(), true)
+	}
 	if !c.CreatedAt().Equal(createdAt) {
 		t.Errorf("CreatedAt() = %v, want %v", c.CreatedAt(), createdAt)
 	}
@@ -87,14 +97,15 @@ func TestNewCustomer(t *testing.T) {
 func TestUpdateCustomer(t *testing.T) {
 	t.Parallel()
 	id, _ := NewCustomerIDFromString("fe8c2263-bbac-4bb9-a41d-b04f5afc4425")
-	groupID, _ := NewGroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
 	name, _ := NewName("test customer")
 	nameKana, _ := NewNameKana("テストカナ")
 	gender, _ := NewGender("male")
 	birthDate, _ := NewBirthDate(2000, 1, 1)
-	c := NewCustomer(id, groupID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, time.Now(), time.Now())
+	past := time.Now().UTC().Add(-time.Hour)
+	c := NewCustomer(id, tenantID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, past, past)
 
-	if c.Phone() != nil || c.Email() != nil || c.PostalCode() != nil || c.Prefecture() != nil || c.City() != nil || c.Street() != nil || c.Building() != nil || c.EmergencyContactName() != nil || c.EmergencyContactRelationship() != nil || c.EmergencyContactPhone() != nil {
+	if c.Phone() != nil || c.Email() != nil || c.PostalCode() != nil || c.Prefecture() != nil || c.City() != nil || c.Street() != nil || c.Building() != nil || c.EmergencyContactName() != nil || c.EmergencyContactRelationship() != nil || c.EmergencyContactPhone() != nil || c.OrganizationID() != nil {
 		t.Errorf("expected nil optional fields before update")
 	}
 
@@ -112,8 +123,9 @@ func TestUpdateCustomer(t *testing.T) {
 	emergencyContactName, _ := NewEmergencyContactName("更新 花子")
 	emergencyContactRelationship, _ := NewEmergencyContactRelationship("母")
 	emergencyContactPhone, _ := NewPhone("080-1234-5678")
+	organizationID, _ := organization.NewOrganizationIDFromString("3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d")
 
-	c.Update(updatedName, updatedNameKana, updatedGender, updatedBirthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone)
+	c.Update(updatedName, updatedNameKana, updatedGender, updatedBirthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, &organizationID)
 
 	if c.Name() != updatedName {
 		t.Errorf("Name() = %v, want %v", c.Name(), updatedName)
@@ -157,7 +169,92 @@ func TestUpdateCustomer(t *testing.T) {
 	if c.EmergencyContactPhone() == nil || c.EmergencyContactPhone().String() != "08012345678" {
 		t.Errorf("EmergencyContactPhone() = %v, want 08012345678", c.EmergencyContactPhone())
 	}
-	if !c.CreatedAt().Before(c.UpdatedAt()) {
-		t.Errorf("CreatedAt() = %v, UpdatedAt() = %v, want CreatedAt < UpdatedAt", c.CreatedAt(), c.UpdatedAt())
+	if c.OrganizationID() == nil || c.OrganizationID().String() != "3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d" {
+		t.Errorf("OrganizationID() = %v, want 3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d", c.OrganizationID())
+	}
+	if !c.CreatedAt().Equal(past) {
+		t.Errorf("CreatedAt() = %v, want %v", c.CreatedAt(), past)
+	}
+	if !c.UpdatedAt().After(past) {
+		t.Errorf("UpdatedAt() = %v, want after %v", c.UpdatedAt(), past)
+	}
+	if c.UpdatedAt().Location() != time.UTC {
+		t.Errorf("UpdatedAt().Location() = %v, want %v", c.UpdatedAt().Location(), time.UTC)
+	}
+	if !c.IsActive() {
+		t.Errorf("IsActive() = %v, want %v", c.IsActive(), true)
+	}
+
+	c.Update(updatedName, updatedNameKana, updatedGender, updatedBirthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, nil)
+
+	if c.OrganizationID() != nil {
+		t.Errorf("OrganizationID() = %v, want nil", c.OrganizationID())
+	}
+}
+
+func TestSetActiveCustomer(t *testing.T) {
+	t.Parallel()
+	id, _ := NewCustomerIDFromString("fe8c2263-bbac-4bb9-a41d-b04f5afc4425")
+	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	name, _ := NewName("test customer")
+	nameKana, _ := NewNameKana("テストカナ")
+	gender, _ := NewGender("male")
+	birthDate, _ := NewBirthDate(2000, 1, 1)
+	past := time.Now().UTC().Add(-time.Hour)
+
+	active := NewCustomer(id, tenantID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, past, past)
+
+	active.SetActive(false)
+
+	if active.IsActive() {
+		t.Errorf("IsActive() = %v, want %v", active.IsActive(), false)
+	}
+	if !active.CreatedAt().Equal(past) {
+		t.Errorf("CreatedAt() = %v, want %v", active.CreatedAt(), past)
+	}
+	if !active.UpdatedAt().After(past) {
+		t.Errorf("UpdatedAt() = %v, want after %v", active.UpdatedAt(), past)
+	}
+	if active.UpdatedAt().Location() != time.UTC {
+		t.Errorf("UpdatedAt().Location() = %v, want %v", active.UpdatedAt().Location(), time.UTC)
+	}
+
+	deactivatedAt := active.UpdatedAt()
+
+	active.SetActive(false)
+
+	if active.IsActive() {
+		t.Errorf("IsActive() = %v, want %v", active.IsActive(), false)
+	}
+	if !active.UpdatedAt().Equal(deactivatedAt) {
+		t.Errorf("UpdatedAt() = %v, want unchanged %v", active.UpdatedAt(), deactivatedAt)
+	}
+
+	inactive := NewCustomer(id, tenantID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, past, past)
+
+	inactive.SetActive(true)
+
+	if !inactive.IsActive() {
+		t.Errorf("IsActive() = %v, want %v", inactive.IsActive(), true)
+	}
+	if !inactive.CreatedAt().Equal(past) {
+		t.Errorf("CreatedAt() = %v, want %v", inactive.CreatedAt(), past)
+	}
+	if !inactive.UpdatedAt().After(past) {
+		t.Errorf("UpdatedAt() = %v, want after %v", inactive.UpdatedAt(), past)
+	}
+	if inactive.UpdatedAt().Location() != time.UTC {
+		t.Errorf("UpdatedAt().Location() = %v, want %v", inactive.UpdatedAt().Location(), time.UTC)
+	}
+
+	activatedAt := inactive.UpdatedAt()
+
+	inactive.SetActive(true)
+
+	if !inactive.IsActive() {
+		t.Errorf("IsActive() = %v, want %v", inactive.IsActive(), true)
+	}
+	if !inactive.UpdatedAt().Equal(activatedAt) {
+		t.Errorf("UpdatedAt() = %v, want unchanged %v", inactive.UpdatedAt(), activatedAt)
 	}
 }

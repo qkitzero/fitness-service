@@ -15,7 +15,10 @@ func TestNewStreet(t *testing.T) {
 	}{
 		{"success", true, "1-1-1", "1-1-1"},
 		{"success blank", true, "  ", ""},
+		{"success max length", true, strings.Repeat("あ", 255), strings.Repeat("あ", 255)},
 		{"failure too long", false, strings.Repeat("あ", 256), ""},
+		{"failure null character", false, "1-1\x00-1", ""},
+		{"failure newline", false, "1-1\n-1", ""},
 	}
 	for _, tt := range tests {
 		tt := tt
