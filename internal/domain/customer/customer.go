@@ -21,9 +21,11 @@ type Customer interface {
 	EmergencyContactName() *EmergencyContactName
 	EmergencyContactRelationship() *EmergencyContactRelationship
 	EmergencyContactPhone() *Phone
+	IsActive() bool
 	CreatedAt() time.Time
 	UpdatedAt() time.Time
 	Update(name Name, nameKana NameKana, gender Gender, birthDate BirthDate, phone *Phone, email *Email, postalCode *PostalCode, prefecture *Prefecture, city *City, street *Street, building *Building, emergencyContactName *EmergencyContactName, emergencyContactRelationship *EmergencyContactRelationship, emergencyContactPhone *Phone)
+	SetActive(active bool)
 }
 
 type customer struct {
@@ -43,6 +45,7 @@ type customer struct {
 	emergencyContactName         *EmergencyContactName
 	emergencyContactRelationship *EmergencyContactRelationship
 	emergencyContactPhone        *Phone
+	active                       bool
 	createdAt                    time.Time
 	updatedAt                    time.Time
 }
@@ -151,6 +154,10 @@ func (c customer) EmergencyContactPhone() *Phone {
 	return &p
 }
 
+func (c customer) IsActive() bool {
+	return c.active
+}
+
 func (c customer) CreatedAt() time.Time {
 	return c.createdAt
 }
@@ -177,6 +184,14 @@ func (c *customer) Update(name Name, nameKana NameKana, gender Gender, birthDate
 	c.updatedAt = time.Now().UTC()
 }
 
+func (c *customer) SetActive(active bool) {
+	if c.active == active {
+		return
+	}
+	c.active = active
+	c.updatedAt = time.Now().UTC()
+}
+
 func NewCustomer(
 	id CustomerID,
 	groupID GroupID,
@@ -194,6 +209,7 @@ func NewCustomer(
 	emergencyContactName *EmergencyContactName,
 	emergencyContactRelationship *EmergencyContactRelationship,
 	emergencyContactPhone *Phone,
+	active bool,
 	createdAt time.Time,
 	updatedAt time.Time,
 ) Customer {
@@ -214,6 +230,7 @@ func NewCustomer(
 		emergencyContactName:         emergencyContactName,
 		emergencyContactRelationship: emergencyContactRelationship,
 		emergencyContactPhone:        emergencyContactPhone,
+		active:                       active,
 		createdAt:                    createdAt,
 		updatedAt:                    updatedAt,
 	}

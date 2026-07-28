@@ -13,8 +13,9 @@ import (
 type CustomerUsecase interface {
 	CreateCustomer(ctx context.Context, groupID customer.GroupID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone) (customer.Customer, error)
 	GetCustomer(ctx context.Context, customerID customer.CustomerID) (customer.Customer, error)
-	ListCustomers(ctx context.Context, groupID customer.GroupID) ([]customer.Customer, error)
+	ListCustomers(ctx context.Context, groupID customer.GroupID, includeInactive bool) ([]customer.Customer, error)
 	UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone) (customer.Customer, error)
+	SetCustomerActive(ctx context.Context, customerID customer.CustomerID, active bool) (customer.Customer, error)
 	DeleteCustomer(ctx context.Context, customerID customer.CustomerID) error
 }
 
@@ -43,27 +44,7 @@ func (u *customerUsecase) verifyGroupMembership(ctx context.Context, groupID cus
 	return user.ErrNotGroupMember
 }
 
-func (u *customerUsecase) CreateCustomer(ctx context.Context, groupID customer.GroupID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone) (customer.Customer, error) {
-	if _, err := u.authService.VerifyToken(ctx); err != nil {
-		return nil, err
-	}
-
-	if err := u.verifyGroupMembership(ctx, groupID); err != nil {
-		return nil, err
-	}
-
-	now := time.Now().UTC()
-
-	newCustomer := customer.NewCustomer(customer.NewCustomerID(), groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, now, now)
-
-	if err := u.customerRepo.Create(ctx, newCustomer); err != nil {
-		return nil, err
-	}
-
-	return newCustomer, nil
-}
-
-func (u *customerUsecase) GetCustomer(ctx context.Context, customerID customer.CustomerID) (customer.Customer, error) {
+func (u *customerUsecase) findOwnedCustomer(ctx context.Context, customerID customer.CustomerID) (customer.Customer, error) {
 	if _, err := u.authService.VerifyToken(ctx); err != nil {
 		return nil, err
 	}
@@ -83,7 +64,7 @@ func (u *customerUsecase) GetCustomer(ctx context.Context, customerID customer.C
 	return foundCustomer, nil
 }
 
-func (u *customerUsecase) ListCustomers(ctx context.Context, groupID customer.GroupID) ([]customer.Customer, error) {
+func (u *customerUsecase) CreateCustomer(ctx context.Context, groupID customer.GroupID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone) (customer.Customer, error) {
 	if _, err := u.authService.VerifyToken(ctx); err != nil {
 		return nil, err
 	}
@@ -92,7 +73,31 @@ func (u *customerUsecase) ListCustomers(ctx context.Context, groupID customer.Gr
 		return nil, err
 	}
 
-	customers, err := u.customerRepo.ListByGroupID(ctx, groupID)
+	now := time.Now().UTC()
+
+	newCustomer := customer.NewCustomer(customer.NewCustomerID(), groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, true, now, now)
+
+	if err := u.customerRepo.Create(ctx, newCustomer); err != nil {
+		return nil, err
+	}
+
+	return newCustomer, nil
+}
+
+func (u *customerUsecase) GetCustomer(ctx context.Context, customerID customer.CustomerID) (customer.Customer, error) {
+	return u.findOwnedCustomer(ctx, customerID)
+}
+
+func (u *customerUsecase) ListCustomers(ctx context.Context, groupID customer.GroupID, includeInactive bool) ([]customer.Customer, error) {
+	if _, err := u.authService.VerifyToken(ctx); err != nil {
+		return nil, err
+	}
+
+	if err := u.verifyGroupMembership(ctx, groupID); err != nil {
+		return nil, err
+	}
+
+	customers, err := u.customerRepo.ListByGroupID(ctx, groupID, includeInactive)
 	if err != nil {
 		return nil, err
 	}
@@ -101,19 +106,8 @@ func (u *customerUsecase) ListCustomers(ctx context.Context, groupID customer.Gr
 }
 
 func (u *customerUsecase) UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone) (customer.Customer, error) {
-	if _, err := u.authService.VerifyToken(ctx); err != nil {
-		return nil, err
-	}
-
-	foundCustomer, err := u.customerRepo.FindByID(ctx, customerID)
+	foundCustomer, err := u.findOwnedCustomer(ctx, customerID)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := u.verifyGroupMembership(ctx, foundCustomer.GroupID()); err != nil {
-		if errors.Is(err, user.ErrNotGroupMember) {
-			return nil, customer.ErrCustomerNotFound
-		}
 		return nil, err
 	}
 
@@ -126,20 +120,23 @@ func (u *customerUsecase) UpdateCustomer(ctx context.Context, customerID custome
 	return foundCustomer, nil
 }
 
-func (u *customerUsecase) DeleteCustomer(ctx context.Context, customerID customer.CustomerID) error {
-	if _, err := u.authService.VerifyToken(ctx); err != nil {
-		return err
-	}
-
-	foundCustomer, err := u.customerRepo.FindByID(ctx, customerID)
+func (u *customerUsecase) SetCustomerActive(ctx context.Context, customerID customer.CustomerID, active bool) (customer.Customer, error) {
+	foundCustomer, err := u.findOwnedCustomer(ctx, customerID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if err := u.verifyGroupMembership(ctx, foundCustomer.GroupID()); err != nil {
-		if errors.Is(err, user.ErrNotGroupMember) {
-			return customer.ErrCustomerNotFound
-		}
+	foundCustomer.SetActive(active)
+
+	if err := u.customerRepo.UpdateActive(ctx, foundCustomer); err != nil {
+		return nil, err
+	}
+
+	return foundCustomer, nil
+}
+
+func (u *customerUsecase) DeleteCustomer(ctx context.Context, customerID customer.CustomerID) error {
+	if _, err := u.findOwnedCustomer(ctx, customerID); err != nil {
 		return err
 	}
 

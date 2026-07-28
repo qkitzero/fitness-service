@@ -26,7 +26,7 @@ func TestNewCustomer(t *testing.T) {
 
 	createdAt := time.Now()
 	updatedAt := time.Now()
-	c := NewCustomer(id, groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, createdAt, updatedAt)
+	c := NewCustomer(id, groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, true, createdAt, updatedAt)
 
 	if c.ID() != id {
 		t.Errorf("ID() = %v, want %v", c.ID(), id)
@@ -76,6 +76,9 @@ func TestNewCustomer(t *testing.T) {
 	if c.EmergencyContactPhone() == nil || c.EmergencyContactPhone().String() != "09012345678" {
 		t.Errorf("EmergencyContactPhone() = %v, want 09012345678", c.EmergencyContactPhone())
 	}
+	if !c.IsActive() {
+		t.Errorf("IsActive() = %v, want %v", c.IsActive(), true)
+	}
 	if !c.CreatedAt().Equal(createdAt) {
 		t.Errorf("CreatedAt() = %v, want %v", c.CreatedAt(), createdAt)
 	}
@@ -93,7 +96,7 @@ func TestUpdateCustomer(t *testing.T) {
 	gender, _ := NewGender("male")
 	birthDate, _ := NewBirthDate(2000, 1, 1)
 	past := time.Now().UTC().Add(-time.Hour)
-	c := NewCustomer(id, groupID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, past, past)
+	c := NewCustomer(id, groupID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, past, past)
 
 	if c.Phone() != nil || c.Email() != nil || c.PostalCode() != nil || c.Prefecture() != nil || c.City() != nil || c.Street() != nil || c.Building() != nil || c.EmergencyContactName() != nil || c.EmergencyContactRelationship() != nil || c.EmergencyContactPhone() != nil {
 		t.Errorf("expected nil optional fields before update")
@@ -166,5 +169,75 @@ func TestUpdateCustomer(t *testing.T) {
 	}
 	if c.UpdatedAt().Location() != time.UTC {
 		t.Errorf("UpdatedAt().Location() = %v, want %v", c.UpdatedAt().Location(), time.UTC)
+	}
+	if !c.IsActive() {
+		t.Errorf("IsActive() = %v, want %v", c.IsActive(), true)
+	}
+}
+
+func TestSetActiveCustomer(t *testing.T) {
+	t.Parallel()
+	id, _ := NewCustomerIDFromString("fe8c2263-bbac-4bb9-a41d-b04f5afc4425")
+	groupID, _ := NewGroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	name, _ := NewName("test customer")
+	nameKana, _ := NewNameKana("テストカナ")
+	gender, _ := NewGender("male")
+	birthDate, _ := NewBirthDate(2000, 1, 1)
+	past := time.Now().UTC().Add(-time.Hour)
+
+	active := NewCustomer(id, groupID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, past, past)
+
+	active.SetActive(false)
+
+	if active.IsActive() {
+		t.Errorf("IsActive() = %v, want %v", active.IsActive(), false)
+	}
+	if !active.CreatedAt().Equal(past) {
+		t.Errorf("CreatedAt() = %v, want %v", active.CreatedAt(), past)
+	}
+	if !active.UpdatedAt().After(past) {
+		t.Errorf("UpdatedAt() = %v, want after %v", active.UpdatedAt(), past)
+	}
+	if active.UpdatedAt().Location() != time.UTC {
+		t.Errorf("UpdatedAt().Location() = %v, want %v", active.UpdatedAt().Location(), time.UTC)
+	}
+
+	deactivatedAt := active.UpdatedAt()
+
+	active.SetActive(false)
+
+	if active.IsActive() {
+		t.Errorf("IsActive() = %v, want %v", active.IsActive(), false)
+	}
+	if !active.UpdatedAt().Equal(deactivatedAt) {
+		t.Errorf("UpdatedAt() = %v, want unchanged %v", active.UpdatedAt(), deactivatedAt)
+	}
+
+	inactive := NewCustomer(id, groupID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, past, past)
+
+	inactive.SetActive(true)
+
+	if !inactive.IsActive() {
+		t.Errorf("IsActive() = %v, want %v", inactive.IsActive(), true)
+	}
+	if !inactive.CreatedAt().Equal(past) {
+		t.Errorf("CreatedAt() = %v, want %v", inactive.CreatedAt(), past)
+	}
+	if !inactive.UpdatedAt().After(past) {
+		t.Errorf("UpdatedAt() = %v, want after %v", inactive.UpdatedAt(), past)
+	}
+	if inactive.UpdatedAt().Location() != time.UTC {
+		t.Errorf("UpdatedAt().Location() = %v, want %v", inactive.UpdatedAt().Location(), time.UTC)
+	}
+
+	activatedAt := inactive.UpdatedAt()
+
+	inactive.SetActive(true)
+
+	if !inactive.IsActive() {
+		t.Errorf("IsActive() = %v, want %v", inactive.IsActive(), true)
+	}
+	if !inactive.UpdatedAt().Equal(activatedAt) {
+		t.Errorf("UpdatedAt() = %v, want unchanged %v", inactive.UpdatedAt(), activatedAt)
 	}
 }
