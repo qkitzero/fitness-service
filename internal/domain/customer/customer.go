@@ -2,11 +2,13 @@ package customer
 
 import (
 	"time"
+
+	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 type Customer interface {
 	ID() CustomerID
-	GroupID() GroupID
+	TenantID() tenant.TenantID
 	Name() Name
 	NameKana() NameKana
 	Gender() Gender
@@ -30,7 +32,7 @@ type Customer interface {
 
 type customer struct {
 	id                           CustomerID
-	groupID                      GroupID
+	tenantID                     tenant.TenantID
 	name                         Name
 	nameKana                     NameKana
 	gender                       Gender
@@ -54,8 +56,8 @@ func (c customer) ID() CustomerID {
 	return c.id
 }
 
-func (c customer) GroupID() GroupID {
-	return c.groupID
+func (c customer) TenantID() tenant.TenantID {
+	return c.tenantID
 }
 
 func (c customer) Name() Name {
@@ -194,7 +196,7 @@ func (c *customer) SetActive(active bool) {
 
 func NewCustomer(
 	id CustomerID,
-	groupID GroupID,
+	tenantID tenant.TenantID,
 	name Name,
 	nameKana NameKana,
 	gender Gender,
@@ -215,7 +217,7 @@ func NewCustomer(
 ) Customer {
 	return &customer{
 		id:                           id,
-		groupID:                      groupID,
+		tenantID:                     tenantID,
 		name:                         name,
 		nameKana:                     nameKana,
 		gender:                       gender,

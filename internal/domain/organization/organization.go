@@ -2,11 +2,13 @@ package organization
 
 import (
 	"time"
+
+	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 type Organization interface {
 	ID() OrganizationID
-	GroupID() GroupID
+	TenantID() tenant.TenantID
 	Name() Name
 	CreatedAt() time.Time
 	UpdatedAt() time.Time
@@ -15,7 +17,7 @@ type Organization interface {
 
 type organization struct {
 	id        OrganizationID
-	groupID   GroupID
+	tenantID  tenant.TenantID
 	name      Name
 	createdAt time.Time
 	updatedAt time.Time
@@ -25,8 +27,8 @@ func (o organization) ID() OrganizationID {
 	return o.id
 }
 
-func (o organization) GroupID() GroupID {
-	return o.groupID
+func (o organization) TenantID() tenant.TenantID {
+	return o.tenantID
 }
 
 func (o organization) Name() Name {
@@ -48,14 +50,14 @@ func (o *organization) Update(name Name) {
 
 func NewOrganization(
 	id OrganizationID,
-	groupID GroupID,
+	tenantID tenant.TenantID,
 	name Name,
 	createdAt time.Time,
 	updatedAt time.Time,
 ) Organization {
 	return &organization{
 		id:        id,
-		groupID:   groupID,
+		tenantID:  tenantID,
 		name:      name,
 		createdAt: createdAt,
 		updatedAt: updatedAt,

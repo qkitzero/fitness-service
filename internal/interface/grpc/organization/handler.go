@@ -12,6 +12,7 @@ import (
 	apporganization "github.com/qkitzero/fitness-service/internal/application/organization"
 	appuser "github.com/qkitzero/fitness-service/internal/application/user"
 	domainorganization "github.com/qkitzero/fitness-service/internal/domain/organization"
+	domaintenant "github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 type OrganizationHandler struct {
@@ -30,7 +31,7 @@ func NewOrganizationHandler(
 func toProtoOrganization(o domainorganization.Organization) *organizationv1.Organization {
 	return &organizationv1.Organization{
 		OrganizationId: o.ID().String(),
-		GroupId:        o.GroupID().String(),
+		GroupId:        o.TenantID().String(),
 		Name:           o.Name().String(),
 	}
 }
@@ -53,7 +54,7 @@ func mapOrganizationError(err error, op string) error {
 }
 
 func (h *OrganizationHandler) CreateOrganization(ctx context.Context, req *organizationv1.CreateOrganizationRequest) (*organizationv1.CreateOrganizationResponse, error) {
-	groupID, err := domainorganization.NewGroupID(req.GetGroupId())
+	tenantID, err := domaintenant.NewTenantID(req.GetGroupId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -62,7 +63,7 @@ func (h *OrganizationHandler) CreateOrganization(ctx context.Context, req *organ
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	organization, err := h.organizationUsecase.CreateOrganization(ctx, groupID, name)
+	organization, err := h.organizationUsecase.CreateOrganization(ctx, tenantID, name)
 	if err != nil {
 		return nil, mapOrganizationError(err, "CreateOrganization")
 	}
@@ -89,12 +90,12 @@ func (h *OrganizationHandler) GetOrganization(ctx context.Context, req *organiza
 }
 
 func (h *OrganizationHandler) ListOrganizations(ctx context.Context, req *organizationv1.ListOrganizationsRequest) (*organizationv1.ListOrganizationsResponse, error) {
-	groupID, err := domainorganization.NewGroupID(req.GetGroupId())
+	tenantID, err := domaintenant.NewTenantID(req.GetGroupId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	organizations, err := h.organizationUsecase.ListOrganizations(ctx, groupID)
+	organizations, err := h.organizationUsecase.ListOrganizations(ctx, tenantID)
 	if err != nil {
 		return nil, mapOrganizationError(err, "ListOrganizations")
 	}

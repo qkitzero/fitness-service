@@ -4,11 +4,12 @@ import (
 	"time"
 
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
+	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 type CustomerModel struct {
 	ID                           customer.CustomerID
-	GroupID                      customer.GroupID
+	GroupID                      tenant.TenantID
 	Name                         customer.Name
 	NameKana                     customer.NameKana
 	Gender                       customer.Gender

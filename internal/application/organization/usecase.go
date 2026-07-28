@@ -8,12 +8,13 @@ import (
 	"github.com/qkitzero/fitness-service/internal/application/auth"
 	"github.com/qkitzero/fitness-service/internal/application/user"
 	"github.com/qkitzero/fitness-service/internal/domain/organization"
+	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 type OrganizationUsecase interface {
-	CreateOrganization(ctx context.Context, groupID organization.GroupID, name organization.Name) (organization.Organization, error)
+	CreateOrganization(ctx context.Context, tenantID tenant.TenantID, name organization.Name) (organization.Organization, error)
 	GetOrganization(ctx context.Context, organizationID organization.OrganizationID) (organization.Organization, error)
-	ListOrganizations(ctx context.Context, groupID organization.GroupID) ([]organization.Organization, error)
+	ListOrganizations(ctx context.Context, tenantID tenant.TenantID) ([]organization.Organization, error)
 	UpdateOrganization(ctx context.Context, organizationID organization.OrganizationID, name organization.Name) (organization.Organization, error)
 	DeleteOrganization(ctx context.Context, organizationID organization.OrganizationID) error
 }
@@ -28,14 +29,14 @@ func NewOrganizationUsecase(authService auth.AuthService, userService user.UserS
 	return &organizationUsecase{authService: authService, userService: userService, organizationRepo: organizationRepo}
 }
 
-func (u *organizationUsecase) verifyGroupMembership(ctx context.Context, groupID organization.GroupID) error {
+func (u *organizationUsecase) verifyTenantMembership(ctx context.Context, tenantID tenant.TenantID) error {
 	groupIDs, err := u.userService.ListMyGroups(ctx)
 	if err != nil {
 		return err
 	}
 
 	for _, id := range groupIDs {
-		if id == groupID.String() {
+		if id == tenantID.String() {
 			return nil
 		}
 	}
@@ -43,18 +44,18 @@ func (u *organizationUsecase) verifyGroupMembership(ctx context.Context, groupID
 	return user.ErrNotGroupMember
 }
 
-func (u *organizationUsecase) CreateOrganization(ctx context.Context, groupID organization.GroupID, name organization.Name) (organization.Organization, error) {
+func (u *organizationUsecase) CreateOrganization(ctx context.Context, tenantID tenant.TenantID, name organization.Name) (organization.Organization, error) {
 	if _, err := u.authService.VerifyToken(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := u.verifyGroupMembership(ctx, groupID); err != nil {
+	if err := u.verifyTenantMembership(ctx, tenantID); err != nil {
 		return nil, err
 	}
 
 	now := time.Now().UTC()
 
-	newOrganization := organization.NewOrganization(organization.NewOrganizationID(), groupID, name, now, now)
+	newOrganization := organization.NewOrganization(organization.NewOrganizationID(), tenantID, name, now, now)
 
 	if err := u.organizationRepo.Create(ctx, newOrganization); err != nil {
 		return nil, err
@@ -73,7 +74,7 @@ func (u *organizationUsecase) GetOrganization(ctx context.Context, organizationI
 		return nil, err
 	}
 
-	if err := u.verifyGroupMembership(ctx, foundOrganization.GroupID()); err != nil {
+	if err := u.verifyTenantMembership(ctx, foundOrganization.TenantID()); err != nil {
 		if errors.Is(err, user.ErrNotGroupMember) {
 			return nil, organization.ErrOrganizationNotFound
 		}
@@ -83,16 +84,16 @@ func (u *organizationUsecase) GetOrganization(ctx context.Context, organizationI
 	return foundOrganization, nil
 }
 
-func (u *organizationUsecase) ListOrganizations(ctx context.Context, groupID organization.GroupID) ([]organization.Organization, error) {
+func (u *organizationUsecase) ListOrganizations(ctx context.Context, tenantID tenant.TenantID) ([]organization.Organization, error) {
 	if _, err := u.authService.VerifyToken(ctx); err != nil {
 		return nil, err
 	}
 
-	if err := u.verifyGroupMembership(ctx, groupID); err != nil {
+	if err := u.verifyTenantMembership(ctx, tenantID); err != nil {
 		return nil, err
 	}
 
-	organizations, err := u.organizationRepo.ListByGroupID(ctx, groupID)
+	organizations, err := u.organizationRepo.ListByTenantID(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +111,7 @@ func (u *organizationUsecase) UpdateOrganization(ctx context.Context, organizati
 		return nil, err
 	}
 
-	if err := u.verifyGroupMembership(ctx, foundOrganization.GroupID()); err != nil {
+	if err := u.verifyTenantMembership(ctx, foundOrganization.TenantID()); err != nil {
 		if errors.Is(err, user.ErrNotGroupMember) {
 			return nil, organization.ErrOrganizationNotFound
 		}
@@ -136,7 +137,7 @@ func (u *organizationUsecase) DeleteOrganization(ctx context.Context, organizati
 		return err
 	}
 
-	if err := u.verifyGroupMembership(ctx, foundOrganization.GroupID()); err != nil {
+	if err := u.verifyTenantMembership(ctx, foundOrganization.TenantID()); err != nil {
 		if errors.Is(err, user.ErrNotGroupMember) {
 			return organization.ErrOrganizationNotFound
 		}

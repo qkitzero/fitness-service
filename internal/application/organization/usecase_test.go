@@ -10,6 +10,7 @@ import (
 
 	"github.com/qkitzero/fitness-service/internal/application/user"
 	"github.com/qkitzero/fitness-service/internal/domain/organization"
+	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 	mocksappauth "github.com/qkitzero/fitness-service/mocks/application/auth"
 	mocksappuser "github.com/qkitzero/fitness-service/mocks/application/user"
 	mocksorganization "github.com/qkitzero/fitness-service/mocks/domain/organization"
@@ -17,7 +18,7 @@ import (
 
 func TestCreateOrganization(t *testing.T) {
 	t.Parallel()
-	groupID, _ := organization.NewGroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
 	name, _ := organization.NewName("テスト株式会社")
 
 	tests := []struct {
@@ -28,15 +29,15 @@ func TestCreateOrganization(t *testing.T) {
 		ctx             context.Context
 		userID          string
 		verifyTokenErr  error
-		myGroupIDs      []string
+		myTenantIDs     []string
 		listMyGroupsErr error
 		createErr       error
 	}{
-		{"success create organization", true, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{groupID.String()}, nil, nil},
-		{"failure verify token error", false, nil, false, context.Background(), "", errors.New("verify token error"), []string{groupID.String()}, nil, nil},
-		{"failure not group member", false, user.ErrNotGroupMember, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
+		{"success create organization", true, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, nil},
+		{"failure verify token error", false, nil, false, context.Background(), "", errors.New("verify token error"), []string{tenantID.String()}, nil, nil},
+		{"failure not tenant member", false, user.ErrNotGroupMember, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
 		{"failure list my groups error", false, nil, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, errors.New("list my groups error"), nil},
-		{"failure create error", false, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{groupID.String()}, nil, errors.New("create error")},
+		{"failure create error", false, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, errors.New("create error")},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -50,14 +51,14 @@ func TestCreateOrganization(t *testing.T) {
 			mockUserService := mocksappuser.NewMockUserService(ctrl)
 			mockOrganizationRepository := mocksorganization.NewMockOrganizationRepository(ctrl)
 			mockAuthService.EXPECT().VerifyToken(tt.ctx).Return(tt.userID, tt.verifyTokenErr).AnyTimes()
-			mockUserService.EXPECT().ListMyGroups(tt.ctx).Return(tt.myGroupIDs, tt.listMyGroupsErr).AnyTimes()
+			mockUserService.EXPECT().ListMyGroups(tt.ctx).Return(tt.myTenantIDs, tt.listMyGroupsErr).AnyTimes()
 			if tt.callCreate {
 				mockOrganizationRepository.EXPECT().Create(tt.ctx, gomock.Any()).Return(tt.createErr).Times(1)
 			}
 
 			u := NewOrganizationUsecase(mockAuthService, mockUserService, mockOrganizationRepository)
 
-			createdOrganization, err := u.CreateOrganization(tt.ctx, groupID, name)
+			createdOrganization, err := u.CreateOrganization(tt.ctx, tenantID, name)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}
@@ -68,8 +69,8 @@ func TestCreateOrganization(t *testing.T) {
 				t.Errorf("err = %v, want %v", err, tt.wantErr)
 			}
 			if tt.success {
-				if createdOrganization.GroupID() != groupID {
-					t.Errorf("GroupID() = %v, want %v", createdOrganization.GroupID(), groupID)
+				if createdOrganization.TenantID() != tenantID {
+					t.Errorf("TenantID() = %v, want %v", createdOrganization.TenantID(), tenantID)
 				}
 				if createdOrganization.Name() != name {
 					t.Errorf("Name() = %v, want %v", createdOrganization.Name(), name)
@@ -87,7 +88,7 @@ func TestCreateOrganization(t *testing.T) {
 
 func TestGetOrganization(t *testing.T) {
 	t.Parallel()
-	groupID, _ := organization.NewGroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
 
 	tests := []struct {
 		name            string
@@ -98,14 +99,14 @@ func TestGetOrganization(t *testing.T) {
 		userID          string
 		verifyTokenErr  error
 		findByIDErr     error
-		myGroupIDs      []string
+		myTenantIDs     []string
 		listMyGroupsErr error
 	}{
-		{"success get organization", true, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{groupID.String()}, nil},
-		{"failure verify token error", false, nil, false, context.Background(), "", errors.New("verify token error"), nil, []string{groupID.String()}, nil},
-		{"failure find by id error", false, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, errors.New("find by id error"), []string{groupID.String()}, nil},
-		{"failure organization not found", false, organization.ErrOrganizationNotFound, true, context.Background(), "google-oauth2|000000000000000000000", nil, organization.ErrOrganizationNotFound, []string{groupID.String()}, nil},
-		{"failure other group is hidden as not found", false, organization.ErrOrganizationNotFound, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil},
+		{"success get organization", true, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{tenantID.String()}, nil},
+		{"failure verify token error", false, nil, false, context.Background(), "", errors.New("verify token error"), nil, []string{tenantID.String()}, nil},
+		{"failure find by id error", false, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, errors.New("find by id error"), []string{tenantID.String()}, nil},
+		{"failure organization not found", false, organization.ErrOrganizationNotFound, true, context.Background(), "google-oauth2|000000000000000000000", nil, organization.ErrOrganizationNotFound, []string{tenantID.String()}, nil},
+		{"failure other tenant is hidden as not found", false, organization.ErrOrganizationNotFound, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil},
 		{"failure list my groups error", false, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, nil, errors.New("list my groups error")},
 	}
 	for _, tt := range tests {
@@ -121,10 +122,10 @@ func TestGetOrganization(t *testing.T) {
 			mockAuthService := mocksappauth.NewMockAuthService(ctrl)
 			mockUserService := mocksappuser.NewMockUserService(ctrl)
 			mockOrganization := mocksorganization.NewMockOrganization(ctrl)
-			mockOrganization.EXPECT().GroupID().Return(groupID).AnyTimes()
+			mockOrganization.EXPECT().TenantID().Return(tenantID).AnyTimes()
 			mockOrganizationRepository := mocksorganization.NewMockOrganizationRepository(ctrl)
 			mockAuthService.EXPECT().VerifyToken(tt.ctx).Return(tt.userID, tt.verifyTokenErr).AnyTimes()
-			mockUserService.EXPECT().ListMyGroups(tt.ctx).Return(tt.myGroupIDs, tt.listMyGroupsErr).AnyTimes()
+			mockUserService.EXPECT().ListMyGroups(tt.ctx).Return(tt.myTenantIDs, tt.listMyGroupsErr).AnyTimes()
 			if tt.callFindByID {
 				mockOrganizationRepository.EXPECT().FindByID(tt.ctx, organizationID).Return(mockOrganization, tt.findByIDErr).Times(1)
 			}
@@ -150,25 +151,25 @@ func TestGetOrganization(t *testing.T) {
 
 func TestListOrganizations(t *testing.T) {
 	t.Parallel()
-	groupID, _ := organization.NewGroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
 
 	tests := []struct {
-		name              string
-		success           bool
-		wantErr           error
-		callListByGroupID bool
-		ctx               context.Context
-		userID            string
-		verifyTokenErr    error
-		myGroupIDs        []string
-		listMyGroupsErr   error
-		listByGroupIDErr  error
+		name               string
+		success            bool
+		wantErr            error
+		callListByTenantID bool
+		ctx                context.Context
+		userID             string
+		verifyTokenErr     error
+		myTenantIDs        []string
+		listMyGroupsErr    error
+		listByTenantIDErr  error
 	}{
-		{"success list organizations", true, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{groupID.String()}, nil, nil},
-		{"failure verify token error", false, nil, false, context.Background(), "", errors.New("verify token error"), []string{groupID.String()}, nil, nil},
-		{"failure not group member", false, user.ErrNotGroupMember, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
+		{"success list organizations", true, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, nil},
+		{"failure verify token error", false, nil, false, context.Background(), "", errors.New("verify token error"), []string{tenantID.String()}, nil, nil},
+		{"failure not tenant member", false, user.ErrNotGroupMember, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
 		{"failure list my groups error", false, nil, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, errors.New("list my groups error"), nil},
-		{"failure list by group id error", false, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{groupID.String()}, nil, errors.New("list by group id error")},
+		{"failure list by tenant id error", false, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, errors.New("list by group id error")},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -183,14 +184,14 @@ func TestListOrganizations(t *testing.T) {
 			mockOrganization := mocksorganization.NewMockOrganization(ctrl)
 			mockOrganizationRepository := mocksorganization.NewMockOrganizationRepository(ctrl)
 			mockAuthService.EXPECT().VerifyToken(tt.ctx).Return(tt.userID, tt.verifyTokenErr).AnyTimes()
-			mockUserService.EXPECT().ListMyGroups(tt.ctx).Return(tt.myGroupIDs, tt.listMyGroupsErr).AnyTimes()
-			if tt.callListByGroupID {
-				mockOrganizationRepository.EXPECT().ListByGroupID(tt.ctx, groupID).Return([]organization.Organization{mockOrganization}, tt.listByGroupIDErr).Times(1)
+			mockUserService.EXPECT().ListMyGroups(tt.ctx).Return(tt.myTenantIDs, tt.listMyGroupsErr).AnyTimes()
+			if tt.callListByTenantID {
+				mockOrganizationRepository.EXPECT().ListByTenantID(tt.ctx, tenantID).Return([]organization.Organization{mockOrganization}, tt.listByTenantIDErr).Times(1)
 			}
 
 			u := NewOrganizationUsecase(mockAuthService, mockUserService, mockOrganizationRepository)
 
-			organizations, err := u.ListOrganizations(tt.ctx, groupID)
+			organizations, err := u.ListOrganizations(tt.ctx, tenantID)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}
@@ -214,7 +215,7 @@ func TestListOrganizations(t *testing.T) {
 
 func TestUpdateOrganization(t *testing.T) {
 	t.Parallel()
-	groupID, _ := organization.NewGroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
 	name, _ := organization.NewName("更新株式会社")
 
 	tests := []struct {
@@ -227,17 +228,17 @@ func TestUpdateOrganization(t *testing.T) {
 		userID          string
 		verifyTokenErr  error
 		findByIDErr     error
-		myGroupIDs      []string
+		myTenantIDs     []string
 		listMyGroupsErr error
 		updateErr       error
 	}{
-		{"success update organization", true, nil, true, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{groupID.String()}, nil, nil},
-		{"failure verify token error", false, nil, false, false, context.Background(), "", errors.New("verify token error"), nil, []string{groupID.String()}, nil, nil},
-		{"failure find by id error", false, nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, errors.New("find by id error"), []string{groupID.String()}, nil, nil},
-		{"failure organization not found", false, organization.ErrOrganizationNotFound, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, organization.ErrOrganizationNotFound, []string{groupID.String()}, nil, nil},
-		{"failure other group is hidden as not found", false, organization.ErrOrganizationNotFound, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
+		{"success update organization", true, nil, true, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{tenantID.String()}, nil, nil},
+		{"failure verify token error", false, nil, false, false, context.Background(), "", errors.New("verify token error"), nil, []string{tenantID.String()}, nil, nil},
+		{"failure find by id error", false, nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, errors.New("find by id error"), []string{tenantID.String()}, nil, nil},
+		{"failure organization not found", false, organization.ErrOrganizationNotFound, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, organization.ErrOrganizationNotFound, []string{tenantID.String()}, nil, nil},
+		{"failure other tenant is hidden as not found", false, organization.ErrOrganizationNotFound, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
 		{"failure list my groups error", false, nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, nil, errors.New("list my groups error"), nil},
-		{"failure update error", false, nil, true, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{groupID.String()}, nil, errors.New("update error")},
+		{"failure update error", false, nil, true, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{tenantID.String()}, nil, errors.New("update error")},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -252,10 +253,10 @@ func TestUpdateOrganization(t *testing.T) {
 			mockAuthService := mocksappauth.NewMockAuthService(ctrl)
 			mockUserService := mocksappuser.NewMockUserService(ctrl)
 			mockOrganization := mocksorganization.NewMockOrganization(ctrl)
-			mockOrganization.EXPECT().GroupID().Return(groupID).AnyTimes()
+			mockOrganization.EXPECT().TenantID().Return(tenantID).AnyTimes()
 			mockOrganizationRepository := mocksorganization.NewMockOrganizationRepository(ctrl)
 			mockAuthService.EXPECT().VerifyToken(tt.ctx).Return(tt.userID, tt.verifyTokenErr).AnyTimes()
-			mockUserService.EXPECT().ListMyGroups(tt.ctx).Return(tt.myGroupIDs, tt.listMyGroupsErr).AnyTimes()
+			mockUserService.EXPECT().ListMyGroups(tt.ctx).Return(tt.myTenantIDs, tt.listMyGroupsErr).AnyTimes()
 			if tt.callFindByID {
 				mockOrganizationRepository.EXPECT().FindByID(tt.ctx, organizationID).Return(mockOrganization, tt.findByIDErr).Times(1)
 			}
@@ -285,7 +286,7 @@ func TestUpdateOrganization(t *testing.T) {
 
 func TestDeleteOrganization(t *testing.T) {
 	t.Parallel()
-	groupID, _ := organization.NewGroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
 
 	tests := []struct {
 		name            string
@@ -297,17 +298,17 @@ func TestDeleteOrganization(t *testing.T) {
 		userID          string
 		verifyTokenErr  error
 		findByIDErr     error
-		myGroupIDs      []string
+		myTenantIDs     []string
 		listMyGroupsErr error
 		deleteErr       error
 	}{
-		{"success delete organization", true, nil, true, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{groupID.String()}, nil, nil},
-		{"failure verify token error", false, nil, false, false, context.Background(), "", errors.New("verify token error"), nil, []string{groupID.String()}, nil, nil},
-		{"failure find by id error", false, nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, errors.New("find by id error"), []string{groupID.String()}, nil, nil},
-		{"failure organization not found", false, organization.ErrOrganizationNotFound, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, organization.ErrOrganizationNotFound, []string{groupID.String()}, nil, nil},
-		{"failure other group is hidden as not found", false, organization.ErrOrganizationNotFound, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
+		{"success delete organization", true, nil, true, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{tenantID.String()}, nil, nil},
+		{"failure verify token error", false, nil, false, false, context.Background(), "", errors.New("verify token error"), nil, []string{tenantID.String()}, nil, nil},
+		{"failure find by id error", false, nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, errors.New("find by id error"), []string{tenantID.String()}, nil, nil},
+		{"failure organization not found", false, organization.ErrOrganizationNotFound, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, organization.ErrOrganizationNotFound, []string{tenantID.String()}, nil, nil},
+		{"failure other tenant is hidden as not found", false, organization.ErrOrganizationNotFound, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
 		{"failure list my groups error", false, nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, nil, errors.New("list my groups error"), nil},
-		{"failure delete error", false, nil, true, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{groupID.String()}, nil, errors.New("delete error")},
+		{"failure delete error", false, nil, true, true, context.Background(), "google-oauth2|000000000000000000000", nil, nil, []string{tenantID.String()}, nil, errors.New("delete error")},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -322,10 +323,10 @@ func TestDeleteOrganization(t *testing.T) {
 			mockAuthService := mocksappauth.NewMockAuthService(ctrl)
 			mockUserService := mocksappuser.NewMockUserService(ctrl)
 			mockOrganization := mocksorganization.NewMockOrganization(ctrl)
-			mockOrganization.EXPECT().GroupID().Return(groupID).AnyTimes()
+			mockOrganization.EXPECT().TenantID().Return(tenantID).AnyTimes()
 			mockOrganizationRepository := mocksorganization.NewMockOrganizationRepository(ctrl)
 			mockAuthService.EXPECT().VerifyToken(tt.ctx).Return(tt.userID, tt.verifyTokenErr).AnyTimes()
-			mockUserService.EXPECT().ListMyGroups(tt.ctx).Return(tt.myGroupIDs, tt.listMyGroupsErr).AnyTimes()
+			mockUserService.EXPECT().ListMyGroups(tt.ctx).Return(tt.myTenantIDs, tt.listMyGroupsErr).AnyTimes()
 			if tt.callFindByID {
 				mockOrganizationRepository.EXPECT().FindByID(tt.ctx, organizationID).Return(mockOrganization, tt.findByIDErr).Times(1)
 			}

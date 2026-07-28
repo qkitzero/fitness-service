@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	organization "github.com/qkitzero/fitness-service/internal/domain/organization"
+	tenant "github.com/qkitzero/fitness-service/internal/domain/tenant"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -84,19 +85,19 @@ func (mr *MockOrganizationRepositoryMockRecorder) FindByID(ctx, organizationID a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByID", reflect.TypeOf((*MockOrganizationRepository)(nil).FindByID), ctx, organizationID)
 }
 
-// ListByGroupID mocks base method.
-func (m *MockOrganizationRepository) ListByGroupID(ctx context.Context, groupID organization.GroupID) ([]organization.Organization, error) {
+// ListByTenantID mocks base method.
+func (m *MockOrganizationRepository) ListByTenantID(ctx context.Context, tenantID tenant.TenantID) ([]organization.Organization, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByGroupID", ctx, groupID)
+	ret := m.ctrl.Call(m, "ListByTenantID", ctx, tenantID)
 	ret0, _ := ret[0].([]organization.Organization)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListByGroupID indicates an expected call of ListByGroupID.
-func (mr *MockOrganizationRepositoryMockRecorder) ListByGroupID(ctx, groupID any) *gomock.Call {
+// ListByTenantID indicates an expected call of ListByTenantID.
+func (mr *MockOrganizationRepositoryMockRecorder) ListByTenantID(ctx, tenantID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByGroupID", reflect.TypeOf((*MockOrganizationRepository)(nil).ListByGroupID), ctx, groupID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTenantID", reflect.TypeOf((*MockOrganizationRepository)(nil).ListByTenantID), ctx, tenantID)
 }
 
 // Update mocks base method.

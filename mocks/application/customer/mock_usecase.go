@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	customer "github.com/qkitzero/fitness-service/internal/domain/customer"
+	tenant "github.com/qkitzero/fitness-service/internal/domain/tenant"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -42,18 +43,18 @@ func (m *MockCustomerUsecase) EXPECT() *MockCustomerUsecaseMockRecorder {
 }
 
 // CreateCustomer mocks base method.
-func (m *MockCustomerUsecase) CreateCustomer(ctx context.Context, groupID customer.GroupID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone) (customer.Customer, error) {
+func (m *MockCustomerUsecase) CreateCustomer(ctx context.Context, tenantID tenant.TenantID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone) (customer.Customer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateCustomer", ctx, groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone)
+	ret := m.ctrl.Call(m, "CreateCustomer", ctx, tenantID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone)
 	ret0, _ := ret[0].(customer.Customer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateCustomer indicates an expected call of CreateCustomer.
-func (mr *MockCustomerUsecaseMockRecorder) CreateCustomer(ctx, groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone any) *gomock.Call {
+func (mr *MockCustomerUsecaseMockRecorder) CreateCustomer(ctx, tenantID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomer", reflect.TypeOf((*MockCustomerUsecase)(nil).CreateCustomer), ctx, groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateCustomer", reflect.TypeOf((*MockCustomerUsecase)(nil).CreateCustomer), ctx, tenantID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone)
 }
 
 // DeleteCustomer mocks base method.
@@ -86,18 +87,18 @@ func (mr *MockCustomerUsecaseMockRecorder) GetCustomer(ctx, customerID any) *gom
 }
 
 // ListCustomers mocks base method.
-func (m *MockCustomerUsecase) ListCustomers(ctx context.Context, groupID customer.GroupID, includeInactive bool) ([]customer.Customer, error) {
+func (m *MockCustomerUsecase) ListCustomers(ctx context.Context, tenantID tenant.TenantID, includeInactive bool) ([]customer.Customer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListCustomers", ctx, groupID, includeInactive)
+	ret := m.ctrl.Call(m, "ListCustomers", ctx, tenantID, includeInactive)
 	ret0, _ := ret[0].([]customer.Customer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListCustomers indicates an expected call of ListCustomers.
-func (mr *MockCustomerUsecaseMockRecorder) ListCustomers(ctx, groupID, includeInactive any) *gomock.Call {
+func (mr *MockCustomerUsecaseMockRecorder) ListCustomers(ctx, tenantID, includeInactive any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCustomers", reflect.TypeOf((*MockCustomerUsecase)(nil).ListCustomers), ctx, groupID, includeInactive)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCustomers", reflect.TypeOf((*MockCustomerUsecase)(nil).ListCustomers), ctx, tenantID, includeInactive)
 }
 
 // SetCustomerActive mocks base method.

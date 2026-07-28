@@ -14,6 +14,7 @@ import (
 	time "time"
 
 	customer "github.com/qkitzero/fitness-service/internal/domain/customer"
+	tenant "github.com/qkitzero/fitness-service/internal/domain/tenant"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -167,20 +168,6 @@ func (mr *MockCustomerMockRecorder) Gender() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Gender", reflect.TypeOf((*MockCustomer)(nil).Gender))
 }
 
-// GroupID mocks base method.
-func (m *MockCustomer) GroupID() customer.GroupID {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GroupID")
-	ret0, _ := ret[0].(customer.GroupID)
-	return ret0
-}
-
-// GroupID indicates an expected call of GroupID.
-func (mr *MockCustomerMockRecorder) GroupID() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupID", reflect.TypeOf((*MockCustomer)(nil).GroupID))
-}
-
 // ID mocks base method.
 func (m *MockCustomer) ID() customer.CustomerID {
 	m.ctrl.T.Helper()
@@ -303,6 +290,20 @@ func (m *MockCustomer) Street() *customer.Street {
 func (mr *MockCustomerMockRecorder) Street() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Street", reflect.TypeOf((*MockCustomer)(nil).Street))
+}
+
+// TenantID mocks base method.
+func (m *MockCustomer) TenantID() tenant.TenantID {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TenantID")
+	ret0, _ := ret[0].(tenant.TenantID)
+	return ret0
+}
+
+// TenantID indicates an expected call of TenantID.
+func (mr *MockCustomerMockRecorder) TenantID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TenantID", reflect.TypeOf((*MockCustomer)(nil).TenantID))
 }
 
 // Update mocks base method.

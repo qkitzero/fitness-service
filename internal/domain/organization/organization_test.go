@@ -3,23 +3,25 @@ package organization
 import (
 	"testing"
 	"time"
+
+	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 func TestNewOrganization(t *testing.T) {
 	t.Parallel()
 	id, _ := NewOrganizationIDFromString("3d1e6a5c-7b8f-4c2d-9a0e-1f2b3c4d5e6f")
-	groupID, _ := NewGroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
 	name, _ := NewName("テスト株式会社")
 
 	createdAt := time.Now()
 	updatedAt := time.Now()
-	o := NewOrganization(id, groupID, name, createdAt, updatedAt)
+	o := NewOrganization(id, tenantID, name, createdAt, updatedAt)
 
 	if o.ID() != id {
 		t.Errorf("ID() = %v, want %v", o.ID(), id)
 	}
-	if o.GroupID() != groupID {
-		t.Errorf("GroupID() = %v, want %v", o.GroupID(), groupID)
+	if o.TenantID() != tenantID {
+		t.Errorf("TenantID() = %v, want %v", o.TenantID(), tenantID)
 	}
 	if o.Name() != name {
 		t.Errorf("Name() = %v, want %v", o.Name(), name)
@@ -35,10 +37,10 @@ func TestNewOrganization(t *testing.T) {
 func TestUpdateOrganization(t *testing.T) {
 	t.Parallel()
 	id, _ := NewOrganizationIDFromString("3d1e6a5c-7b8f-4c2d-9a0e-1f2b3c4d5e6f")
-	groupID, _ := NewGroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
 	name, _ := NewName("テスト株式会社")
 	past := time.Now().UTC().Add(-time.Hour)
-	o := NewOrganization(id, groupID, name, past, past)
+	o := NewOrganization(id, tenantID, name, past, past)
 
 	updatedName, _ := NewName("更新株式会社")
 
@@ -50,8 +52,8 @@ func TestUpdateOrganization(t *testing.T) {
 	if o.ID() != id {
 		t.Errorf("ID() = %v, want %v", o.ID(), id)
 	}
-	if o.GroupID() != groupID {
-		t.Errorf("GroupID() = %v, want %v", o.GroupID(), groupID)
+	if o.TenantID() != tenantID {
+		t.Errorf("TenantID() = %v, want %v", o.TenantID(), tenantID)
 	}
 	if !o.CreatedAt().Equal(past) {
 		t.Errorf("CreatedAt() = %v, want %v", o.CreatedAt(), past)

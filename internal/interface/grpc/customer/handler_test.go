@@ -15,6 +15,7 @@ import (
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
 	"github.com/qkitzero/fitness-service/internal/application/user"
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
+	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 	mocksappcustomer "github.com/qkitzero/fitness-service/mocks/application/customer"
 	mockscustomer "github.com/qkitzero/fitness-service/mocks/domain/customer"
 )
@@ -27,7 +28,7 @@ const (
 func customerSample(ctrl *gomock.Controller, active bool) *mockscustomer.MockCustomer {
 	m := mockscustomer.NewMockCustomer(ctrl)
 	id, _ := customer.NewCustomerIDFromString(sampleCustomerID)
-	groupID, _ := customer.NewGroupID(sampleGroupID)
+	tenantID, _ := tenant.NewTenantID(sampleGroupID)
 	name, _ := customer.NewName("test customer")
 	nameKana, _ := customer.NewNameKana("テストカナ")
 	birthDate, _ := customer.NewBirthDate(2000, 1, 1)
@@ -43,7 +44,7 @@ func customerSample(ctrl *gomock.Controller, active bool) *mockscustomer.MockCus
 	emergencyContactPhone, _ := customer.NewPhone("090-1234-5678")
 	m.EXPECT().ID().Return(id).AnyTimes()
 	m.EXPECT().Name().Return(name).AnyTimes()
-	m.EXPECT().GroupID().Return(groupID).AnyTimes()
+	m.EXPECT().TenantID().Return(tenantID).AnyTimes()
 	m.EXPECT().NameKana().Return(nameKana).AnyTimes()
 	m.EXPECT().Gender().Return(customer.GenderMale).AnyTimes()
 	m.EXPECT().BirthDate().Return(birthDate).AnyTimes()
@@ -106,7 +107,7 @@ func TestCreateCustomer(t *testing.T) {
 		{"failure invalid emergency contact name", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, EmergencyContactName: &tooLong}, false, nil, codes.InvalidArgument},
 		{"failure invalid emergency contact relationship", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, EmergencyContactRelationship: &tooLong}, false, nil, codes.InvalidArgument},
 		{"failure invalid emergency contact phone", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, EmergencyContactPhone: &invalid}, false, nil, codes.InvalidArgument},
-		{"failure not group member", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, user.ErrNotGroupMember, codes.PermissionDenied},
 		{"failure usecase error", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, fmt.Errorf("create customer error"), codes.Internal},
 		{"failure unauthenticated is preserved", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", &customerv1.CreateCustomerRequest{Name: "test customer", GroupId: gid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
@@ -122,8 +123,8 @@ func TestCreateCustomer(t *testing.T) {
 			ctx := context.Background()
 			mockUsecase := mocksappcustomer.NewMockCustomerUsecase(ctrl)
 			if tt.callUsecase {
-				groupID, _ := customer.NewGroupID(gid)
-				mockUsecase.EXPECT().CreateCustomer(gomock.Any(), groupID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(customerSample(ctrl, true), tt.createErr).Times(1)
+				tenantID, _ := tenant.NewTenantID(gid)
+				mockUsecase.EXPECT().CreateCustomer(gomock.Any(), tenantID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(customerSample(ctrl, true), tt.createErr).Times(1)
 			}
 
 			handler := NewCustomerHandler(mockUsecase)
@@ -151,7 +152,7 @@ func TestGetCustomer(t *testing.T) {
 		{"success get customer", sampleCustomerID, true, nil, codes.OK},
 		{"failure invalid customer id", "", false, nil, codes.InvalidArgument},
 		{"failure get customer error", sampleCustomerID, true, fmt.Errorf("get customer error"), codes.Internal},
-		{"failure not group member", sampleCustomerID, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", sampleCustomerID, true, user.ErrNotGroupMember, codes.PermissionDenied},
 		{"failure customer not found", sampleCustomerID, true, customer.ErrCustomerNotFound, codes.NotFound},
 		{"failure unauthenticated is preserved", sampleCustomerID, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", sampleCustomerID, true, status.Error(codes.InvalidArgument, "user service"), codes.Internal},
@@ -196,7 +197,7 @@ func TestListCustomers(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name             string
-		groupID          string
+		tenantID         string
 		includeInactive  bool
 		callUsecase      bool
 		listCustomersErr error
@@ -205,7 +206,7 @@ func TestListCustomers(t *testing.T) {
 		{"success list customers", sampleGroupID, false, true, nil, codes.OK},
 		{"success list customers including inactive", sampleGroupID, true, true, nil, codes.OK},
 		{"failure invalid group id", "", false, false, nil, codes.InvalidArgument},
-		{"failure not group member", sampleGroupID, false, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", sampleGroupID, false, true, user.ErrNotGroupMember, codes.PermissionDenied},
 		{"failure usecase error", sampleGroupID, false, true, fmt.Errorf("list customers error"), codes.Internal},
 		{"failure unauthenticated is preserved", sampleGroupID, false, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", sampleGroupID, false, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
@@ -221,14 +222,14 @@ func TestListCustomers(t *testing.T) {
 			ctx := context.Background()
 			mockUsecase := mocksappcustomer.NewMockCustomerUsecase(ctrl)
 			if tt.callUsecase {
-				groupID, _ := customer.NewGroupID(sampleGroupID)
+				tenantID, _ := tenant.NewTenantID(sampleGroupID)
 				customers := []customer.Customer{customerSample(ctrl, true), customerSample(ctrl, false)}
-				mockUsecase.EXPECT().ListCustomers(gomock.Any(), groupID, tt.includeInactive).Return(customers, tt.listCustomersErr).Times(1)
+				mockUsecase.EXPECT().ListCustomers(gomock.Any(), tenantID, tt.includeInactive).Return(customers, tt.listCustomersErr).Times(1)
 			}
 
 			handler := NewCustomerHandler(mockUsecase)
 
-			res, err := handler.ListCustomers(ctx, &customerv1.ListCustomersRequest{GroupId: tt.groupID, IncludeInactive: tt.includeInactive})
+			res, err := handler.ListCustomers(ctx, &customerv1.ListCustomersRequest{GroupId: tt.tenantID, IncludeInactive: tt.includeInactive})
 			if got := status.Code(err); got != tt.wantCode {
 				t.Errorf("expected code %v, got %v (err=%v)", tt.wantCode, got, err)
 			}
@@ -277,7 +278,7 @@ func TestUpdateCustomer(t *testing.T) {
 		{"failure invalid birth date", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: futureDate}, false, nil, codes.InvalidArgument},
 		{"failure invalid phone", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate, Phone: &invalid}, false, nil, codes.InvalidArgument},
 		{"failure usecase error", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, fmt.Errorf("update customer error"), codes.Internal},
-		{"failure not group member", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, user.ErrNotGroupMember, codes.PermissionDenied},
 		{"failure customer not found", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, customer.ErrCustomerNotFound, codes.NotFound},
 		{"failure unauthenticated is preserved", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, status.Error(codes.InvalidArgument, "user service"), codes.Internal},
@@ -329,7 +330,7 @@ func TestSetCustomerActive(t *testing.T) {
 		{"success activate customer", sampleCustomerID, true, true, nil, codes.OK},
 		{"failure invalid customer id", "", false, false, nil, codes.InvalidArgument},
 		{"failure usecase error", sampleCustomerID, false, true, fmt.Errorf("set customer active error"), codes.Internal},
-		{"failure not group member", sampleCustomerID, false, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", sampleCustomerID, false, true, user.ErrNotGroupMember, codes.PermissionDenied},
 		{"failure customer not found", sampleCustomerID, false, true, customer.ErrCustomerNotFound, codes.NotFound},
 		{"failure unauthenticated is preserved", sampleCustomerID, false, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", sampleCustomerID, false, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
@@ -379,7 +380,7 @@ func TestDeleteCustomer(t *testing.T) {
 		{"success delete customer", sampleCustomerID, true, nil, codes.OK},
 		{"failure invalid customer id", "", false, nil, codes.InvalidArgument},
 		{"failure usecase error", sampleCustomerID, true, fmt.Errorf("delete customer error"), codes.Internal},
-		{"failure not group member", sampleCustomerID, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", sampleCustomerID, true, user.ErrNotGroupMember, codes.PermissionDenied},
 		{"failure customer not found", sampleCustomerID, true, customer.ErrCustomerNotFound, codes.NotFound},
 		{"failure unauthenticated is preserved", sampleCustomerID, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", sampleCustomerID, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
@@ -557,7 +558,7 @@ func TestToProtoGender(t *testing.T) {
 func TestToProtoCustomer(t *testing.T) {
 	t.Parallel()
 	id, _ := customer.NewCustomerIDFromString(sampleCustomerID)
-	groupID, _ := customer.NewGroupID(sampleGroupID)
+	tenantID, _ := tenant.NewTenantID(sampleGroupID)
 	name, _ := customer.NewName("test customer")
 	nameKana, _ := customer.NewNameKana("テストカナ")
 	gender, _ := customer.NewGender("male")
@@ -574,7 +575,7 @@ func TestToProtoCustomer(t *testing.T) {
 	emergencyContactPhone, _ := customer.NewPhone("090-1234-5678")
 	now := time.Now().UTC()
 
-	full := customer.NewCustomer(id, groupID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, true, now, now)
+	full := customer.NewCustomer(id, tenantID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, true, now, now)
 	got := toProtoCustomer(full)
 	if got.GetCustomerId() != id.String() {
 		t.Errorf("CustomerId = %v, want %v", got.GetCustomerId(), id.String())
@@ -582,8 +583,8 @@ func TestToProtoCustomer(t *testing.T) {
 	if got.GetName() != "test customer" {
 		t.Errorf("Name = %v, want test customer", got.GetName())
 	}
-	if got.GetGroupId() != groupID.String() {
-		t.Errorf("GroupId = %v, want %v", got.GetGroupId(), groupID.String())
+	if got.GetGroupId() != tenantID.String() {
+		t.Errorf("GroupId = %v, want %v", got.GetGroupId(), tenantID.String())
 	}
 	if got.GetNameKana() != "テストカナ" {
 		t.Errorf("NameKana = %v, want テストカナ", got.GetNameKana())
@@ -628,7 +629,7 @@ func TestToProtoCustomer(t *testing.T) {
 		t.Errorf("IsActive = %v, want %v", got.GetIsActive(), true)
 	}
 
-	empty := customer.NewCustomer(id, groupID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, now, now)
+	empty := customer.NewCustomer(id, tenantID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, now, now)
 	gotEmpty := toProtoCustomer(empty)
 	if gotEmpty.Phone != nil || gotEmpty.Email != nil || gotEmpty.PostalCode != nil || gotEmpty.Prefecture != nil || gotEmpty.City != nil || gotEmpty.Street != nil || gotEmpty.Building != nil || gotEmpty.EmergencyContactName != nil || gotEmpty.EmergencyContactRelationship != nil || gotEmpty.EmergencyContactPhone != nil {
 		t.Errorf("expected nil optional proto fields for empty customer")

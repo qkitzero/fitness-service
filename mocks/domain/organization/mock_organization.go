@@ -14,6 +14,7 @@ import (
 	time "time"
 
 	organization "github.com/qkitzero/fitness-service/internal/domain/organization"
+	tenant "github.com/qkitzero/fitness-service/internal/domain/tenant"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -55,20 +56,6 @@ func (mr *MockOrganizationMockRecorder) CreatedAt() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatedAt", reflect.TypeOf((*MockOrganization)(nil).CreatedAt))
 }
 
-// GroupID mocks base method.
-func (m *MockOrganization) GroupID() organization.GroupID {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GroupID")
-	ret0, _ := ret[0].(organization.GroupID)
-	return ret0
-}
-
-// GroupID indicates an expected call of GroupID.
-func (mr *MockOrganizationMockRecorder) GroupID() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GroupID", reflect.TypeOf((*MockOrganization)(nil).GroupID))
-}
-
 // ID mocks base method.
 func (m *MockOrganization) ID() organization.OrganizationID {
 	m.ctrl.T.Helper()
@@ -95,6 +82,20 @@ func (m *MockOrganization) Name() organization.Name {
 func (mr *MockOrganizationMockRecorder) Name() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockOrganization)(nil).Name))
+}
+
+// TenantID mocks base method.
+func (m *MockOrganization) TenantID() tenant.TenantID {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TenantID")
+	ret0, _ := ret[0].(tenant.TenantID)
+	return ret0
+}
+
+// TenantID indicates an expected call of TenantID.
+func (mr *MockOrganizationMockRecorder) TenantID() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TenantID", reflect.TypeOf((*MockOrganization)(nil).TenantID))
 }
 
 // Update mocks base method.

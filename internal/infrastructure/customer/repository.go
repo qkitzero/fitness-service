@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
+	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 type customerRepository struct {
@@ -20,7 +21,7 @@ func NewCustomerRepository(db *gorm.DB) customer.CustomerRepository {
 func toModel(c customer.Customer) CustomerModel {
 	return CustomerModel{
 		ID:                           c.ID(),
-		GroupID:                      c.GroupID(),
+		GroupID:                      c.TenantID(),
 		Name:                         c.Name(),
 		NameKana:                     c.NameKana(),
 		Gender:                       c.Gender(),
@@ -90,9 +91,9 @@ func (r *customerRepository) FindByID(ctx context.Context, id customer.CustomerI
 	return toDomain(customerModel), nil
 }
 
-func (r *customerRepository) ListByGroupID(ctx context.Context, groupID customer.GroupID, includeInactive bool) ([]customer.Customer, error) {
+func (r *customerRepository) ListByTenantID(ctx context.Context, tenantID tenant.TenantID, includeInactive bool) ([]customer.Customer, error) {
 	var customerModels []CustomerModel
-	query := r.db.WithContext(ctx).Where("group_id = ?", groupID)
+	query := r.db.WithContext(ctx).Where("group_id = ?", tenantID)
 	if !includeInactive {
 		query = query.Where("is_active = ?", true)
 	}

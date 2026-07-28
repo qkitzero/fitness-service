@@ -7,6 +7,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/qkitzero/fitness-service/internal/domain/organization"
+	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 type organizationRepository struct {
@@ -20,7 +21,7 @@ func NewOrganizationRepository(db *gorm.DB) organization.OrganizationRepository 
 func toModel(o organization.Organization) OrganizationModel {
 	return OrganizationModel{
 		ID:        o.ID(),
-		GroupID:   o.GroupID(),
+		GroupID:   o.TenantID(),
 		Name:      o.Name(),
 		CreatedAt: o.CreatedAt(),
 		UpdatedAt: o.UpdatedAt(),
@@ -62,9 +63,9 @@ func (r *organizationRepository) FindByID(ctx context.Context, id organization.O
 	return toDomain(organizationModel), nil
 }
 
-func (r *organizationRepository) ListByGroupID(ctx context.Context, groupID organization.GroupID) ([]organization.Organization, error) {
+func (r *organizationRepository) ListByTenantID(ctx context.Context, tenantID tenant.TenantID) ([]organization.Organization, error) {
 	var organizationModels []OrganizationModel
-	if err := r.db.WithContext(ctx).Where("group_id = ?", groupID).Order("created_at, id").Find(&organizationModels).Error; err != nil {
+	if err := r.db.WithContext(ctx).Where("group_id = ?", tenantID).Order("created_at, id").Find(&organizationModels).Error; err != nil {
 		return nil, err
 	}
 

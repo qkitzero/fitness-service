@@ -13,6 +13,7 @@ import (
 	appcustomer "github.com/qkitzero/fitness-service/internal/application/customer"
 	appuser "github.com/qkitzero/fitness-service/internal/application/user"
 	domaincustomer "github.com/qkitzero/fitness-service/internal/domain/customer"
+	domaintenant "github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 type CustomerHandler struct {
@@ -66,7 +67,7 @@ func toProtoCustomer(c domaincustomer.Customer) *customerv1.Customer {
 	msg := &customerv1.Customer{
 		CustomerId: c.ID().String(),
 		Name:       c.Name().String(),
-		GroupId:    c.GroupID().String(),
+		GroupId:    c.TenantID().String(),
 		NameKana:   c.NameKana().String(),
 		Gender:     toProtoGender(c.Gender()),
 		BirthDate:  toProtoBirthDate(c.BirthDate()),
@@ -215,7 +216,7 @@ func mapCustomerError(err error, op string) error {
 }
 
 func (h *CustomerHandler) CreateCustomer(ctx context.Context, req *customerv1.CreateCustomerRequest) (*customerv1.CreateCustomerResponse, error) {
-	groupID, err := domaincustomer.NewGroupID(req.GetGroupId())
+	tenantID, err := domaintenant.NewTenantID(req.GetGroupId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -224,7 +225,7 @@ func (h *CustomerHandler) CreateCustomer(ctx context.Context, req *customerv1.Cr
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	customer, err := h.customerUsecase.CreateCustomer(ctx, groupID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.postalCode, fields.prefecture, fields.city, fields.street, fields.building, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone)
+	customer, err := h.customerUsecase.CreateCustomer(ctx, tenantID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.postalCode, fields.prefecture, fields.city, fields.street, fields.building, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone)
 	if err != nil {
 		return nil, mapCustomerError(err, "CreateCustomer")
 	}
@@ -251,12 +252,12 @@ func (h *CustomerHandler) GetCustomer(ctx context.Context, req *customerv1.GetCu
 }
 
 func (h *CustomerHandler) ListCustomers(ctx context.Context, req *customerv1.ListCustomersRequest) (*customerv1.ListCustomersResponse, error) {
-	groupID, err := domaincustomer.NewGroupID(req.GetGroupId())
+	tenantID, err := domaintenant.NewTenantID(req.GetGroupId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	customers, err := h.customerUsecase.ListCustomers(ctx, groupID, req.GetIncludeInactive())
+	customers, err := h.customerUsecase.ListCustomers(ctx, tenantID, req.GetIncludeInactive())
 	if err != nil {
 		return nil, mapCustomerError(err, "ListCustomers")
 	}

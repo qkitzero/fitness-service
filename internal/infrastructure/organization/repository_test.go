@@ -14,6 +14,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/qkitzero/fitness-service/internal/domain/organization"
+	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 	mocksorganization "github.com/qkitzero/fitness-service/mocks/domain/organization"
 )
 
@@ -33,7 +34,7 @@ func TestCreate(t *testing.T) {
 				mock.ExpectBegin()
 
 				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "organizations" ("id","group_id","name","created_at","updated_at") VALUES ($1,$2,$3,$4,$5)`)).
-					WithArgs(organization.ID(), organization.GroupID(), organization.Name(), createdAt, updatedAt).
+					WithArgs(organization.ID(), organization.TenantID(), organization.Name(), createdAt, updatedAt).
 					WillReturnResult(sqlmock.NewResult(1, 1))
 
 				mock.ExpectCommit()
@@ -46,7 +47,7 @@ func TestCreate(t *testing.T) {
 				mock.ExpectBegin()
 
 				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "organizations" ("id","group_id","name","created_at","updated_at") VALUES ($1,$2,$3,$4,$5)`)).
-					WithArgs(organization.ID(), organization.GroupID(), organization.Name(), createdAt, updatedAt).
+					WithArgs(organization.ID(), organization.TenantID(), organization.Name(), createdAt, updatedAt).
 					WillReturnError(errors.New("create organization error"))
 
 				mock.ExpectRollback()
@@ -73,7 +74,7 @@ func TestCreate(t *testing.T) {
 
 			mockOrganization := mocksorganization.NewMockOrganization(ctrl)
 			mockOrganization.EXPECT().ID().Return(organization.OrganizationID{UUID: uuid.New()}).AnyTimes()
-			mockOrganization.EXPECT().GroupID().Return(organization.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")).AnyTimes()
+			mockOrganization.EXPECT().TenantID().Return(tenant.TenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")).AnyTimes()
 			mockOrganization.EXPECT().Name().Return(organization.Name("テスト株式会社")).AnyTimes()
 			mockOrganization.EXPECT().CreatedAt().Return(createdAt).AnyTimes()
 			mockOrganization.EXPECT().UpdatedAt().Return(updatedAt).AnyTimes()
@@ -176,8 +177,8 @@ func TestFindByID(t *testing.T) {
 				if o.ID() != tt.organizationID {
 					t.Errorf("ID() = %v, want %v", o.ID(), tt.organizationID)
 				}
-				if o.GroupID().String() != "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b" {
-					t.Errorf("GroupID() = %v, want 0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b", o.GroupID().String())
+				if o.TenantID().String() != "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b" {
+					t.Errorf("TenantID() = %v, want 0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b", o.TenantID().String())
 				}
 				if o.Name().String() != "テスト株式会社" {
 					t.Errorf("Name() = %v, want テスト株式会社", o.Name().String())
@@ -191,27 +192,27 @@ func TestFindByID(t *testing.T) {
 	}
 }
 
-func TestListByGroupID(t *testing.T) {
+func TestListByTenantID(t *testing.T) {
 	t.Parallel()
 	columns := []string{"id", "group_id", "name", "created_at", "updated_at"}
 	tests := []struct {
 		name      string
 		success   bool
 		wantNames []string
-		groupID   organization.GroupID
-		setup     func(mock sqlmock.Sqlmock, groupID organization.GroupID)
+		tenantID  tenant.TenantID
+		setup     func(mock sqlmock.Sqlmock, tenantID tenant.TenantID)
 	}{
 		{
-			name:      "success list organizations by group id",
+			name:      "success list organizations by tenant id",
 			success:   true,
 			wantNames: []string{"テスト株式会社", "テスト工業株式会社"},
-			groupID:   organization.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
-			setup: func(mock sqlmock.Sqlmock, groupID organization.GroupID) {
+			tenantID:  tenant.TenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
+			setup: func(mock sqlmock.Sqlmock, tenantID tenant.TenantID) {
 				organizationRows := sqlmock.NewRows(columns).
-					AddRow(uuid.New().String(), groupID, "テスト株式会社", time.Now(), time.Now()).
-					AddRow(uuid.New().String(), groupID, "テスト工業株式会社", time.Now(), time.Now())
+					AddRow(uuid.New().String(), tenantID, "テスト株式会社", time.Now(), time.Now()).
+					AddRow(uuid.New().String(), tenantID, "テスト工業株式会社", time.Now(), time.Now())
 				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE group_id = $1 ORDER BY created_at, id`)).
-					WithArgs(groupID).
+					WithArgs(tenantID).
 					WillReturnRows(organizationRows)
 			},
 		},
@@ -219,11 +220,11 @@ func TestListByGroupID(t *testing.T) {
 			name:      "success list no organizations",
 			success:   true,
 			wantNames: []string{},
-			groupID:   organization.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
-			setup: func(mock sqlmock.Sqlmock, groupID organization.GroupID) {
+			tenantID:  tenant.TenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
+			setup: func(mock sqlmock.Sqlmock, tenantID tenant.TenantID) {
 				organizationRows := sqlmock.NewRows(columns)
 				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE group_id = $1 ORDER BY created_at, id`)).
-					WithArgs(groupID).
+					WithArgs(tenantID).
 					WillReturnRows(organizationRows)
 			},
 		},
@@ -231,10 +232,10 @@ func TestListByGroupID(t *testing.T) {
 			name:      "failure list organizations error",
 			success:   false,
 			wantNames: nil,
-			groupID:   organization.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
-			setup: func(mock sqlmock.Sqlmock, groupID organization.GroupID) {
+			tenantID:  tenant.TenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"),
+			setup: func(mock sqlmock.Sqlmock, tenantID tenant.TenantID) {
 				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "organizations" WHERE group_id = $1 ORDER BY created_at, id`)).
-					WithArgs(groupID).
+					WithArgs(tenantID).
 					WillReturnError(errors.New("list organizations error"))
 			},
 		},
@@ -254,11 +255,11 @@ func TestListByGroupID(t *testing.T) {
 				t.Fatalf("failed to open gorm: %s", err)
 			}
 
-			tt.setup(mock, tt.groupID)
+			tt.setup(mock, tt.tenantID)
 
 			repo := NewOrganizationRepository(gormDB)
 
-			organizations, err := repo.ListByGroupID(context.Background(), tt.groupID)
+			organizations, err := repo.ListByTenantID(context.Background(), tt.tenantID)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}
@@ -276,8 +277,8 @@ func TestListByGroupID(t *testing.T) {
 					if organizations[i].Name().String() != wantName {
 						t.Errorf("organizations[%d].Name() = %v, want %v", i, organizations[i].Name().String(), wantName)
 					}
-					if organizations[i].GroupID() != tt.groupID {
-						t.Errorf("organizations[%d].GroupID() = %v, want %v", i, organizations[i].GroupID(), tt.groupID)
+					if organizations[i].TenantID() != tt.tenantID {
+						t.Errorf("organizations[%d].TenantID() = %v, want %v", i, organizations[i].TenantID(), tt.tenantID)
 					}
 				}
 			}
@@ -307,7 +308,7 @@ func TestUpdate(t *testing.T) {
 				mock.ExpectBegin()
 
 				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "organizations" SET "group_id"=$1,"name"=$2,"created_at"=$3,"updated_at"=$4 WHERE id = $5`)).
-					WithArgs(organization.GroupID(), organization.Name(), createdAt, updatedAt, organization.ID()).
+					WithArgs(organization.TenantID(), organization.Name(), createdAt, updatedAt, organization.ID()).
 					WillReturnResult(sqlmock.NewResult(0, 1))
 
 				mock.ExpectCommit()
@@ -321,7 +322,7 @@ func TestUpdate(t *testing.T) {
 				mock.ExpectBegin()
 
 				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "organizations" SET "group_id"=$1,"name"=$2,"created_at"=$3,"updated_at"=$4 WHERE id = $5`)).
-					WithArgs(organization.GroupID(), organization.Name(), createdAt, updatedAt, organization.ID()).
+					WithArgs(organization.TenantID(), organization.Name(), createdAt, updatedAt, organization.ID()).
 					WillReturnResult(sqlmock.NewResult(0, 0))
 
 				mock.ExpectRollback()
@@ -335,7 +336,7 @@ func TestUpdate(t *testing.T) {
 				mock.ExpectBegin()
 
 				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "organizations" SET "group_id"=$1,"name"=$2,"created_at"=$3,"updated_at"=$4 WHERE id = $5`)).
-					WithArgs(organization.GroupID(), organization.Name(), createdAt, updatedAt, organization.ID()).
+					WithArgs(organization.TenantID(), organization.Name(), createdAt, updatedAt, organization.ID()).
 					WillReturnError(errors.New("update organization error"))
 
 				mock.ExpectRollback()
@@ -362,7 +363,7 @@ func TestUpdate(t *testing.T) {
 
 			mockOrganization := mocksorganization.NewMockOrganization(ctrl)
 			mockOrganization.EXPECT().ID().Return(organization.OrganizationID{UUID: uuid.New()}).AnyTimes()
-			mockOrganization.EXPECT().GroupID().Return(organization.GroupID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")).AnyTimes()
+			mockOrganization.EXPECT().TenantID().Return(tenant.TenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")).AnyTimes()
 			mockOrganization.EXPECT().Name().Return(organization.Name("更新株式会社")).AnyTimes()
 			mockOrganization.EXPECT().CreatedAt().Return(createdAt).AnyTimes()
 			mockOrganization.EXPECT().UpdatedAt().Return(updatedAt).AnyTimes()

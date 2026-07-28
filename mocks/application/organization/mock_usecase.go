@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	organization "github.com/qkitzero/fitness-service/internal/domain/organization"
+	tenant "github.com/qkitzero/fitness-service/internal/domain/tenant"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -42,18 +43,18 @@ func (m *MockOrganizationUsecase) EXPECT() *MockOrganizationUsecaseMockRecorder 
 }
 
 // CreateOrganization mocks base method.
-func (m *MockOrganizationUsecase) CreateOrganization(ctx context.Context, groupID organization.GroupID, name organization.Name) (organization.Organization, error) {
+func (m *MockOrganizationUsecase) CreateOrganization(ctx context.Context, tenantID tenant.TenantID, name organization.Name) (organization.Organization, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrganization", ctx, groupID, name)
+	ret := m.ctrl.Call(m, "CreateOrganization", ctx, tenantID, name)
 	ret0, _ := ret[0].(organization.Organization)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateOrganization indicates an expected call of CreateOrganization.
-func (mr *MockOrganizationUsecaseMockRecorder) CreateOrganization(ctx, groupID, name any) *gomock.Call {
+func (mr *MockOrganizationUsecaseMockRecorder) CreateOrganization(ctx, tenantID, name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrganization", reflect.TypeOf((*MockOrganizationUsecase)(nil).CreateOrganization), ctx, groupID, name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrganization", reflect.TypeOf((*MockOrganizationUsecase)(nil).CreateOrganization), ctx, tenantID, name)
 }
 
 // DeleteOrganization mocks base method.
@@ -86,18 +87,18 @@ func (mr *MockOrganizationUsecaseMockRecorder) GetOrganization(ctx, organization
 }
 
 // ListOrganizations mocks base method.
-func (m *MockOrganizationUsecase) ListOrganizations(ctx context.Context, groupID organization.GroupID) ([]organization.Organization, error) {
+func (m *MockOrganizationUsecase) ListOrganizations(ctx context.Context, tenantID tenant.TenantID) ([]organization.Organization, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListOrganizations", ctx, groupID)
+	ret := m.ctrl.Call(m, "ListOrganizations", ctx, tenantID)
 	ret0, _ := ret[0].([]organization.Organization)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListOrganizations indicates an expected call of ListOrganizations.
-func (mr *MockOrganizationUsecaseMockRecorder) ListOrganizations(ctx, groupID any) *gomock.Call {
+func (mr *MockOrganizationUsecaseMockRecorder) ListOrganizations(ctx, tenantID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOrganizations", reflect.TypeOf((*MockOrganizationUsecase)(nil).ListOrganizations), ctx, groupID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOrganizations", reflect.TypeOf((*MockOrganizationUsecase)(nil).ListOrganizations), ctx, tenantID)
 }
 
 // UpdateOrganization mocks base method.
