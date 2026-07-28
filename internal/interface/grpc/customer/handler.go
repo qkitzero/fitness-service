@@ -11,7 +11,6 @@ import (
 
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
 	appcustomer "github.com/qkitzero/fitness-service/internal/application/customer"
-	appuser "github.com/qkitzero/fitness-service/internal/application/user"
 	domaincustomer "github.com/qkitzero/fitness-service/internal/domain/customer"
 	domaintenant "github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
@@ -199,7 +198,7 @@ func parseCustomerFields(req customerFieldsRequest) (customerFields, error) {
 }
 
 func mapCustomerError(err error, op string) error {
-	if errors.Is(err, appuser.ErrNotGroupMember) {
+	if errors.Is(err, domaintenant.ErrNotMember) {
 		return status.Error(codes.PermissionDenied, err.Error())
 	}
 	if errors.Is(err, domaincustomer.ErrCustomerNotFound) {

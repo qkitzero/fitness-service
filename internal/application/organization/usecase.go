@@ -41,7 +41,7 @@ func (u *organizationUsecase) verifyTenantMembership(ctx context.Context, tenant
 		}
 	}
 
-	return user.ErrNotGroupMember
+	return tenant.ErrNotMember
 }
 
 func (u *organizationUsecase) CreateOrganization(ctx context.Context, tenantID tenant.TenantID, name organization.Name) (organization.Organization, error) {
@@ -75,7 +75,7 @@ func (u *organizationUsecase) GetOrganization(ctx context.Context, organizationI
 	}
 
 	if err := u.verifyTenantMembership(ctx, foundOrganization.TenantID()); err != nil {
-		if errors.Is(err, user.ErrNotGroupMember) {
+		if errors.Is(err, tenant.ErrNotMember) {
 			return nil, organization.ErrOrganizationNotFound
 		}
 		return nil, err
@@ -112,7 +112,7 @@ func (u *organizationUsecase) UpdateOrganization(ctx context.Context, organizati
 	}
 
 	if err := u.verifyTenantMembership(ctx, foundOrganization.TenantID()); err != nil {
-		if errors.Is(err, user.ErrNotGroupMember) {
+		if errors.Is(err, tenant.ErrNotMember) {
 			return nil, organization.ErrOrganizationNotFound
 		}
 		return nil, err
@@ -138,7 +138,7 @@ func (u *organizationUsecase) DeleteOrganization(ctx context.Context, organizati
 	}
 
 	if err := u.verifyTenantMembership(ctx, foundOrganization.TenantID()); err != nil {
-		if errors.Is(err, user.ErrNotGroupMember) {
+		if errors.Is(err, tenant.ErrNotMember) {
 			return organization.ErrOrganizationNotFound
 		}
 		return err

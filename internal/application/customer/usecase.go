@@ -42,7 +42,7 @@ func (u *customerUsecase) verifyTenantMembership(ctx context.Context, tenantID t
 		}
 	}
 
-	return user.ErrNotGroupMember
+	return tenant.ErrNotMember
 }
 
 func (u *customerUsecase) findOwnedCustomer(ctx context.Context, customerID customer.CustomerID) (customer.Customer, error) {
@@ -56,7 +56,7 @@ func (u *customerUsecase) findOwnedCustomer(ctx context.Context, customerID cust
 	}
 
 	if err := u.verifyTenantMembership(ctx, foundCustomer.TenantID()); err != nil {
-		if errors.Is(err, user.ErrNotGroupMember) {
+		if errors.Is(err, tenant.ErrNotMember) {
 			return nil, customer.ErrCustomerNotFound
 		}
 		return nil, err

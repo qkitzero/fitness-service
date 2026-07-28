@@ -13,7 +13,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
-	"github.com/qkitzero/fitness-service/internal/application/user"
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
 	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 	mocksappcustomer "github.com/qkitzero/fitness-service/mocks/application/customer"
@@ -107,7 +106,7 @@ func TestCreateCustomer(t *testing.T) {
 		{"failure invalid emergency contact name", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, EmergencyContactName: &tooLong}, false, nil, codes.InvalidArgument},
 		{"failure invalid emergency contact relationship", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, EmergencyContactRelationship: &tooLong}, false, nil, codes.InvalidArgument},
 		{"failure invalid emergency contact phone", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate, EmergencyContactPhone: &invalid}, false, nil, codes.InvalidArgument},
-		{"failure not tenant member", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure usecase error", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, fmt.Errorf("create customer error"), codes.Internal},
 		{"failure unauthenticated is preserved", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", &customerv1.CreateCustomerRequest{Name: "test customer", TenantId: tid, NameKana: "テストカナ", Gender: customerv1.Gender_GENDER_MALE, BirthDate: validDate}, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
@@ -152,7 +151,7 @@ func TestGetCustomer(t *testing.T) {
 		{"success get customer", sampleCustomerID, true, nil, codes.OK},
 		{"failure invalid customer id", "", false, nil, codes.InvalidArgument},
 		{"failure get customer error", sampleCustomerID, true, fmt.Errorf("get customer error"), codes.Internal},
-		{"failure not tenant member", sampleCustomerID, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", sampleCustomerID, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure customer not found", sampleCustomerID, true, customer.ErrCustomerNotFound, codes.NotFound},
 		{"failure unauthenticated is preserved", sampleCustomerID, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", sampleCustomerID, true, status.Error(codes.InvalidArgument, "user service"), codes.Internal},
@@ -206,7 +205,7 @@ func TestListCustomers(t *testing.T) {
 		{"success list customers", sampleTenantID, false, true, nil, codes.OK},
 		{"success list customers including inactive", sampleTenantID, true, true, nil, codes.OK},
 		{"failure invalid group id", "", false, false, nil, codes.InvalidArgument},
-		{"failure not tenant member", sampleTenantID, false, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", sampleTenantID, false, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure usecase error", sampleTenantID, false, true, fmt.Errorf("list customers error"), codes.Internal},
 		{"failure unauthenticated is preserved", sampleTenantID, false, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", sampleTenantID, false, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
@@ -278,7 +277,7 @@ func TestUpdateCustomer(t *testing.T) {
 		{"failure invalid birth date", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: futureDate}, false, nil, codes.InvalidArgument},
 		{"failure invalid phone", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate, Phone: &invalid}, false, nil, codes.InvalidArgument},
 		{"failure usecase error", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, fmt.Errorf("update customer error"), codes.Internal},
-		{"failure not tenant member", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure customer not found", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, customer.ErrCustomerNotFound, codes.NotFound},
 		{"failure unauthenticated is preserved", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", &customerv1.UpdateCustomerRequest{CustomerId: cid, Name: "updated test customer", NameKana: "コウシンカナ", Gender: customerv1.Gender_GENDER_FEMALE, BirthDate: validDate}, true, status.Error(codes.InvalidArgument, "user service"), codes.Internal},
@@ -330,7 +329,7 @@ func TestSetCustomerActive(t *testing.T) {
 		{"success activate customer", sampleCustomerID, true, true, nil, codes.OK},
 		{"failure invalid customer id", "", false, false, nil, codes.InvalidArgument},
 		{"failure usecase error", sampleCustomerID, false, true, fmt.Errorf("set customer active error"), codes.Internal},
-		{"failure not tenant member", sampleCustomerID, false, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", sampleCustomerID, false, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure customer not found", sampleCustomerID, false, true, customer.ErrCustomerNotFound, codes.NotFound},
 		{"failure unauthenticated is preserved", sampleCustomerID, false, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", sampleCustomerID, false, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
@@ -380,7 +379,7 @@ func TestDeleteCustomer(t *testing.T) {
 		{"success delete customer", sampleCustomerID, true, nil, codes.OK},
 		{"failure invalid customer id", "", false, nil, codes.InvalidArgument},
 		{"failure usecase error", sampleCustomerID, true, fmt.Errorf("delete customer error"), codes.Internal},
-		{"failure not tenant member", sampleCustomerID, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", sampleCustomerID, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure customer not found", sampleCustomerID, true, customer.ErrCustomerNotFound, codes.NotFound},
 		{"failure unauthenticated is preserved", sampleCustomerID, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", sampleCustomerID, true, status.Error(codes.NotFound, "user not found"), codes.Internal},

@@ -12,7 +12,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	organizationv1 "github.com/qkitzero/fitness-service/gen/go/organization/v1"
-	"github.com/qkitzero/fitness-service/internal/application/user"
 	"github.com/qkitzero/fitness-service/internal/domain/organization"
 	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 	mocksapporganization "github.com/qkitzero/fitness-service/mocks/application/organization"
@@ -37,7 +36,7 @@ func TestCreateOrganization(t *testing.T) {
 		{"failure invalid name", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: ""}, false, nil, codes.InvalidArgument},
 		{"failure too long name", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: tooLong}, false, nil, codes.InvalidArgument},
 		{"failure null character name", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: "テスト\x00株式会社"}, false, nil, codes.InvalidArgument},
-		{"failure not tenant member", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: "テスト株式会社"}, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: "テスト株式会社"}, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure usecase error", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: "テスト株式会社"}, true, fmt.Errorf("create organization error"), codes.Internal},
 		{"failure unauthenticated is preserved", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: "テスト株式会社"}, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", &organizationv1.CreateOrganizationRequest{TenantId: tid, Name: "テスト株式会社"}, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
@@ -91,7 +90,7 @@ func TestGetOrganization(t *testing.T) {
 		{"success get organization", oid, true, nil, codes.OK},
 		{"failure invalid organization id", "", false, nil, codes.InvalidArgument},
 		{"failure usecase error", oid, true, fmt.Errorf("get organization error"), codes.Internal},
-		{"failure not tenant member", oid, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", oid, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure organization not found", oid, true, organization.ErrOrganizationNotFound, codes.NotFound},
 		{"failure unauthenticated is preserved", oid, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", oid, true, status.Error(codes.InvalidArgument, "user service"), codes.Internal},
@@ -152,7 +151,7 @@ func TestListOrganizations(t *testing.T) {
 	}{
 		{"success list organizations", tid, true, nil, codes.OK},
 		{"failure invalid group id", "", false, nil, codes.InvalidArgument},
-		{"failure not tenant member", tid, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", tid, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure usecase error", tid, true, fmt.Errorf("list organizations error"), codes.Internal},
 		{"failure unauthenticated is preserved", tid, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", tid, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
@@ -226,7 +225,7 @@ func TestUpdateOrganization(t *testing.T) {
 		{"failure too long name", &organizationv1.UpdateOrganizationRequest{OrganizationId: oid, Name: tooLong}, false, nil, codes.InvalidArgument},
 		{"failure null character name", &organizationv1.UpdateOrganizationRequest{OrganizationId: oid, Name: "更新\x00株式会社"}, false, nil, codes.InvalidArgument},
 		{"failure usecase error", &organizationv1.UpdateOrganizationRequest{OrganizationId: oid, Name: "更新株式会社"}, true, fmt.Errorf("update organization error"), codes.Internal},
-		{"failure not tenant member", &organizationv1.UpdateOrganizationRequest{OrganizationId: oid, Name: "更新株式会社"}, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", &organizationv1.UpdateOrganizationRequest{OrganizationId: oid, Name: "更新株式会社"}, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure organization not found", &organizationv1.UpdateOrganizationRequest{OrganizationId: oid, Name: "更新株式会社"}, true, organization.ErrOrganizationNotFound, codes.NotFound},
 		{"failure unauthenticated is preserved", &organizationv1.UpdateOrganizationRequest{OrganizationId: oid, Name: "更新株式会社"}, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", &organizationv1.UpdateOrganizationRequest{OrganizationId: oid, Name: "更新株式会社"}, true, status.Error(codes.InvalidArgument, "user service"), codes.Internal},
@@ -284,7 +283,7 @@ func TestDeleteOrganization(t *testing.T) {
 		{"success delete organization", oid, true, nil, codes.OK},
 		{"failure invalid organization id", "", false, nil, codes.InvalidArgument},
 		{"failure usecase error", oid, true, fmt.Errorf("delete organization error"), codes.Internal},
-		{"failure not tenant member", oid, true, user.ErrNotGroupMember, codes.PermissionDenied},
+		{"failure not tenant member", oid, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure organization not found", oid, true, organization.ErrOrganizationNotFound, codes.NotFound},
 		{"failure unauthenticated is preserved", oid, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", oid, true, status.Error(codes.NotFound, "user not found"), codes.Internal},

@@ -10,7 +10,6 @@ import (
 
 	organizationv1 "github.com/qkitzero/fitness-service/gen/go/organization/v1"
 	apporganization "github.com/qkitzero/fitness-service/internal/application/organization"
-	appuser "github.com/qkitzero/fitness-service/internal/application/user"
 	domainorganization "github.com/qkitzero/fitness-service/internal/domain/organization"
 	domaintenant "github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
@@ -37,7 +36,7 @@ func toProtoOrganization(o domainorganization.Organization) *organizationv1.Orga
 }
 
 func mapOrganizationError(err error, op string) error {
-	if errors.Is(err, appuser.ErrNotGroupMember) {
+	if errors.Is(err, domaintenant.ErrNotMember) {
 		return status.Error(codes.PermissionDenied, err.Error())
 	}
 	if errors.Is(err, domainorganization.ErrOrganizationNotFound) {

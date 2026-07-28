@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/mock/gomock"
 
-	"github.com/qkitzero/fitness-service/internal/application/user"
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
 	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 	mocksappauth "github.com/qkitzero/fitness-service/mocks/application/auth"
@@ -38,7 +37,7 @@ func TestCreateCustomer(t *testing.T) {
 	}{
 		{"success create customer", true, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, nil},
 		{"failure verify token error", false, nil, false, context.Background(), "", errors.New("verify token error"), []string{tenantID.String()}, nil, nil},
-		{"failure not tenant member", false, user.ErrNotGroupMember, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
+		{"failure not tenant member", false, tenant.ErrNotMember, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
 		{"failure list my groups error", false, nil, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, errors.New("list my groups error"), nil},
 		{"failure create error", false, nil, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, errors.New("create error")},
 	}
@@ -175,7 +174,7 @@ func TestListCustomers(t *testing.T) {
 		{"success list customers", true, nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, nil},
 		{"success list customers including inactive", true, nil, true, true, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, nil},
 		{"failure verify token error", false, nil, false, false, context.Background(), "", errors.New("verify token error"), []string{tenantID.String()}, nil, nil},
-		{"failure not tenant member", false, user.ErrNotGroupMember, false, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
+		{"failure not tenant member", false, tenant.ErrNotMember, false, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{"9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"}, nil, nil},
 		{"failure list my groups error", false, nil, false, false, context.Background(), "google-oauth2|000000000000000000000", nil, nil, errors.New("list my groups error"), nil},
 		{"failure list by tenant id error", false, nil, true, false, context.Background(), "google-oauth2|000000000000000000000", nil, []string{tenantID.String()}, nil, errors.New("list by group id error")},
 	}
