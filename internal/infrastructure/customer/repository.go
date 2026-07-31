@@ -6,6 +6,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/qkitzero/fitness-service/internal/domain/address"
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
 	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
@@ -19,6 +20,7 @@ func NewCustomerRepository(db *gorm.DB) customer.CustomerRepository {
 }
 
 func toModel(c customer.Customer) CustomerModel {
+	addr := c.Address()
 	return CustomerModel{
 		ID:                           c.ID(),
 		TenantID:                     c.TenantID(),
@@ -28,11 +30,11 @@ func toModel(c customer.Customer) CustomerModel {
 		BirthDate:                    c.BirthDate(),
 		Phone:                        c.Phone(),
 		Email:                        c.Email(),
-		PostalCode:                   c.PostalCode(),
-		Prefecture:                   c.Prefecture(),
-		City:                         c.City(),
-		Street:                       c.Street(),
-		Building:                     c.Building(),
+		PostalCode:                   addr.PostalCode(),
+		Prefecture:                   addr.Prefecture(),
+		City:                         addr.City(),
+		Street:                       addr.Street(),
+		Building:                     addr.Building(),
 		EmergencyContactName:         c.EmergencyContactName(),
 		EmergencyContactRelationship: c.EmergencyContactRelationship(),
 		EmergencyContactPhone:        c.EmergencyContactPhone(),
@@ -53,11 +55,7 @@ func toDomain(m CustomerModel) customer.Customer {
 		m.BirthDate,
 		m.Phone,
 		m.Email,
-		m.PostalCode,
-		m.Prefecture,
-		m.City,
-		m.Street,
-		m.Building,
+		address.NewAddress(m.PostalCode, m.Prefecture, m.City, m.Street, m.Building),
 		m.EmergencyContactName,
 		m.EmergencyContactRelationship,
 		m.EmergencyContactPhone,

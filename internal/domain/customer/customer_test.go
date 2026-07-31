@@ -1,9 +1,12 @@
 package customer
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
+	"github.com/qkitzero/fitness-service/internal/domain/address"
+	"github.com/qkitzero/fitness-service/internal/domain/contact"
 	"github.com/qkitzero/fitness-service/internal/domain/organization"
 	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
@@ -16,81 +19,91 @@ func TestNewCustomer(t *testing.T) {
 	nameKana, _ := NewNameKana("テストカナ")
 	gender, _ := NewGender("male")
 	birthDate, _ := NewBirthDate(2000, 1, 1)
-	phone, _ := NewPhone("03-1234-5678")
-	email, _ := NewEmail("test@example.com")
-	postalCode, _ := NewPostalCode("123-4567")
-	prefecture, _ := NewPrefecture("東京都")
-	city, _ := NewCity("千代田区")
-	street, _ := NewStreet("1-1-1")
-	building, _ := NewBuilding("テストビル")
+	phone, _ := contact.NewPhone("03-1234-5678")
+	email, _ := contact.NewEmail("test@example.com")
+	postalCode, _ := address.NewPostalCode("123-4567")
+	prefecture, _ := address.NewPrefecture("東京都")
+	city, _ := address.NewCity("千代田区")
+	street, _ := address.NewStreet("1-1-1")
+	building, _ := address.NewBuilding("テストビル")
+	addr := address.NewAddress(postalCode, prefecture, city, street, building)
 	emergencyContactName, _ := NewEmergencyContactName("緊急 太郎")
 	emergencyContactRelationship, _ := NewEmergencyContactRelationship("父")
-	emergencyContactPhone, _ := NewPhone("090-1234-5678")
+	emergencyContactPhone, _ := contact.NewPhone("090-1234-5678")
 	organizationID, _ := organization.NewOrganizationIDFromString("3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d")
 
-	createdAt := time.Now()
-	updatedAt := time.Now()
-	c := NewCustomer(id, tenantID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, &organizationID, true, createdAt, updatedAt)
+	tests := []struct {
+		name                         string
+		phone                        *contact.Phone
+		email                        *contact.Email
+		address                      address.Address
+		emergencyContactName         *EmergencyContactName
+		emergencyContactRelationship *EmergencyContactRelationship
+		emergencyContactPhone        *contact.Phone
+		organizationID               *organization.OrganizationID
+		active                       bool
+	}{
+		{"success new customer", phone, email, addr, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, &organizationID, true},
+		{"success new customer without optional fields", nil, nil, address.Address{}, nil, nil, nil, nil, false},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	if c.ID() != id {
-		t.Errorf("ID() = %v, want %v", c.ID(), id)
-	}
-	if c.TenantID() != tenantID {
-		t.Errorf("TenantID() = %v, want %v", c.TenantID(), tenantID)
-	}
-	if c.Name() != name {
-		t.Errorf("Name() = %v, want %v", c.Name(), name)
-	}
-	if c.NameKana() != nameKana {
-		t.Errorf("NameKana() = %v, want %v", c.NameKana(), nameKana)
-	}
-	if c.Gender() != gender {
-		t.Errorf("Gender() = %v, want %v", c.Gender(), gender)
-	}
-	if !c.BirthDate().Equal(birthDate.Time) {
-		t.Errorf("BirthDate() = %v, want %v", c.BirthDate(), birthDate)
-	}
-	if c.Phone() == nil || c.Phone().String() != "0312345678" {
-		t.Errorf("Phone() = %v, want 0312345678", c.Phone())
-	}
-	if c.Email() == nil || c.Email().String() != "test@example.com" {
-		t.Errorf("Email() = %v, want test@example.com", c.Email())
-	}
-	if c.PostalCode() == nil || c.PostalCode().String() != "1234567" {
-		t.Errorf("PostalCode() = %v, want 1234567", c.PostalCode())
-	}
-	if c.Prefecture() == nil || c.Prefecture().String() != "東京都" {
-		t.Errorf("Prefecture() = %v, want 東京都", c.Prefecture())
-	}
-	if c.City() == nil || c.City().String() != "千代田区" {
-		t.Errorf("City() = %v, want 千代田区", c.City())
-	}
-	if c.Street() == nil || c.Street().String() != "1-1-1" {
-		t.Errorf("Street() = %v, want 1-1-1", c.Street())
-	}
-	if c.Building() == nil || c.Building().String() != "テストビル" {
-		t.Errorf("Building() = %v, want テストビル", c.Building())
-	}
-	if c.EmergencyContactName() == nil || c.EmergencyContactName().String() != "緊急 太郎" {
-		t.Errorf("EmergencyContactName() = %v, want 緊急 太郎", c.EmergencyContactName())
-	}
-	if c.EmergencyContactRelationship() == nil || c.EmergencyContactRelationship().String() != "父" {
-		t.Errorf("EmergencyContactRelationship() = %v, want 父", c.EmergencyContactRelationship())
-	}
-	if c.EmergencyContactPhone() == nil || c.EmergencyContactPhone().String() != "09012345678" {
-		t.Errorf("EmergencyContactPhone() = %v, want 09012345678", c.EmergencyContactPhone())
-	}
-	if c.OrganizationID() == nil || c.OrganizationID().String() != "3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d" {
-		t.Errorf("OrganizationID() = %v, want 3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d", c.OrganizationID())
-	}
-	if !c.IsActive() {
-		t.Errorf("IsActive() = %v, want %v", c.IsActive(), true)
-	}
-	if !c.CreatedAt().Equal(createdAt) {
-		t.Errorf("CreatedAt() = %v, want %v", c.CreatedAt(), createdAt)
-	}
-	if !c.UpdatedAt().Equal(updatedAt) {
-		t.Errorf("UpdatedAt() = %v, want %v", c.UpdatedAt(), updatedAt)
+			createdAt := time.Now()
+			updatedAt := time.Now()
+			c := NewCustomer(id, tenantID, name, nameKana, gender, birthDate, tt.phone, tt.email, tt.address, tt.emergencyContactName, tt.emergencyContactRelationship, tt.emergencyContactPhone, tt.organizationID, tt.active, createdAt, updatedAt)
+
+			if c.ID() != id {
+				t.Errorf("ID() = %v, want %v", c.ID(), id)
+			}
+			if c.TenantID() != tenantID {
+				t.Errorf("TenantID() = %v, want %v", c.TenantID(), tenantID)
+			}
+			if c.Name() != name {
+				t.Errorf("Name() = %v, want %v", c.Name(), name)
+			}
+			if c.NameKana() != nameKana {
+				t.Errorf("NameKana() = %v, want %v", c.NameKana(), nameKana)
+			}
+			if c.Gender() != gender {
+				t.Errorf("Gender() = %v, want %v", c.Gender(), gender)
+			}
+			if !c.BirthDate().Equal(birthDate.Time) {
+				t.Errorf("BirthDate() = %v, want %v", c.BirthDate(), birthDate)
+			}
+			if !reflect.DeepEqual(c.Phone(), tt.phone) {
+				t.Errorf("Phone() = %v, want %v", c.Phone(), tt.phone)
+			}
+			if !reflect.DeepEqual(c.Email(), tt.email) {
+				t.Errorf("Email() = %v, want %v", c.Email(), tt.email)
+			}
+			if !reflect.DeepEqual(c.Address(), tt.address) {
+				t.Errorf("Address() = %v, want %v", c.Address(), tt.address)
+			}
+			if !reflect.DeepEqual(c.EmergencyContactName(), tt.emergencyContactName) {
+				t.Errorf("EmergencyContactName() = %v, want %v", c.EmergencyContactName(), tt.emergencyContactName)
+			}
+			if !reflect.DeepEqual(c.EmergencyContactRelationship(), tt.emergencyContactRelationship) {
+				t.Errorf("EmergencyContactRelationship() = %v, want %v", c.EmergencyContactRelationship(), tt.emergencyContactRelationship)
+			}
+			if !reflect.DeepEqual(c.EmergencyContactPhone(), tt.emergencyContactPhone) {
+				t.Errorf("EmergencyContactPhone() = %v, want %v", c.EmergencyContactPhone(), tt.emergencyContactPhone)
+			}
+			if !reflect.DeepEqual(c.OrganizationID(), tt.organizationID) {
+				t.Errorf("OrganizationID() = %v, want %v", c.OrganizationID(), tt.organizationID)
+			}
+			if c.IsActive() != tt.active {
+				t.Errorf("IsActive() = %v, want %v", c.IsActive(), tt.active)
+			}
+			if !c.CreatedAt().Equal(createdAt) {
+				t.Errorf("CreatedAt() = %v, want %v", c.CreatedAt(), createdAt)
+			}
+			if !c.UpdatedAt().Equal(updatedAt) {
+				t.Errorf("UpdatedAt() = %v, want %v", c.UpdatedAt(), updatedAt)
+			}
+		})
 	}
 }
 
@@ -102,93 +115,91 @@ func TestUpdateCustomer(t *testing.T) {
 	nameKana, _ := NewNameKana("テストカナ")
 	gender, _ := NewGender("male")
 	birthDate, _ := NewBirthDate(2000, 1, 1)
-	past := time.Now().UTC().Add(-time.Hour)
-	c := NewCustomer(id, tenantID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, past, past)
-
-	if c.Phone() != nil || c.Email() != nil || c.PostalCode() != nil || c.Prefecture() != nil || c.City() != nil || c.Street() != nil || c.Building() != nil || c.EmergencyContactName() != nil || c.EmergencyContactRelationship() != nil || c.EmergencyContactPhone() != nil || c.OrganizationID() != nil {
-		t.Errorf("expected nil optional fields before update")
-	}
-
 	updatedName, _ := NewName("updated test customer")
 	updatedNameKana, _ := NewNameKana("コウシンカナ")
 	updatedGender, _ := NewGender("female")
 	updatedBirthDate, _ := NewBirthDate(1999, 12, 31)
-	phone, _ := NewPhone("090-1234-5678")
-	email, _ := NewEmail("updated@example.com")
-	postalCode, _ := NewPostalCode("543-2100")
-	prefecture, _ := NewPrefecture("大阪府")
-	city, _ := NewCity("大阪市")
-	street, _ := NewStreet("2-2-2")
-	building, _ := NewBuilding("更新ビル")
+	phone, _ := contact.NewPhone("090-1234-5678")
+	email, _ := contact.NewEmail("updated@example.com")
+	postalCode, _ := address.NewPostalCode("543-2100")
+	prefecture, _ := address.NewPrefecture("大阪府")
+	city, _ := address.NewCity("大阪市")
+	street, _ := address.NewStreet("2-2-2")
+	building, _ := address.NewBuilding("更新ビル")
+	addr := address.NewAddress(postalCode, prefecture, city, street, building)
 	emergencyContactName, _ := NewEmergencyContactName("更新 花子")
 	emergencyContactRelationship, _ := NewEmergencyContactRelationship("母")
-	emergencyContactPhone, _ := NewPhone("080-1234-5678")
+	emergencyContactPhone, _ := contact.NewPhone("080-1234-5678")
 	organizationID, _ := organization.NewOrganizationIDFromString("3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d")
 
-	c.Update(updatedName, updatedNameKana, updatedGender, updatedBirthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, &organizationID)
+	tests := []struct {
+		name           string
+		organizationID *organization.OrganizationID
+	}{
+		{"success update customer", &organizationID},
+		{"success update customer clearing the organization", nil},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	if c.Name() != updatedName {
-		t.Errorf("Name() = %v, want %v", c.Name(), updatedName)
-	}
-	if c.NameKana() != updatedNameKana {
-		t.Errorf("NameKana() = %v, want %v", c.NameKana(), updatedNameKana)
-	}
-	if c.Gender() != updatedGender {
-		t.Errorf("Gender() = %v, want %v", c.Gender(), updatedGender)
-	}
-	if !c.BirthDate().Equal(updatedBirthDate.Time) {
-		t.Errorf("BirthDate() = %v, want %v", c.BirthDate(), updatedBirthDate)
-	}
-	if c.Phone() == nil || c.Phone().String() != "09012345678" {
-		t.Errorf("Phone() = %v, want 09012345678", c.Phone())
-	}
-	if c.Email() == nil || c.Email().String() != "updated@example.com" {
-		t.Errorf("Email() = %v, want updated@example.com", c.Email())
-	}
-	if c.PostalCode() == nil || c.PostalCode().String() != "5432100" {
-		t.Errorf("PostalCode() = %v, want 5432100", c.PostalCode())
-	}
-	if c.Prefecture() == nil || c.Prefecture().String() != "大阪府" {
-		t.Errorf("Prefecture() = %v, want 大阪府", c.Prefecture())
-	}
-	if c.City() == nil || c.City().String() != "大阪市" {
-		t.Errorf("City() = %v, want 大阪市", c.City())
-	}
-	if c.Street() == nil || c.Street().String() != "2-2-2" {
-		t.Errorf("Street() = %v, want 2-2-2", c.Street())
-	}
-	if c.Building() == nil || c.Building().String() != "更新ビル" {
-		t.Errorf("Building() = %v, want 更新ビル", c.Building())
-	}
-	if c.EmergencyContactName() == nil || c.EmergencyContactName().String() != "更新 花子" {
-		t.Errorf("EmergencyContactName() = %v, want 更新 花子", c.EmergencyContactName())
-	}
-	if c.EmergencyContactRelationship() == nil || c.EmergencyContactRelationship().String() != "母" {
-		t.Errorf("EmergencyContactRelationship() = %v, want 母", c.EmergencyContactRelationship())
-	}
-	if c.EmergencyContactPhone() == nil || c.EmergencyContactPhone().String() != "08012345678" {
-		t.Errorf("EmergencyContactPhone() = %v, want 08012345678", c.EmergencyContactPhone())
-	}
-	if c.OrganizationID() == nil || c.OrganizationID().String() != "3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d" {
-		t.Errorf("OrganizationID() = %v, want 3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d", c.OrganizationID())
-	}
-	if !c.CreatedAt().Equal(past) {
-		t.Errorf("CreatedAt() = %v, want %v", c.CreatedAt(), past)
-	}
-	if !c.UpdatedAt().After(past) {
-		t.Errorf("UpdatedAt() = %v, want after %v", c.UpdatedAt(), past)
-	}
-	if c.UpdatedAt().Location() != time.UTC {
-		t.Errorf("UpdatedAt().Location() = %v, want %v", c.UpdatedAt().Location(), time.UTC)
-	}
-	if !c.IsActive() {
-		t.Errorf("IsActive() = %v, want %v", c.IsActive(), true)
-	}
+			past := time.Now().UTC().Add(-time.Hour)
+			c := NewCustomer(id, tenantID, name, nameKana, gender, birthDate, nil, nil, address.Address{}, nil, nil, nil, nil, true, past, past)
 
-	c.Update(updatedName, updatedNameKana, updatedGender, updatedBirthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, nil)
+			initialAddr := c.Address()
+			if c.Phone() != nil || c.Email() != nil || initialAddr.PostalCode() != nil || initialAddr.Prefecture() != nil || initialAddr.City() != nil || initialAddr.Street() != nil || initialAddr.Building() != nil || c.EmergencyContactName() != nil || c.EmergencyContactRelationship() != nil || c.EmergencyContactPhone() != nil || c.OrganizationID() != nil {
+				t.Errorf("expected nil optional fields before update")
+			}
 
-	if c.OrganizationID() != nil {
-		t.Errorf("OrganizationID() = %v, want nil", c.OrganizationID())
+			c.Update(updatedName, updatedNameKana, updatedGender, updatedBirthDate, phone, email, addr, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, tt.organizationID)
+
+			if c.Name() != updatedName {
+				t.Errorf("Name() = %v, want %v", c.Name(), updatedName)
+			}
+			if c.NameKana() != updatedNameKana {
+				t.Errorf("NameKana() = %v, want %v", c.NameKana(), updatedNameKana)
+			}
+			if c.Gender() != updatedGender {
+				t.Errorf("Gender() = %v, want %v", c.Gender(), updatedGender)
+			}
+			if !c.BirthDate().Equal(updatedBirthDate.Time) {
+				t.Errorf("BirthDate() = %v, want %v", c.BirthDate(), updatedBirthDate)
+			}
+			if !reflect.DeepEqual(c.Phone(), phone) {
+				t.Errorf("Phone() = %v, want %v", c.Phone(), phone)
+			}
+			if !reflect.DeepEqual(c.Email(), email) {
+				t.Errorf("Email() = %v, want %v", c.Email(), email)
+			}
+			if !reflect.DeepEqual(c.Address(), addr) {
+				t.Errorf("Address() = %v, want %v", c.Address(), addr)
+			}
+			if !reflect.DeepEqual(c.EmergencyContactName(), emergencyContactName) {
+				t.Errorf("EmergencyContactName() = %v, want %v", c.EmergencyContactName(), emergencyContactName)
+			}
+			if !reflect.DeepEqual(c.EmergencyContactRelationship(), emergencyContactRelationship) {
+				t.Errorf("EmergencyContactRelationship() = %v, want %v", c.EmergencyContactRelationship(), emergencyContactRelationship)
+			}
+			if !reflect.DeepEqual(c.EmergencyContactPhone(), emergencyContactPhone) {
+				t.Errorf("EmergencyContactPhone() = %v, want %v", c.EmergencyContactPhone(), emergencyContactPhone)
+			}
+			if !reflect.DeepEqual(c.OrganizationID(), tt.organizationID) {
+				t.Errorf("OrganizationID() = %v, want %v", c.OrganizationID(), tt.organizationID)
+			}
+			if !c.IsActive() {
+				t.Errorf("IsActive() = %v, want %v", c.IsActive(), true)
+			}
+			if !c.CreatedAt().Equal(past) {
+				t.Errorf("CreatedAt() = %v, want %v", c.CreatedAt(), past)
+			}
+			if !c.UpdatedAt().After(past) {
+				t.Errorf("UpdatedAt() = %v, want after %v", c.UpdatedAt(), past)
+			}
+			if c.UpdatedAt().Location() != time.UTC {
+				t.Errorf("UpdatedAt().Location() = %v, want %v", c.UpdatedAt().Location(), time.UTC)
+			}
+		})
 	}
 }
 
@@ -200,61 +211,43 @@ func TestSetActiveCustomer(t *testing.T) {
 	nameKana, _ := NewNameKana("テストカナ")
 	gender, _ := NewGender("male")
 	birthDate, _ := NewBirthDate(2000, 1, 1)
-	past := time.Now().UTC().Add(-time.Hour)
 
-	active := NewCustomer(id, tenantID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, past, past)
-
-	active.SetActive(false)
-
-	if active.IsActive() {
-		t.Errorf("IsActive() = %v, want %v", active.IsActive(), false)
+	tests := []struct {
+		name        string
+		initial     bool
+		active      bool
+		wantUpdated bool
+	}{
+		{"success deactivate customer", true, false, true},
+		{"success activate customer", false, true, true},
+		{"success deactivate an already inactive customer", false, false, false},
+		{"success activate an already active customer", true, true, false},
 	}
-	if !active.CreatedAt().Equal(past) {
-		t.Errorf("CreatedAt() = %v, want %v", active.CreatedAt(), past)
-	}
-	if !active.UpdatedAt().After(past) {
-		t.Errorf("UpdatedAt() = %v, want after %v", active.UpdatedAt(), past)
-	}
-	if active.UpdatedAt().Location() != time.UTC {
-		t.Errorf("UpdatedAt().Location() = %v, want %v", active.UpdatedAt().Location(), time.UTC)
-	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	deactivatedAt := active.UpdatedAt()
+			past := time.Now().UTC().Add(-time.Hour)
+			c := NewCustomer(id, tenantID, name, nameKana, gender, birthDate, nil, nil, address.Address{}, nil, nil, nil, nil, tt.initial, past, past)
 
-	active.SetActive(false)
+			c.SetActive(tt.active)
 
-	if active.IsActive() {
-		t.Errorf("IsActive() = %v, want %v", active.IsActive(), false)
-	}
-	if !active.UpdatedAt().Equal(deactivatedAt) {
-		t.Errorf("UpdatedAt() = %v, want unchanged %v", active.UpdatedAt(), deactivatedAt)
-	}
-
-	inactive := NewCustomer(id, tenantID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, past, past)
-
-	inactive.SetActive(true)
-
-	if !inactive.IsActive() {
-		t.Errorf("IsActive() = %v, want %v", inactive.IsActive(), true)
-	}
-	if !inactive.CreatedAt().Equal(past) {
-		t.Errorf("CreatedAt() = %v, want %v", inactive.CreatedAt(), past)
-	}
-	if !inactive.UpdatedAt().After(past) {
-		t.Errorf("UpdatedAt() = %v, want after %v", inactive.UpdatedAt(), past)
-	}
-	if inactive.UpdatedAt().Location() != time.UTC {
-		t.Errorf("UpdatedAt().Location() = %v, want %v", inactive.UpdatedAt().Location(), time.UTC)
-	}
-
-	activatedAt := inactive.UpdatedAt()
-
-	inactive.SetActive(true)
-
-	if !inactive.IsActive() {
-		t.Errorf("IsActive() = %v, want %v", inactive.IsActive(), true)
-	}
-	if !inactive.UpdatedAt().Equal(activatedAt) {
-		t.Errorf("UpdatedAt() = %v, want unchanged %v", inactive.UpdatedAt(), activatedAt)
+			if c.IsActive() != tt.active {
+				t.Errorf("IsActive() = %v, want %v", c.IsActive(), tt.active)
+			}
+			if !c.CreatedAt().Equal(past) {
+				t.Errorf("CreatedAt() = %v, want %v", c.CreatedAt(), past)
+			}
+			if tt.wantUpdated && !c.UpdatedAt().After(past) {
+				t.Errorf("UpdatedAt() = %v, want after %v", c.UpdatedAt(), past)
+			}
+			if tt.wantUpdated && c.UpdatedAt().Location() != time.UTC {
+				t.Errorf("UpdatedAt().Location() = %v, want %v", c.UpdatedAt().Location(), time.UTC)
+			}
+			if !tt.wantUpdated && !c.UpdatedAt().Equal(past) {
+				t.Errorf("UpdatedAt() = %v, want unchanged %v", c.UpdatedAt(), past)
+			}
+		})
 	}
 }
