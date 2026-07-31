@@ -13,6 +13,8 @@ import (
 	"google.golang.org/grpc/status"
 
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
+	"github.com/qkitzero/fitness-service/internal/domain/address"
+	"github.com/qkitzero/fitness-service/internal/domain/contact"
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
 	"github.com/qkitzero/fitness-service/internal/domain/organization"
 	"github.com/qkitzero/fitness-service/internal/domain/tenant"
@@ -33,16 +35,17 @@ func customerSample(ctrl *gomock.Controller, active bool) *mockscustomer.MockCus
 	name, _ := customer.NewName("test customer")
 	nameKana, _ := customer.NewNameKana("テストカナ")
 	birthDate, _ := customer.NewBirthDate(2000, 1, 1)
-	phone, _ := customer.NewPhone("03-1234-5678")
-	email, _ := customer.NewEmail("test@example.com")
-	postalCode, _ := customer.NewPostalCode("123-4567")
-	prefecture, _ := customer.NewPrefecture("東京都")
-	city, _ := customer.NewCity("千代田区")
-	street, _ := customer.NewStreet("1-1-1")
-	building, _ := customer.NewBuilding("テストビル")
+	phone, _ := contact.NewPhone("03-1234-5678")
+	email, _ := contact.NewEmail("test@example.com")
+	postalCode, _ := address.NewPostalCode("123-4567")
+	prefecture, _ := address.NewPrefecture("東京都")
+	city, _ := address.NewCity("千代田区")
+	street, _ := address.NewStreet("1-1-1")
+	building, _ := address.NewBuilding("テストビル")
+	addr := address.NewAddress(postalCode, prefecture, city, street, building)
 	emergencyContactName, _ := customer.NewEmergencyContactName("緊急 太郎")
 	emergencyContactRelationship, _ := customer.NewEmergencyContactRelationship("父")
-	emergencyContactPhone, _ := customer.NewPhone("090-1234-5678")
+	emergencyContactPhone, _ := contact.NewPhone("090-1234-5678")
 	organizationID, _ := organization.NewOrganizationIDFromString(sampleOrganizationID)
 	m.EXPECT().ID().Return(id).AnyTimes()
 	m.EXPECT().Name().Return(name).AnyTimes()
@@ -52,11 +55,7 @@ func customerSample(ctrl *gomock.Controller, active bool) *mockscustomer.MockCus
 	m.EXPECT().BirthDate().Return(birthDate).AnyTimes()
 	m.EXPECT().Phone().Return(phone).AnyTimes()
 	m.EXPECT().Email().Return(email).AnyTimes()
-	m.EXPECT().PostalCode().Return(postalCode).AnyTimes()
-	m.EXPECT().Prefecture().Return(prefecture).AnyTimes()
-	m.EXPECT().City().Return(city).AnyTimes()
-	m.EXPECT().Street().Return(street).AnyTimes()
-	m.EXPECT().Building().Return(building).AnyTimes()
+	m.EXPECT().Address().Return(addr).AnyTimes()
 	m.EXPECT().EmergencyContactName().Return(emergencyContactName).AnyTimes()
 	m.EXPECT().EmergencyContactRelationship().Return(emergencyContactRelationship).AnyTimes()
 	m.EXPECT().EmergencyContactPhone().Return(emergencyContactPhone).AnyTimes()
@@ -130,7 +129,7 @@ func TestCreateCustomer(t *testing.T) {
 			mockUsecase := mocksappcustomer.NewMockCustomerUsecase(ctrl)
 			if tt.callUsecase {
 				tenantID, _ := tenant.NewTenantID(tid)
-				mockUsecase.EXPECT().CreateCustomer(gomock.Any(), tenantID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(customerSample(ctrl, true), tt.createErr).Times(1)
+				mockUsecase.EXPECT().CreateCustomer(gomock.Any(), tenantID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(customerSample(ctrl, true), tt.createErr).Times(1)
 			}
 
 			handler := NewCustomerHandler(mockUsecase)
@@ -307,7 +306,7 @@ func TestUpdateCustomer(t *testing.T) {
 			mockUsecase := mocksappcustomer.NewMockCustomerUsecase(ctrl)
 			if tt.callUsecase {
 				customerID, _ := customer.NewCustomerIDFromString(cid)
-				mockUsecase.EXPECT().UpdateCustomer(gomock.Any(), customerID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(customerSample(ctrl, true), tt.updateErr).Times(1)
+				mockUsecase.EXPECT().UpdateCustomer(gomock.Any(), customerID, gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(customerSample(ctrl, true), tt.updateErr).Times(1)
 			}
 
 			handler := NewCustomerHandler(mockUsecase)
@@ -439,83 +438,141 @@ func TestParseCustomerFields(t *testing.T) {
 	ecPhone := "090-1234-5678"
 	organizationID := sampleOrganizationID
 
-	got, err := parseCustomerFields(&customerv1.CreateCustomerRequest{
-		Name:                         "test customer",
-		NameKana:                     "テストカナ",
-		Gender:                       customerv1.Gender_GENDER_MALE,
-		BirthDate:                    &date.Date{Year: 2000, Month: 1, Day: 1},
-		Phone:                        &phone,
-		Email:                        &email,
-		PostalCode:                   &postalCode,
-		Prefecture:                   &prefecture,
-		City:                         &city,
-		Street:                       &street,
-		Building:                     &building,
-		EmergencyContactName:         &ecName,
-		EmergencyContactRelationship: &ecRelationship,
-		EmergencyContactPhone:        &ecPhone,
-		OrganizationId:               &organizationID,
-	})
-	if err != nil {
-		t.Fatalf("expected no error, but got %v", err)
+	tests := []struct {
+		name                             string
+		req                              *customerv1.CreateCustomerRequest
+		wantPhone                        string
+		wantEmail                        string
+		wantPostalCode                   string
+		wantPrefecture                   string
+		wantCity                         string
+		wantStreet                       string
+		wantBuilding                     string
+		wantEmergencyContactName         string
+		wantEmergencyContactRelationship string
+		wantEmergencyContactPhone        string
+		wantOrganizationID               string
+	}{
+		{
+			"success parse customer fields",
+			&customerv1.CreateCustomerRequest{
+				Name:                         "test customer",
+				NameKana:                     "テストカナ",
+				Gender:                       customerv1.Gender_GENDER_MALE,
+				BirthDate:                    &date.Date{Year: 2000, Month: 1, Day: 1},
+				Phone:                        &phone,
+				Email:                        &email,
+				PostalCode:                   &postalCode,
+				Prefecture:                   &prefecture,
+				City:                         &city,
+				Street:                       &street,
+				Building:                     &building,
+				EmergencyContactName:         &ecName,
+				EmergencyContactRelationship: &ecRelationship,
+				EmergencyContactPhone:        &ecPhone,
+				OrganizationId:               &organizationID,
+			},
+			"0312345678", "test@example.com", "1234567", "東京都", "千代田区", "1-1-1", "テストビル", "緊急 太郎", "父", "09012345678", sampleOrganizationID,
+		},
+		{
+			"success parse customer fields without optional fields",
+			&customerv1.CreateCustomerRequest{
+				Name:      "test customer",
+				NameKana:  "テストカナ",
+				Gender:    customerv1.Gender_GENDER_MALE,
+				BirthDate: &date.Date{Year: 2000, Month: 1, Day: 1},
+			},
+			"", "", "", "", "", "", "", "", "", "", "",
+		},
 	}
-	if got.name.String() != "test customer" {
-		t.Errorf("name = %v, want test customer", got.name.String())
-	}
-	if got.nameKana.String() != "テストカナ" {
-		t.Errorf("nameKana = %v, want テストカナ", got.nameKana.String())
-	}
-	if got.gender != customer.GenderMale {
-		t.Errorf("gender = %v, want %v", got.gender, customer.GenderMale)
-	}
-	if got.birthDate.Year() != 2000 || got.birthDate.Month() != time.January || got.birthDate.Day() != 1 {
-		t.Errorf("birthDate = %v, want 2000-01-01", got.birthDate)
-	}
-	if got.phone == nil || got.phone.String() != "0312345678" {
-		t.Errorf("phone = %v, want 0312345678", got.phone)
-	}
-	if got.email == nil || got.email.String() != "test@example.com" {
-		t.Errorf("email = %v, want test@example.com", got.email)
-	}
-	if got.postalCode == nil || got.postalCode.String() != "1234567" {
-		t.Errorf("postalCode = %v, want 1234567", got.postalCode)
-	}
-	if got.prefecture == nil || got.prefecture.String() != "東京都" {
-		t.Errorf("prefecture = %v, want 東京都", got.prefecture)
-	}
-	if got.city == nil || got.city.String() != "千代田区" {
-		t.Errorf("city = %v, want 千代田区", got.city)
-	}
-	if got.street == nil || got.street.String() != "1-1-1" {
-		t.Errorf("street = %v, want 1-1-1", got.street)
-	}
-	if got.building == nil || got.building.String() != "テストビル" {
-		t.Errorf("building = %v, want テストビル", got.building)
-	}
-	if got.emergencyContactName == nil || got.emergencyContactName.String() != "緊急 太郎" {
-		t.Errorf("emergencyContactName = %v, want 緊急 太郎", got.emergencyContactName)
-	}
-	if got.emergencyContactRelationship == nil || got.emergencyContactRelationship.String() != "父" {
-		t.Errorf("emergencyContactRelationship = %v, want 父", got.emergencyContactRelationship)
-	}
-	if got.emergencyContactPhone == nil || got.emergencyContactPhone.String() != "09012345678" {
-		t.Errorf("emergencyContactPhone = %v, want 09012345678", got.emergencyContactPhone)
-	}
-	if got.organizationID == nil || got.organizationID.String() != sampleOrganizationID {
-		t.Errorf("organizationID = %v, want %v", got.organizationID, sampleOrganizationID)
-	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	gotEmpty, err := parseCustomerFields(&customerv1.CreateCustomerRequest{
-		Name:      "test customer",
-		NameKana:  "テストカナ",
-		Gender:    customerv1.Gender_GENDER_MALE,
-		BirthDate: &date.Date{Year: 2000, Month: 1, Day: 1},
-	})
-	if err != nil {
-		t.Fatalf("expected no error, but got %v", err)
-	}
-	if gotEmpty.phone != nil || gotEmpty.email != nil || gotEmpty.postalCode != nil || gotEmpty.prefecture != nil || gotEmpty.city != nil || gotEmpty.street != nil || gotEmpty.building != nil || gotEmpty.emergencyContactName != nil || gotEmpty.emergencyContactRelationship != nil || gotEmpty.emergencyContactPhone != nil || gotEmpty.organizationID != nil {
-		t.Errorf("expected nil optional fields")
+			got, err := parseCustomerFields(tt.req)
+			if err != nil {
+				t.Fatalf("expected no error, but got %v", err)
+			}
+			if got.name.String() != "test customer" {
+				t.Errorf("name = %v, want test customer", got.name.String())
+			}
+			if got.nameKana.String() != "テストカナ" {
+				t.Errorf("nameKana = %v, want テストカナ", got.nameKana.String())
+			}
+			if got.gender != customer.GenderMale {
+				t.Errorf("gender = %v, want %v", got.gender, customer.GenderMale)
+			}
+			if got.birthDate.Year() != 2000 || got.birthDate.Month() != time.January || got.birthDate.Day() != 1 {
+				t.Errorf("birthDate = %v, want 2000-01-01", got.birthDate)
+			}
+			if tt.wantPhone == "" && got.phone != nil {
+				t.Errorf("phone = %v, want nil", got.phone)
+			}
+			if tt.wantPhone != "" && (got.phone == nil || got.phone.String() != tt.wantPhone) {
+				t.Errorf("phone = %v, want %v", got.phone, tt.wantPhone)
+			}
+			if tt.wantEmail == "" && got.email != nil {
+				t.Errorf("email = %v, want nil", got.email)
+			}
+			if tt.wantEmail != "" && (got.email == nil || got.email.String() != tt.wantEmail) {
+				t.Errorf("email = %v, want %v", got.email, tt.wantEmail)
+			}
+			if tt.wantPostalCode == "" && got.address.PostalCode() != nil {
+				t.Errorf("address.PostalCode() = %v, want nil", got.address.PostalCode())
+			}
+			if tt.wantPostalCode != "" && (got.address.PostalCode() == nil || got.address.PostalCode().String() != tt.wantPostalCode) {
+				t.Errorf("address.PostalCode() = %v, want %v", got.address.PostalCode(), tt.wantPostalCode)
+			}
+			if tt.wantPrefecture == "" && got.address.Prefecture() != nil {
+				t.Errorf("address.Prefecture() = %v, want nil", got.address.Prefecture())
+			}
+			if tt.wantPrefecture != "" && (got.address.Prefecture() == nil || got.address.Prefecture().String() != tt.wantPrefecture) {
+				t.Errorf("address.Prefecture() = %v, want %v", got.address.Prefecture(), tt.wantPrefecture)
+			}
+			if tt.wantCity == "" && got.address.City() != nil {
+				t.Errorf("address.City() = %v, want nil", got.address.City())
+			}
+			if tt.wantCity != "" && (got.address.City() == nil || got.address.City().String() != tt.wantCity) {
+				t.Errorf("address.City() = %v, want %v", got.address.City(), tt.wantCity)
+			}
+			if tt.wantStreet == "" && got.address.Street() != nil {
+				t.Errorf("address.Street() = %v, want nil", got.address.Street())
+			}
+			if tt.wantStreet != "" && (got.address.Street() == nil || got.address.Street().String() != tt.wantStreet) {
+				t.Errorf("address.Street() = %v, want %v", got.address.Street(), tt.wantStreet)
+			}
+			if tt.wantBuilding == "" && got.address.Building() != nil {
+				t.Errorf("address.Building() = %v, want nil", got.address.Building())
+			}
+			if tt.wantBuilding != "" && (got.address.Building() == nil || got.address.Building().String() != tt.wantBuilding) {
+				t.Errorf("address.Building() = %v, want %v", got.address.Building(), tt.wantBuilding)
+			}
+			if tt.wantEmergencyContactName == "" && got.emergencyContactName != nil {
+				t.Errorf("emergencyContactName = %v, want nil", got.emergencyContactName)
+			}
+			if tt.wantEmergencyContactName != "" && (got.emergencyContactName == nil || got.emergencyContactName.String() != tt.wantEmergencyContactName) {
+				t.Errorf("emergencyContactName = %v, want %v", got.emergencyContactName, tt.wantEmergencyContactName)
+			}
+			if tt.wantEmergencyContactRelationship == "" && got.emergencyContactRelationship != nil {
+				t.Errorf("emergencyContactRelationship = %v, want nil", got.emergencyContactRelationship)
+			}
+			if tt.wantEmergencyContactRelationship != "" && (got.emergencyContactRelationship == nil || got.emergencyContactRelationship.String() != tt.wantEmergencyContactRelationship) {
+				t.Errorf("emergencyContactRelationship = %v, want %v", got.emergencyContactRelationship, tt.wantEmergencyContactRelationship)
+			}
+			if tt.wantEmergencyContactPhone == "" && got.emergencyContactPhone != nil {
+				t.Errorf("emergencyContactPhone = %v, want nil", got.emergencyContactPhone)
+			}
+			if tt.wantEmergencyContactPhone != "" && (got.emergencyContactPhone == nil || got.emergencyContactPhone.String() != tt.wantEmergencyContactPhone) {
+				t.Errorf("emergencyContactPhone = %v, want %v", got.emergencyContactPhone, tt.wantEmergencyContactPhone)
+			}
+			if tt.wantOrganizationID == "" && got.organizationID != nil {
+				t.Errorf("organizationID = %v, want nil", got.organizationID)
+			}
+			if tt.wantOrganizationID != "" && (got.organizationID == nil || got.organizationID.String() != tt.wantOrganizationID) {
+				t.Errorf("organizationID = %v, want %v", got.organizationID, tt.wantOrganizationID)
+			}
+		})
 	}
 }
 
@@ -583,82 +640,141 @@ func TestToProtoCustomer(t *testing.T) {
 	nameKana, _ := customer.NewNameKana("テストカナ")
 	gender, _ := customer.NewGender("male")
 	birthDate, _ := customer.NewBirthDate(2000, 1, 1)
-	phone, _ := customer.NewPhone("03-1234-5678")
-	email, _ := customer.NewEmail("test@example.com")
-	postalCode, _ := customer.NewPostalCode("123-4567")
-	prefecture, _ := customer.NewPrefecture("東京都")
-	city, _ := customer.NewCity("千代田区")
-	street, _ := customer.NewStreet("1-1-1")
-	building, _ := customer.NewBuilding("テストビル")
+	phone, _ := contact.NewPhone("03-1234-5678")
+	email, _ := contact.NewEmail("test@example.com")
+	postalCode, _ := address.NewPostalCode("123-4567")
+	prefecture, _ := address.NewPrefecture("東京都")
+	city, _ := address.NewCity("千代田区")
+	street, _ := address.NewStreet("1-1-1")
+	building, _ := address.NewBuilding("テストビル")
+	addr := address.NewAddress(postalCode, prefecture, city, street, building)
 	emergencyContactName, _ := customer.NewEmergencyContactName("緊急 太郎")
 	emergencyContactRelationship, _ := customer.NewEmergencyContactRelationship("父")
-	emergencyContactPhone, _ := customer.NewPhone("090-1234-5678")
+	emergencyContactPhone, _ := contact.NewPhone("090-1234-5678")
 	organizationID, _ := organization.NewOrganizationIDFromString(sampleOrganizationID)
 	now := time.Now().UTC()
 
-	full := customer.NewCustomer(id, tenantID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, &organizationID, true, now, now)
-	got := toProtoCustomer(full)
-	if got.GetCustomerId() != id.String() {
-		t.Errorf("CustomerId = %v, want %v", got.GetCustomerId(), id.String())
+	tests := []struct {
+		name                             string
+		c                                customer.Customer
+		wantPhone                        string
+		wantEmail                        string
+		wantPostalCode                   string
+		wantPrefecture                   string
+		wantCity                         string
+		wantStreet                       string
+		wantBuilding                     string
+		wantEmergencyContactName         string
+		wantEmergencyContactRelationship string
+		wantEmergencyContactPhone        string
+		wantOrganizationID               string
+		wantIsActive                     bool
+	}{
+		{
+			"success to proto customer",
+			customer.NewCustomer(id, tenantID, name, nameKana, gender, birthDate, phone, email, addr, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, &organizationID, true, now, now),
+			"0312345678", "test@example.com", "1234567", "東京都", "千代田区", "1-1-1", "テストビル", "緊急 太郎", "父", "09012345678", sampleOrganizationID, true,
+		},
+		{
+			"success to proto customer without optional fields",
+			customer.NewCustomer(id, tenantID, name, nameKana, gender, birthDate, nil, nil, address.Address{}, nil, nil, nil, nil, false, now, now),
+			"", "", "", "", "", "", "", "", "", "", "", false,
+		},
 	}
-	if got.GetName() != "test customer" {
-		t.Errorf("Name = %v, want test customer", got.GetName())
-	}
-	if got.GetTenantId() != tenantID.String() {
-		t.Errorf("TenantId = %v, want %v", got.GetTenantId(), tenantID.String())
-	}
-	if got.GetNameKana() != "テストカナ" {
-		t.Errorf("NameKana = %v, want テストカナ", got.GetNameKana())
-	}
-	if got.GetGender() != customerv1.Gender_GENDER_MALE {
-		t.Errorf("Gender = %v, want MALE", got.GetGender())
-	}
-	if got.GetBirthDate().GetYear() != 2000 || got.GetBirthDate().GetMonth() != 1 || got.GetBirthDate().GetDay() != 1 {
-		t.Errorf("BirthDate = %v, want 2000-1-1", got.GetBirthDate())
-	}
-	if got.GetPhone() != "0312345678" {
-		t.Errorf("Phone = %v, want 0312345678", got.GetPhone())
-	}
-	if got.GetEmail() != "test@example.com" {
-		t.Errorf("Email = %v, want test@example.com", got.GetEmail())
-	}
-	if got.GetPostalCode() != "1234567" {
-		t.Errorf("PostalCode = %v, want 1234567", got.GetPostalCode())
-	}
-	if got.GetPrefecture() != "東京都" {
-		t.Errorf("Prefecture = %v, want 東京都", got.GetPrefecture())
-	}
-	if got.GetCity() != "千代田区" {
-		t.Errorf("City = %v, want 千代田区", got.GetCity())
-	}
-	if got.GetStreet() != "1-1-1" {
-		t.Errorf("Street = %v, want 1-1-1", got.GetStreet())
-	}
-	if got.GetBuilding() != "テストビル" {
-		t.Errorf("Building = %v, want テストビル", got.GetBuilding())
-	}
-	if got.GetEmergencyContactName() != "緊急 太郎" {
-		t.Errorf("EmergencyContactName = %v, want 緊急 太郎", got.GetEmergencyContactName())
-	}
-	if got.GetEmergencyContactRelationship() != "父" {
-		t.Errorf("EmergencyContactRelationship = %v, want 父", got.GetEmergencyContactRelationship())
-	}
-	if got.GetEmergencyContactPhone() != "09012345678" {
-		t.Errorf("EmergencyContactPhone = %v, want 09012345678", got.GetEmergencyContactPhone())
-	}
-	if got.GetOrganizationId() != sampleOrganizationID {
-		t.Errorf("OrganizationId = %v, want %v", got.GetOrganizationId(), sampleOrganizationID)
-	}
-	if !got.GetIsActive() {
-		t.Errorf("IsActive = %v, want %v", got.GetIsActive(), true)
-	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	empty := customer.NewCustomer(id, tenantID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, false, now, now)
-	gotEmpty := toProtoCustomer(empty)
-	if gotEmpty.Phone != nil || gotEmpty.Email != nil || gotEmpty.PostalCode != nil || gotEmpty.Prefecture != nil || gotEmpty.City != nil || gotEmpty.Street != nil || gotEmpty.Building != nil || gotEmpty.EmergencyContactName != nil || gotEmpty.EmergencyContactRelationship != nil || gotEmpty.EmergencyContactPhone != nil || gotEmpty.OrganizationId != nil {
-		t.Errorf("expected nil optional proto fields for empty customer")
-	}
-	if gotEmpty.GetIsActive() {
-		t.Errorf("IsActive = %v, want %v", gotEmpty.GetIsActive(), false)
+			got := toProtoCustomer(tt.c)
+
+			if got.GetCustomerId() != sampleCustomerID {
+				t.Errorf("CustomerId = %v, want %v", got.GetCustomerId(), sampleCustomerID)
+			}
+			if got.GetName() != "test customer" {
+				t.Errorf("Name = %v, want test customer", got.GetName())
+			}
+			if got.GetTenantId() != sampleTenantID {
+				t.Errorf("TenantId = %v, want %v", got.GetTenantId(), sampleTenantID)
+			}
+			if got.GetNameKana() != "テストカナ" {
+				t.Errorf("NameKana = %v, want テストカナ", got.GetNameKana())
+			}
+			if got.GetGender() != customerv1.Gender_GENDER_MALE {
+				t.Errorf("Gender = %v, want MALE", got.GetGender())
+			}
+			if got.GetBirthDate().GetYear() != 2000 || got.GetBirthDate().GetMonth() != 1 || got.GetBirthDate().GetDay() != 1 {
+				t.Errorf("BirthDate = %v, want 2000-1-1", got.GetBirthDate())
+			}
+			if tt.wantPhone == "" && got.Phone != nil {
+				t.Errorf("Phone = %v, want nil", got.Phone)
+			}
+			if tt.wantPhone != "" && got.GetPhone() != tt.wantPhone {
+				t.Errorf("Phone = %v, want %v", got.GetPhone(), tt.wantPhone)
+			}
+			if tt.wantEmail == "" && got.Email != nil {
+				t.Errorf("Email = %v, want nil", got.Email)
+			}
+			if tt.wantEmail != "" && got.GetEmail() != tt.wantEmail {
+				t.Errorf("Email = %v, want %v", got.GetEmail(), tt.wantEmail)
+			}
+			if tt.wantPostalCode == "" && got.PostalCode != nil {
+				t.Errorf("PostalCode = %v, want nil", got.PostalCode)
+			}
+			if tt.wantPostalCode != "" && got.GetPostalCode() != tt.wantPostalCode {
+				t.Errorf("PostalCode = %v, want %v", got.GetPostalCode(), tt.wantPostalCode)
+			}
+			if tt.wantPrefecture == "" && got.Prefecture != nil {
+				t.Errorf("Prefecture = %v, want nil", got.Prefecture)
+			}
+			if tt.wantPrefecture != "" && got.GetPrefecture() != tt.wantPrefecture {
+				t.Errorf("Prefecture = %v, want %v", got.GetPrefecture(), tt.wantPrefecture)
+			}
+			if tt.wantCity == "" && got.City != nil {
+				t.Errorf("City = %v, want nil", got.City)
+			}
+			if tt.wantCity != "" && got.GetCity() != tt.wantCity {
+				t.Errorf("City = %v, want %v", got.GetCity(), tt.wantCity)
+			}
+			if tt.wantStreet == "" && got.Street != nil {
+				t.Errorf("Street = %v, want nil", got.Street)
+			}
+			if tt.wantStreet != "" && got.GetStreet() != tt.wantStreet {
+				t.Errorf("Street = %v, want %v", got.GetStreet(), tt.wantStreet)
+			}
+			if tt.wantBuilding == "" && got.Building != nil {
+				t.Errorf("Building = %v, want nil", got.Building)
+			}
+			if tt.wantBuilding != "" && got.GetBuilding() != tt.wantBuilding {
+				t.Errorf("Building = %v, want %v", got.GetBuilding(), tt.wantBuilding)
+			}
+			if tt.wantEmergencyContactName == "" && got.EmergencyContactName != nil {
+				t.Errorf("EmergencyContactName = %v, want nil", got.EmergencyContactName)
+			}
+			if tt.wantEmergencyContactName != "" && got.GetEmergencyContactName() != tt.wantEmergencyContactName {
+				t.Errorf("EmergencyContactName = %v, want %v", got.GetEmergencyContactName(), tt.wantEmergencyContactName)
+			}
+			if tt.wantEmergencyContactRelationship == "" && got.EmergencyContactRelationship != nil {
+				t.Errorf("EmergencyContactRelationship = %v, want nil", got.EmergencyContactRelationship)
+			}
+			if tt.wantEmergencyContactRelationship != "" && got.GetEmergencyContactRelationship() != tt.wantEmergencyContactRelationship {
+				t.Errorf("EmergencyContactRelationship = %v, want %v", got.GetEmergencyContactRelationship(), tt.wantEmergencyContactRelationship)
+			}
+			if tt.wantEmergencyContactPhone == "" && got.EmergencyContactPhone != nil {
+				t.Errorf("EmergencyContactPhone = %v, want nil", got.EmergencyContactPhone)
+			}
+			if tt.wantEmergencyContactPhone != "" && got.GetEmergencyContactPhone() != tt.wantEmergencyContactPhone {
+				t.Errorf("EmergencyContactPhone = %v, want %v", got.GetEmergencyContactPhone(), tt.wantEmergencyContactPhone)
+			}
+			if tt.wantOrganizationID == "" && got.OrganizationId != nil {
+				t.Errorf("OrganizationId = %v, want nil", got.OrganizationId)
+			}
+			if tt.wantOrganizationID != "" && got.GetOrganizationId() != tt.wantOrganizationID {
+				t.Errorf("OrganizationId = %v, want %v", got.GetOrganizationId(), tt.wantOrganizationID)
+			}
+			if got.GetIsActive() != tt.wantIsActive {
+				t.Errorf("IsActive = %v, want %v", got.GetIsActive(), tt.wantIsActive)
+			}
+		})
 	}
 }

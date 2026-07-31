@@ -64,19 +64,33 @@ func TestBirthDateScan(t *testing.T) {
 
 func TestBirthDateValue(t *testing.T) {
 	t.Parallel()
-
-	birthDate, err := NewBirthDate(2000, 1, 1)
-	if err != nil {
-		t.Fatalf("failed to new birth date: %v", err)
+	tests := []struct {
+		name  string
+		year  int32
+		month int32
+		day   int32
+		want  driver.Value
+	}{
+		{"success value", 2000, 1, 1, driver.Value(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))},
+		{"success leap day", 2000, 2, 29, driver.Value(time.Date(2000, 2, 29, 0, 0, 0, 0, time.UTC))},
 	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	value, err := birthDate.Value()
-	if err != nil {
-		t.Errorf("expected no error, but got %v", err)
-	}
+			birthDate, err := NewBirthDate(tt.year, tt.month, tt.day)
+			if err != nil {
+				t.Fatalf("failed to new birth date: %v", err)
+			}
 
-	want := driver.Value(time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC))
-	if value != want {
-		t.Errorf("Value() = %v, want %v", value, want)
+			value, err := birthDate.Value()
+			if err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+			if value != tt.want {
+				t.Errorf("Value() = %v, want %v", value, tt.want)
+			}
+		})
 	}
 }

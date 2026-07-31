@@ -1,11 +1,11 @@
-package customer
+package tenant
 
 import (
 	"strings"
 	"testing"
 )
 
-func TestNewStreet(t *testing.T) {
+func TestNewNote(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name    string
@@ -13,19 +13,22 @@ func TestNewStreet(t *testing.T) {
 		input   string
 		want    string
 	}{
-		{"success", true, "1-1-1", "1-1-1"},
+		{"success", true, "テスト備考", "テスト備考"},
 		{"success blank", true, "  ", ""},
+		{"success with newline", true, "営業時間: 10-22\n定休日: 月曜", "営業時間: 10-22\n定休日: 月曜"},
+		{"success with carriage return", true, "line1\r\nline2", "line1\r\nline2"},
+		{"success with tab", true, "項目\t値", "項目\t値"},
 		{"success max length", true, strings.Repeat("あ", 255), strings.Repeat("あ", 255)},
 		{"failure too long", false, strings.Repeat("あ", 256), ""},
-		{"failure null character", false, "1-1\x00-1", ""},
-		{"failure newline", false, "1-1\n-1", ""},
+		{"failure null character", false, "テスト\x00備考", ""},
+		{"failure bell character", false, "テスト\a備考", ""},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := NewStreet(tt.input)
+			got, err := NewNote(tt.input)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}

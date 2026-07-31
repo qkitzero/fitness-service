@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/mock/gomock"
 
+	"github.com/qkitzero/fitness-service/internal/domain/address"
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
 	"github.com/qkitzero/fitness-service/internal/domain/organization"
 	"github.com/qkitzero/fitness-service/internal/domain/tenant"
@@ -84,7 +85,7 @@ func TestCreateCustomer(t *testing.T) {
 
 			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository, mockOrganizationRepository)
 
-			createdCustomer, err := u.CreateCustomer(tt.ctx, tenantID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tt.organizationID)
+			createdCustomer, err := u.CreateCustomer(tt.ctx, tenantID, name, nameKana, gender, birthDate, nil, nil, address.Address{}, nil, nil, nil, tt.organizationID)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}
@@ -323,13 +324,13 @@ func TestUpdateCustomer(t *testing.T) {
 				mockOrganizationRepository.EXPECT().FindByID(tt.ctx, *tt.organizationID).Return(foundOrganization, tt.findOrganizationErr).Times(1)
 			}
 			if tt.callUpdate {
-				mockCustomer.EXPECT().Update(name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tt.organizationID).Times(1)
+				mockCustomer.EXPECT().Update(name, nameKana, gender, birthDate, nil, nil, address.Address{}, nil, nil, nil, tt.organizationID).Times(1)
 				mockCustomerRepository.EXPECT().Update(tt.ctx, mockCustomer).Return(tt.updateErr).Times(1)
 			}
 
 			u := NewCustomerUsecase(mockAuthService, mockUserService, mockCustomerRepository, mockOrganizationRepository)
 
-			updatedCustomer, err := u.UpdateCustomer(tt.ctx, customerID, name, nameKana, gender, birthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, tt.organizationID)
+			updatedCustomer, err := u.UpdateCustomer(tt.ctx, customerID, name, nameKana, gender, birthDate, nil, nil, address.Address{}, nil, nil, nil, tt.organizationID)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}

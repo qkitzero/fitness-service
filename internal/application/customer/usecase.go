@@ -7,16 +7,18 @@ import (
 
 	"github.com/qkitzero/fitness-service/internal/application/auth"
 	"github.com/qkitzero/fitness-service/internal/application/user"
+	"github.com/qkitzero/fitness-service/internal/domain/address"
+	"github.com/qkitzero/fitness-service/internal/domain/contact"
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
 	"github.com/qkitzero/fitness-service/internal/domain/organization"
 	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
 type CustomerUsecase interface {
-	CreateCustomer(ctx context.Context, tenantID tenant.TenantID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone, organizationID *organization.OrganizationID) (customer.Customer, error)
+	CreateCustomer(ctx context.Context, tenantID tenant.TenantID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *contact.Phone, email *contact.Email, addr address.Address, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *contact.Phone, organizationID *organization.OrganizationID) (customer.Customer, error)
 	GetCustomer(ctx context.Context, customerID customer.CustomerID) (customer.Customer, error)
 	ListCustomers(ctx context.Context, tenantID tenant.TenantID, includeInactive bool) ([]customer.Customer, error)
-	UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone, organizationID *organization.OrganizationID) (customer.Customer, error)
+	UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *contact.Phone, email *contact.Email, addr address.Address, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *contact.Phone, organizationID *organization.OrganizationID) (customer.Customer, error)
 	SetCustomerActive(ctx context.Context, customerID customer.CustomerID, active bool) (customer.Customer, error)
 	DeleteCustomer(ctx context.Context, customerID customer.CustomerID) error
 }
@@ -87,7 +89,7 @@ func (u *customerUsecase) findOwnedCustomer(ctx context.Context, customerID cust
 	return foundCustomer, nil
 }
 
-func (u *customerUsecase) CreateCustomer(ctx context.Context, tenantID tenant.TenantID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone, organizationID *organization.OrganizationID) (customer.Customer, error) {
+func (u *customerUsecase) CreateCustomer(ctx context.Context, tenantID tenant.TenantID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *contact.Phone, email *contact.Email, addr address.Address, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *contact.Phone, organizationID *organization.OrganizationID) (customer.Customer, error) {
 	if _, err := u.authService.VerifyToken(ctx); err != nil {
 		return nil, err
 	}
@@ -102,7 +104,7 @@ func (u *customerUsecase) CreateCustomer(ctx context.Context, tenantID tenant.Te
 
 	now := time.Now().UTC()
 
-	newCustomer := customer.NewCustomer(customer.NewCustomerID(), tenantID, name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, organizationID, true, now, now)
+	newCustomer := customer.NewCustomer(customer.NewCustomerID(), tenantID, name, nameKana, gender, birthDate, phone, email, addr, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, organizationID, true, now, now)
 
 	if err := u.customerRepo.Create(ctx, newCustomer); err != nil {
 		return nil, err
@@ -132,7 +134,7 @@ func (u *customerUsecase) ListCustomers(ctx context.Context, tenantID tenant.Ten
 	return customers, nil
 }
 
-func (u *customerUsecase) UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *customer.Phone, email *customer.Email, postalCode *customer.PostalCode, prefecture *customer.Prefecture, city *customer.City, street *customer.Street, building *customer.Building, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *customer.Phone, organizationID *organization.OrganizationID) (customer.Customer, error) {
+func (u *customerUsecase) UpdateCustomer(ctx context.Context, customerID customer.CustomerID, name customer.Name, nameKana customer.NameKana, gender customer.Gender, birthDate customer.BirthDate, phone *contact.Phone, email *contact.Email, addr address.Address, emergencyContactName *customer.EmergencyContactName, emergencyContactRelationship *customer.EmergencyContactRelationship, emergencyContactPhone *contact.Phone, organizationID *organization.OrganizationID) (customer.Customer, error) {
 	foundCustomer, err := u.findOwnedCustomer(ctx, customerID)
 	if err != nil {
 		return nil, err
@@ -142,7 +144,7 @@ func (u *customerUsecase) UpdateCustomer(ctx context.Context, customerID custome
 		return nil, err
 	}
 
-	foundCustomer.Update(name, nameKana, gender, birthDate, phone, email, postalCode, prefecture, city, street, building, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, organizationID)
+	foundCustomer.Update(name, nameKana, gender, birthDate, phone, email, addr, emergencyContactName, emergencyContactRelationship, emergencyContactPhone, organizationID)
 
 	if err := u.customerRepo.Update(ctx, foundCustomer); err != nil {
 		return nil, err

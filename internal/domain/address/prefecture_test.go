@@ -1,11 +1,10 @@
-package customer
+package address
 
 import (
-	"strings"
 	"testing"
 )
 
-func TestNewEmail(t *testing.T) {
+func TestNewPrefecture(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name    string
@@ -13,18 +12,16 @@ func TestNewEmail(t *testing.T) {
 		input   string
 		want    string
 	}{
-		{"success", true, "test@example.com", "test@example.com"},
+		{"success", true, "東京都", "東京都"},
 		{"success blank", true, "  ", ""},
-		{"failure too long", false, strings.Repeat("a", 256) + "@example.com", ""},
-		{"failure invalid", false, "invalid", ""},
-		{"failure display name", false, "Tanaka Taro <taro@example.com>", ""},
+		{"failure invalid", false, "存在しない県", ""},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := NewEmail(tt.input)
+			got, err := NewPrefecture(tt.input)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}

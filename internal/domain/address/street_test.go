@@ -1,11 +1,11 @@
-package customer
+package address
 
 import (
 	"strings"
 	"testing"
 )
 
-func TestNewCity(t *testing.T) {
+func TestNewStreet(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name    string
@@ -13,19 +13,19 @@ func TestNewCity(t *testing.T) {
 		input   string
 		want    string
 	}{
-		{"success", true, "千代田区", "千代田区"},
+		{"success", true, "1-1-1", "1-1-1"},
 		{"success blank", true, "  ", ""},
 		{"success max length", true, strings.Repeat("あ", 255), strings.Repeat("あ", 255)},
 		{"failure too long", false, strings.Repeat("あ", 256), ""},
-		{"failure null character", false, "千代田\x00区", ""},
-		{"failure newline", false, "千代田\n区", ""},
+		{"failure null character", false, "1-1\x00-1", ""},
+		{"failure newline", false, "1-1\n-1", ""},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := NewCity(tt.input)
+			got, err := NewStreet(tt.input)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}

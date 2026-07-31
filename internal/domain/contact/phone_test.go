@@ -1,10 +1,10 @@
-package customer
+package contact
 
 import (
 	"testing"
 )
 
-func TestNewPrefecture(t *testing.T) {
+func TestNewPhone(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name    string
@@ -12,16 +12,17 @@ func TestNewPrefecture(t *testing.T) {
 		input   string
 		want    string
 	}{
-		{"success", true, "東京都", "東京都"},
+		{"success", true, "03-1234-5678", "0312345678"},
+		{"success mobile", true, "090-1234-5678", "09012345678"},
 		{"success blank", true, "  ", ""},
-		{"failure invalid", false, "存在しない県", ""},
+		{"failure invalid", false, "invalid", ""},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := NewPrefecture(tt.input)
+			got, err := NewPhone(tt.input)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}

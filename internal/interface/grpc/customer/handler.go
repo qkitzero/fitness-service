@@ -12,6 +12,8 @@ import (
 
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
 	appcustomer "github.com/qkitzero/fitness-service/internal/application/customer"
+	domainaddress "github.com/qkitzero/fitness-service/internal/domain/address"
+	domaincontact "github.com/qkitzero/fitness-service/internal/domain/contact"
 	domaincustomer "github.com/qkitzero/fitness-service/internal/domain/customer"
 	domainorganization "github.com/qkitzero/fitness-service/internal/domain/organization"
 	domaintenant "github.com/qkitzero/fitness-service/internal/domain/tenant"
@@ -82,23 +84,24 @@ func toProtoCustomer(c domaincustomer.Customer) *customerv1.Customer {
 		s := v.String()
 		msg.Email = &s
 	}
-	if v := c.PostalCode(); v != nil {
+	addr := c.Address()
+	if v := addr.PostalCode(); v != nil {
 		s := v.String()
 		msg.PostalCode = &s
 	}
-	if v := c.Prefecture(); v != nil {
+	if v := addr.Prefecture(); v != nil {
 		s := v.String()
 		msg.Prefecture = &s
 	}
-	if v := c.City(); v != nil {
+	if v := addr.City(); v != nil {
 		s := v.String()
 		msg.City = &s
 	}
-	if v := c.Street(); v != nil {
+	if v := addr.Street(); v != nil {
 		s := v.String()
 		msg.Street = &s
 	}
-	if v := c.Building(); v != nil {
+	if v := addr.Building(); v != nil {
 		s := v.String()
 		msg.Building = &s
 	}
@@ -144,17 +147,37 @@ type customerFields struct {
 	nameKana                     domaincustomer.NameKana
 	gender                       domaincustomer.Gender
 	birthDate                    domaincustomer.BirthDate
-	phone                        *domaincustomer.Phone
-	email                        *domaincustomer.Email
-	postalCode                   *domaincustomer.PostalCode
-	prefecture                   *domaincustomer.Prefecture
-	city                         *domaincustomer.City
-	street                       *domaincustomer.Street
-	building                     *domaincustomer.Building
+	phone                        *domaincontact.Phone
+	email                        *domaincontact.Email
+	address                      domainaddress.Address
 	emergencyContactName         *domaincustomer.EmergencyContactName
 	emergencyContactRelationship *domaincustomer.EmergencyContactRelationship
-	emergencyContactPhone        *domaincustomer.Phone
+	emergencyContactPhone        *domaincontact.Phone
 	organizationID               *domainorganization.OrganizationID
+}
+
+func parseAddress(req customerFieldsRequest) (domainaddress.Address, error) {
+	postalCode, err := domainaddress.NewPostalCode(req.GetPostalCode())
+	if err != nil {
+		return domainaddress.Address{}, err
+	}
+	prefecture, err := domainaddress.NewPrefecture(req.GetPrefecture())
+	if err != nil {
+		return domainaddress.Address{}, err
+	}
+	city, err := domainaddress.NewCity(req.GetCity())
+	if err != nil {
+		return domainaddress.Address{}, err
+	}
+	street, err := domainaddress.NewStreet(req.GetStreet())
+	if err != nil {
+		return domainaddress.Address{}, err
+	}
+	building, err := domainaddress.NewBuilding(req.GetBuilding())
+	if err != nil {
+		return domainaddress.Address{}, err
+	}
+	return domainaddress.NewAddress(postalCode, prefecture, city, street, building), nil
 }
 
 func parseCustomerFields(req customerFieldsRequest) (customerFields, error) {
@@ -172,25 +195,13 @@ func parseCustomerFields(req customerFieldsRequest) (customerFields, error) {
 	if f.birthDate, err = domaincustomer.NewBirthDate(req.GetBirthDate().GetYear(), req.GetBirthDate().GetMonth(), req.GetBirthDate().GetDay()); err != nil {
 		return f, err
 	}
-	if f.phone, err = domaincustomer.NewPhone(req.GetPhone()); err != nil {
+	if f.phone, err = domaincontact.NewPhone(req.GetPhone()); err != nil {
 		return f, err
 	}
-	if f.email, err = domaincustomer.NewEmail(req.GetEmail()); err != nil {
+	if f.email, err = domaincontact.NewEmail(req.GetEmail()); err != nil {
 		return f, err
 	}
-	if f.postalCode, err = domaincustomer.NewPostalCode(req.GetPostalCode()); err != nil {
-		return f, err
-	}
-	if f.prefecture, err = domaincustomer.NewPrefecture(req.GetPrefecture()); err != nil {
-		return f, err
-	}
-	if f.city, err = domaincustomer.NewCity(req.GetCity()); err != nil {
-		return f, err
-	}
-	if f.street, err = domaincustomer.NewStreet(req.GetStreet()); err != nil {
-		return f, err
-	}
-	if f.building, err = domaincustomer.NewBuilding(req.GetBuilding()); err != nil {
+	if f.address, err = parseAddress(req); err != nil {
 		return f, err
 	}
 	if f.emergencyContactName, err = domaincustomer.NewEmergencyContactName(req.GetEmergencyContactName()); err != nil {
@@ -199,7 +210,7 @@ func parseCustomerFields(req customerFieldsRequest) (customerFields, error) {
 	if f.emergencyContactRelationship, err = domaincustomer.NewEmergencyContactRelationship(req.GetEmergencyContactRelationship()); err != nil {
 		return f, err
 	}
-	if f.emergencyContactPhone, err = domaincustomer.NewPhone(req.GetEmergencyContactPhone()); err != nil {
+	if f.emergencyContactPhone, err = domaincontact.NewPhone(req.GetEmergencyContactPhone()); err != nil {
 		return f, err
 	}
 	if s := strings.TrimSpace(req.GetOrganizationId()); s != "" {
@@ -242,7 +253,7 @@ func (h *CustomerHandler) CreateCustomer(ctx context.Context, req *customerv1.Cr
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	customer, err := h.customerUsecase.CreateCustomer(ctx, tenantID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.postalCode, fields.prefecture, fields.city, fields.street, fields.building, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone, fields.organizationID)
+	customer, err := h.customerUsecase.CreateCustomer(ctx, tenantID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.address, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone, fields.organizationID)
 	if err != nil {
 		return nil, mapCustomerError(err, "CreateCustomer")
 	}
@@ -299,7 +310,7 @@ func (h *CustomerHandler) UpdateCustomer(ctx context.Context, req *customerv1.Up
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	customer, err := h.customerUsecase.UpdateCustomer(ctx, customerID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.postalCode, fields.prefecture, fields.city, fields.street, fields.building, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone, fields.organizationID)
+	customer, err := h.customerUsecase.UpdateCustomer(ctx, customerID, fields.name, fields.nameKana, fields.gender, fields.birthDate, fields.phone, fields.email, fields.address, fields.emergencyContactName, fields.emergencyContactRelationship, fields.emergencyContactPhone, fields.organizationID)
 	if err != nil {
 		return nil, mapCustomerError(err, "UpdateCustomer")
 	}
