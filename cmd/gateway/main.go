@@ -20,6 +20,7 @@ import (
 
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
 	organizationv1 "github.com/qkitzero/fitness-service/gen/go/organization/v1"
+	tenantv1 "github.com/qkitzero/fitness-service/gen/go/tenant/v1"
 )
 
 const (
@@ -109,6 +110,10 @@ func run() error {
 
 	if err := organizationv1.RegisterOrganizationServiceHandler(ctx, mux, conn); err != nil {
 		return fmt.Errorf("register organization handler: %w", err)
+	}
+
+	if err := tenantv1.RegisterProfileServiceHandler(ctx, mux, conn); err != nil {
+		return fmt.Errorf("register tenant profile handler: %w", err)
 	}
 
 	srv := &http.Server{
