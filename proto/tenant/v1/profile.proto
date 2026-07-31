@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package tenant.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/qkitzero/fitness-service/gen/go/tenant/v1";
+
+service ProfileService {
+  rpc GetProfile(GetProfileRequest) returns (GetProfileResponse) {
+    option (google.api.http) = {get: "/v1/tenant/{tenant_id}/profile"};
+  }
+  rpc UpsertProfile(UpsertProfileRequest) returns (UpsertProfileResponse) {
+    option (google.api.http) = {
+      put: "/v1/tenant/{tenant_id}/profile"
+      body: "*"
+    };
+  }
+}
+
+message Profile {
+  string tenant_id = 1;
+  optional string postal_code = 2;
+  optional string prefecture = 3;
+  optional string city = 4;
+  optional string street = 5;
+  optional string building = 6;
+  optional string phone = 7;
+  optional string email = 8;
+  optional string homepage_url = 9;
+  optional string note = 10;
+}
+
+message GetProfileRequest {
+  string tenant_id = 1;
+}
+
+message GetProfileResponse {
+  Profile profile = 1;
+}
+
+message UpsertProfileRequest {
+  string tenant_id = 1;
+  optional string postal_code = 2;
+  optional string prefecture = 3;
+  optional string city = 4;
+  optional string street = 5;
+  optional string building = 6;
+  optional string phone = 7;
+  optional string email = 8;
+  optional string homepage_url = 9;
+  optional string note = 10;
+}
+
+message UpsertProfileResponse {
+  Profile profile = 1;
+}
