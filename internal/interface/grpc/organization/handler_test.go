@@ -315,19 +315,35 @@ func TestDeleteOrganization(t *testing.T) {
 
 func TestToProtoOrganization(t *testing.T) {
 	t.Parallel()
-	id, _ := organization.NewOrganizationIDFromString("3d1e6a5c-7b8f-4c2d-9a0e-1f2b3c4d5e6f")
-	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
-	name, _ := organization.NewName("テスト株式会社")
-	now := time.Now().UTC()
+	tests := []struct {
+		name             string
+		organizationID   string
+		tenantID         string
+		organizationName string
+	}{
+		{"success", "3d1e6a5c-7b8f-4c2d-9a0e-1f2b3c4d5e6f", "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b", "テスト株式会社"},
+		{"success another organization", "4e2f7b6d-8c9a-5d3e-0b1f-2a3c4d5e6f70", "1a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d", "別の会社"},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 
-	got := toProtoOrganization(organization.NewOrganization(id, tenantID, name, now, now))
-	if got.GetOrganizationId() != id.String() {
-		t.Errorf("OrganizationId = %v, want %v", got.GetOrganizationId(), id.String())
-	}
-	if got.GetTenantId() != tenantID.String() {
-		t.Errorf("TenantId = %v, want %v", got.GetTenantId(), tenantID.String())
-	}
-	if got.GetName() != "テスト株式会社" {
-		t.Errorf("Name = %v, want テスト株式会社", got.GetName())
+			id, _ := organization.NewOrganizationIDFromString(tt.organizationID)
+			tenantID, _ := tenant.NewTenantID(tt.tenantID)
+			organizationName, _ := organization.NewName(tt.organizationName)
+			now := time.Now().UTC()
+
+			got := toProtoOrganization(organization.NewOrganization(id, tenantID, organizationName, now, now))
+			if got.GetOrganizationId() != tt.organizationID {
+				t.Errorf("OrganizationId = %v, want %v", got.GetOrganizationId(), tt.organizationID)
+			}
+			if got.GetTenantId() != tt.tenantID {
+				t.Errorf("TenantId = %v, want %v", got.GetTenantId(), tt.tenantID)
+			}
+			if got.GetName() != tt.organizationName {
+				t.Errorf("Name = %v, want %v", got.GetName(), tt.organizationName)
+			}
+		})
 	}
 }

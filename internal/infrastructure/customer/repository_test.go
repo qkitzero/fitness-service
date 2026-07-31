@@ -13,6 +13,8 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
+	"github.com/qkitzero/fitness-service/internal/domain/address"
+	"github.com/qkitzero/fitness-service/internal/domain/contact"
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
 	"github.com/qkitzero/fitness-service/internal/domain/organization"
 	"github.com/qkitzero/fitness-service/internal/domain/tenant"
@@ -28,14 +30,44 @@ var (
 
 func TestCreate(t *testing.T) {
 	t.Parallel()
+	phone, _ := contact.NewPhone("03-1234-5678")
+	email, _ := contact.NewEmail("test@example.com")
+	postalCode, _ := address.NewPostalCode("123-4567")
+	prefecture, _ := address.NewPrefecture("東京都")
+	city, _ := address.NewCity("千代田区")
+	street, _ := address.NewStreet("1-1-1")
+	building, _ := address.NewBuilding("テストビル")
+	addr := address.NewAddress(postalCode, prefecture, city, street, building)
+	emergencyContactName, _ := customer.NewEmergencyContactName("緊急 太郎")
+	emergencyContactRelationship, _ := customer.NewEmergencyContactRelationship("父")
+	emergencyContactPhone, _ := contact.NewPhone("090-1234-5678")
+	organizationID, _ := organization.NewOrganizationIDFromString(testOrganizationID)
+	foreignKeyViolation := errors.New(`pq: insert or update on table "customers" violates foreign key constraint "fk_customers_organization"`)
+
 	tests := []struct {
-		name    string
-		success bool
-		setup   func(mock sqlmock.Sqlmock, customer customer.Customer)
+		name                         string
+		success                      bool
+		wantErr                      error
+		phone                        *contact.Phone
+		email                        *contact.Email
+		address                      address.Address
+		emergencyContactName         *customer.EmergencyContactName
+		emergencyContactRelationship *customer.EmergencyContactRelationship
+		emergencyContactPhone        *contact.Phone
+		organizationID               *organization.OrganizationID
+		setup                        func(mock sqlmock.Sqlmock, customer customer.Customer)
 	}{
 		{
-			name:    "success create customer",
-			success: true,
+			name:                         "success create customer",
+			success:                      true,
+			wantErr:                      nil,
+			phone:                        phone,
+			email:                        email,
+			address:                      addr,
+			emergencyContactName:         emergencyContactName,
+			emergencyContactRelationship: emergencyContactRelationship,
+			emergencyContactPhone:        emergencyContactPhone,
+			organizationID:               &organizationID,
 			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
 				mock.ExpectBegin()
 
@@ -47,8 +79,58 @@ func TestCreate(t *testing.T) {
 			},
 		},
 		{
-			name:    "failure create customer error",
-			success: false,
+			name:                         "success create customer without optional fields",
+			success:                      true,
+			wantErr:                      nil,
+			phone:                        nil,
+			email:                        nil,
+			address:                      address.Address{},
+			emergencyContactName:         nil,
+			emergencyContactRelationship: nil,
+			emergencyContactPhone:        nil,
+			organizationID:               nil,
+			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
+				mock.ExpectBegin()
+
+				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "customers" ("id","tenant_id","name","name_kana","gender","birth_date","phone","email","postal_code","prefecture","city","street","building","emergency_contact_name","emergency_contact_relationship","emergency_contact_phone","organization_id","is_active","created_at","updated_at") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`)).
+					WithArgs(customer.ID(), customer.TenantID(), customer.Name(), customer.NameKana(), customer.Gender(), testBirthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, testCreatedAt, testUpdatedAt).
+					WillReturnResult(sqlmock.NewResult(1, 1))
+
+				mock.ExpectCommit()
+			},
+		},
+		{
+			name:                         "failure unknown organization",
+			success:                      false,
+			wantErr:                      foreignKeyViolation,
+			phone:                        nil,
+			email:                        nil,
+			address:                      address.Address{},
+			emergencyContactName:         nil,
+			emergencyContactRelationship: nil,
+			emergencyContactPhone:        nil,
+			organizationID:               &organizationID,
+			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
+				mock.ExpectBegin()
+
+				mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "customers" ("id","tenant_id","name","name_kana","gender","birth_date","phone","email","postal_code","prefecture","city","street","building","emergency_contact_name","emergency_contact_relationship","emergency_contact_phone","organization_id","is_active","created_at","updated_at") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`)).
+					WithArgs(customer.ID(), customer.TenantID(), customer.Name(), customer.NameKana(), customer.Gender(), testBirthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, testOrganizationID, true, testCreatedAt, testUpdatedAt).
+					WillReturnError(foreignKeyViolation)
+
+				mock.ExpectRollback()
+			},
+		},
+		{
+			name:                         "failure create customer error",
+			success:                      false,
+			wantErr:                      nil,
+			phone:                        phone,
+			email:                        email,
+			address:                      addr,
+			emergencyContactName:         emergencyContactName,
+			emergencyContactRelationship: emergencyContactRelationship,
+			emergencyContactPhone:        emergencyContactPhone,
+			organizationID:               &organizationID,
 			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
 				mock.ExpectBegin()
 
@@ -78,18 +160,6 @@ func TestCreate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			phone, _ := customer.NewPhone("03-1234-5678")
-			email, _ := customer.NewEmail("test@example.com")
-			postalCode, _ := customer.NewPostalCode("123-4567")
-			prefecture, _ := customer.NewPrefecture("東京都")
-			city, _ := customer.NewCity("千代田区")
-			street, _ := customer.NewStreet("1-1-1")
-			building, _ := customer.NewBuilding("テストビル")
-			emergencyContactName, _ := customer.NewEmergencyContactName("緊急 太郎")
-			emergencyContactRelationship, _ := customer.NewEmergencyContactRelationship("父")
-			emergencyContactPhone, _ := customer.NewPhone("090-1234-5678")
-			organizationID, _ := organization.NewOrganizationIDFromString(testOrganizationID)
-
 			mockCustomer := mockscustomer.NewMockCustomer(ctrl)
 			mockCustomer.EXPECT().ID().Return(customer.CustomerID{UUID: uuid.New()}).AnyTimes()
 			mockCustomer.EXPECT().TenantID().Return(tenant.TenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")).AnyTimes()
@@ -98,17 +168,13 @@ func TestCreate(t *testing.T) {
 			mockCustomer.EXPECT().Gender().Return(customer.GenderMale).AnyTimes()
 			mockCustomer.EXPECT().BirthDate().Return(customer.BirthDate{Time: testBirthDate}).AnyTimes()
 			mockCustomer.EXPECT().IsActive().Return(true).AnyTimes()
-			mockCustomer.EXPECT().Phone().Return(phone).AnyTimes()
-			mockCustomer.EXPECT().Email().Return(email).AnyTimes()
-			mockCustomer.EXPECT().PostalCode().Return(postalCode).AnyTimes()
-			mockCustomer.EXPECT().Prefecture().Return(prefecture).AnyTimes()
-			mockCustomer.EXPECT().City().Return(city).AnyTimes()
-			mockCustomer.EXPECT().Street().Return(street).AnyTimes()
-			mockCustomer.EXPECT().Building().Return(building).AnyTimes()
-			mockCustomer.EXPECT().EmergencyContactName().Return(emergencyContactName).AnyTimes()
-			mockCustomer.EXPECT().EmergencyContactRelationship().Return(emergencyContactRelationship).AnyTimes()
-			mockCustomer.EXPECT().EmergencyContactPhone().Return(emergencyContactPhone).AnyTimes()
-			mockCustomer.EXPECT().OrganizationID().Return(&organizationID).AnyTimes()
+			mockCustomer.EXPECT().Phone().Return(tt.phone).AnyTimes()
+			mockCustomer.EXPECT().Email().Return(tt.email).AnyTimes()
+			mockCustomer.EXPECT().Address().Return(tt.address).AnyTimes()
+			mockCustomer.EXPECT().EmergencyContactName().Return(tt.emergencyContactName).AnyTimes()
+			mockCustomer.EXPECT().EmergencyContactRelationship().Return(tt.emergencyContactRelationship).AnyTimes()
+			mockCustomer.EXPECT().EmergencyContactPhone().Return(tt.emergencyContactPhone).AnyTimes()
+			mockCustomer.EXPECT().OrganizationID().Return(tt.organizationID).AnyTimes()
 			mockCustomer.EXPECT().CreatedAt().Return(testCreatedAt).AnyTimes()
 			mockCustomer.EXPECT().UpdatedAt().Return(testUpdatedAt).AnyTimes()
 
@@ -123,6 +189,9 @@ func TestCreate(t *testing.T) {
 			if !tt.success && err == nil {
 				t.Errorf("expected error, but got nil")
 			}
+			if tt.wantErr != nil && !errors.Is(err, tt.wantErr) {
+				t.Errorf("err = %v, want %v", err, tt.wantErr)
+			}
 
 			if err := mock.ExpectationsWereMet(); err != nil {
 				t.Errorf("there were unfulfilled expectations: %s", err)
@@ -131,165 +200,24 @@ func TestCreate(t *testing.T) {
 	}
 }
 
-func TestCreateNilOptionals(t *testing.T) {
-	t.Parallel()
-
-	sqlDB, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("failed to new sqlmock: %s", err)
-	}
-
-	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to open gorm: %s", err)
-	}
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockCustomer := mockscustomer.NewMockCustomer(ctrl)
-	mockCustomer.EXPECT().ID().Return(customer.CustomerID{UUID: uuid.New()}).AnyTimes()
-	mockCustomer.EXPECT().TenantID().Return(tenant.TenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")).AnyTimes()
-	mockCustomer.EXPECT().Name().Return(customer.Name("test customer")).AnyTimes()
-	mockCustomer.EXPECT().NameKana().Return(customer.NameKana("テストカナ")).AnyTimes()
-	mockCustomer.EXPECT().Gender().Return(customer.GenderMale).AnyTimes()
-	mockCustomer.EXPECT().BirthDate().Return(customer.BirthDate{Time: testBirthDate}).AnyTimes()
-	mockCustomer.EXPECT().IsActive().Return(true).AnyTimes()
-	mockCustomer.EXPECT().Phone().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().Email().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().PostalCode().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().Prefecture().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().City().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().Street().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().Building().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().EmergencyContactName().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().EmergencyContactRelationship().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().EmergencyContactPhone().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().OrganizationID().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().CreatedAt().Return(testCreatedAt).AnyTimes()
-	mockCustomer.EXPECT().UpdatedAt().Return(testUpdatedAt).AnyTimes()
-
-	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "customers" ("id","tenant_id","name","name_kana","gender","birth_date","phone","email","postal_code","prefecture","city","street","building","emergency_contact_name","emergency_contact_relationship","emergency_contact_phone","organization_id","is_active","created_at","updated_at") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`)).
-		WithArgs(mockCustomer.ID(), mockCustomer.TenantID(), mockCustomer.Name(), mockCustomer.NameKana(), mockCustomer.Gender(), testBirthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, testCreatedAt, testUpdatedAt).
-		WillReturnResult(sqlmock.NewResult(1, 1))
-	mock.ExpectCommit()
-
-	repo := NewCustomerRepository(gormDB)
-
-	if err := repo.Create(context.Background(), mockCustomer); err != nil {
-		t.Errorf("expected no error, but got %v", err)
-	}
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
-}
-
-func TestCreateUnknownOrganization(t *testing.T) {
-	t.Parallel()
-
-	sqlDB, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("failed to new sqlmock: %s", err)
-	}
-
-	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to open gorm: %s", err)
-	}
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	organizationID, _ := organization.NewOrganizationIDFromString(testOrganizationID)
-
-	mockCustomer := mockscustomer.NewMockCustomer(ctrl)
-	mockCustomer.EXPECT().ID().Return(customer.CustomerID{UUID: uuid.New()}).AnyTimes()
-	mockCustomer.EXPECT().TenantID().Return(tenant.TenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")).AnyTimes()
-	mockCustomer.EXPECT().Name().Return(customer.Name("test customer")).AnyTimes()
-	mockCustomer.EXPECT().NameKana().Return(customer.NameKana("テストカナ")).AnyTimes()
-	mockCustomer.EXPECT().Gender().Return(customer.GenderMale).AnyTimes()
-	mockCustomer.EXPECT().BirthDate().Return(customer.BirthDate{Time: testBirthDate}).AnyTimes()
-	mockCustomer.EXPECT().IsActive().Return(true).AnyTimes()
-	mockCustomer.EXPECT().Phone().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().Email().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().PostalCode().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().Prefecture().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().City().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().Street().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().Building().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().EmergencyContactName().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().EmergencyContactRelationship().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().EmergencyContactPhone().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().OrganizationID().Return(&organizationID).AnyTimes()
-	mockCustomer.EXPECT().CreatedAt().Return(testCreatedAt).AnyTimes()
-	mockCustomer.EXPECT().UpdatedAt().Return(testUpdatedAt).AnyTimes()
-
-	foreignKeyViolation := errors.New(`pq: insert or update on table "customers" violates foreign key constraint "fk_customers_organization"`)
-
-	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(`INSERT INTO "customers" ("id","tenant_id","name","name_kana","gender","birth_date","phone","email","postal_code","prefecture","city","street","building","emergency_contact_name","emergency_contact_relationship","emergency_contact_phone","organization_id","is_active","created_at","updated_at") VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`)).
-		WithArgs(mockCustomer.ID(), mockCustomer.TenantID(), mockCustomer.Name(), mockCustomer.NameKana(), mockCustomer.Gender(), testBirthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, testOrganizationID, true, testCreatedAt, testUpdatedAt).
-		WillReturnError(foreignKeyViolation)
-	mock.ExpectRollback()
-
-	repo := NewCustomerRepository(gormDB)
-
-	if err := repo.Create(context.Background(), mockCustomer); !errors.Is(err, foreignKeyViolation) {
-		t.Errorf("err = %v, want %v", err, foreignKeyViolation)
-	}
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
-}
-
-func TestFindByIDNilOptionals(t *testing.T) {
-	t.Parallel()
-	columns := []string{"id", "tenant_id", "name", "name_kana", "gender", "birth_date", "phone", "email", "postal_code", "prefecture", "city", "street", "building", "emergency_contact_name", "emergency_contact_relationship", "emergency_contact_phone", "organization_id", "is_active", "created_at", "updated_at"}
-	customerID := customer.CustomerID{UUID: uuid.New()}
-
-	sqlDB, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("failed to new sqlmock: %s", err)
-	}
-
-	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to open gorm: %s", err)
-	}
-
-	customerRows := sqlmock.NewRows(columns).
-		AddRow(customerID, "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b", "test customer", "テストカナ", "male", testBirthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, testCreatedAt, testUpdatedAt)
-	mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE id = $1 ORDER BY "customers"."id" LIMIT $2`)).
-		WithArgs(customerID, 1).
-		WillReturnRows(customerRows)
-
-	repo := NewCustomerRepository(gormDB)
-
-	c, err := repo.FindByID(context.Background(), customerID)
-	if err != nil {
-		t.Errorf("expected no error, but got %v", err)
-	}
-	if c.Phone() != nil || c.Email() != nil || c.PostalCode() != nil || c.Prefecture() != nil || c.City() != nil || c.Street() != nil || c.Building() != nil || c.EmergencyContactName() != nil || c.EmergencyContactRelationship() != nil || c.EmergencyContactPhone() != nil || c.OrganizationID() != nil {
-		t.Errorf("expected nil optional fields")
-	}
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
-	}
-}
-
 func TestFindByID(t *testing.T) {
 	t.Parallel()
 	columns := []string{"id", "tenant_id", "name", "name_kana", "gender", "birth_date", "phone", "email", "postal_code", "prefecture", "city", "street", "building", "emergency_contact_name", "emergency_contact_relationship", "emergency_contact_phone", "organization_id", "is_active", "created_at", "updated_at"}
 	tests := []struct {
-		name       string
-		success    bool
-		wantErr    error
-		customerID customer.CustomerID
-		setup      func(mock sqlmock.Sqlmock, customerID customer.CustomerID)
+		name               string
+		success            bool
+		wantErr            error
+		customerID         customer.CustomerID
+		setup              func(mock sqlmock.Sqlmock, customerID customer.CustomerID)
+		wantPhone          string
+		wantEmail          string
+		wantPostalCode     string
+		wantPrefecture     string
+		wantCity           string
+		wantStreet         string
+		wantBuilding       string
+		wantOrganizationID string
+		wantIsActive       bool
 	}{
 		{
 			name:       "success find customer by id",
@@ -303,6 +231,37 @@ func TestFindByID(t *testing.T) {
 					WithArgs(customerID, 1).
 					WillReturnRows(customerRows)
 			},
+			wantPhone:          "0312345678",
+			wantEmail:          "test@example.com",
+			wantPostalCode:     "1234567",
+			wantPrefecture:     "東京都",
+			wantCity:           "千代田区",
+			wantStreet:         "1-1-1",
+			wantBuilding:       "テストビル",
+			wantOrganizationID: testOrganizationID,
+			wantIsActive:       false,
+		},
+		{
+			name:       "success find customer by id without optional fields",
+			success:    true,
+			wantErr:    nil,
+			customerID: customer.CustomerID{UUID: uuid.New()},
+			setup: func(mock sqlmock.Sqlmock, customerID customer.CustomerID) {
+				customerRows := sqlmock.NewRows(columns).
+					AddRow(customerID, "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b", "test customer", "テストカナ", "male", testBirthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, true, testCreatedAt, testUpdatedAt)
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE id = $1 ORDER BY "customers"."id" LIMIT $2`)).
+					WithArgs(customerID, 1).
+					WillReturnRows(customerRows)
+			},
+			wantPhone:          "",
+			wantEmail:          "",
+			wantPostalCode:     "",
+			wantPrefecture:     "",
+			wantCity:           "",
+			wantStreet:         "",
+			wantBuilding:       "",
+			wantOrganizationID: "",
+			wantIsActive:       true,
 		},
 		{
 			name:       "failure customer not found",
@@ -363,11 +322,57 @@ func TestFindByID(t *testing.T) {
 				if c.Name().String() != "test customer" {
 					t.Errorf("Name() = %v, want test customer", c.Name().String())
 				}
-				if c.IsActive() {
-					t.Errorf("IsActive() = %v, want %v", c.IsActive(), false)
+				if c.IsActive() != tt.wantIsActive {
+					t.Errorf("IsActive() = %v, want %v", c.IsActive(), tt.wantIsActive)
 				}
-				if c.OrganizationID() == nil || c.OrganizationID().String() != testOrganizationID {
-					t.Errorf("OrganizationID() = %v, want %v", c.OrganizationID(), testOrganizationID)
+				if tt.wantOrganizationID == "" && c.OrganizationID() != nil {
+					t.Errorf("OrganizationID() = %v, want nil", c.OrganizationID())
+				}
+				if tt.wantOrganizationID != "" && (c.OrganizationID() == nil || c.OrganizationID().String() != tt.wantOrganizationID) {
+					t.Errorf("OrganizationID() = %v, want %v", c.OrganizationID(), tt.wantOrganizationID)
+				}
+				if tt.wantPhone == "" && c.Phone() != nil {
+					t.Errorf("Phone() = %v, want nil", c.Phone())
+				}
+				if tt.wantPhone != "" && (c.Phone() == nil || c.Phone().String() != tt.wantPhone) {
+					t.Errorf("Phone() = %v, want %v", c.Phone(), tt.wantPhone)
+				}
+				if tt.wantEmail == "" && c.Email() != nil {
+					t.Errorf("Email() = %v, want nil", c.Email())
+				}
+				if tt.wantEmail != "" && (c.Email() == nil || c.Email().String() != tt.wantEmail) {
+					t.Errorf("Email() = %v, want %v", c.Email(), tt.wantEmail)
+				}
+				addr := c.Address()
+				if tt.wantPostalCode == "" && addr.PostalCode() != nil {
+					t.Errorf("Address().PostalCode() = %v, want nil", addr.PostalCode())
+				}
+				if tt.wantPostalCode != "" && (addr.PostalCode() == nil || addr.PostalCode().String() != tt.wantPostalCode) {
+					t.Errorf("Address().PostalCode() = %v, want %v", addr.PostalCode(), tt.wantPostalCode)
+				}
+				if tt.wantPrefecture == "" && addr.Prefecture() != nil {
+					t.Errorf("Address().Prefecture() = %v, want nil", addr.Prefecture())
+				}
+				if tt.wantPrefecture != "" && (addr.Prefecture() == nil || addr.Prefecture().String() != tt.wantPrefecture) {
+					t.Errorf("Address().Prefecture() = %v, want %v", addr.Prefecture(), tt.wantPrefecture)
+				}
+				if tt.wantCity == "" && addr.City() != nil {
+					t.Errorf("Address().City() = %v, want nil", addr.City())
+				}
+				if tt.wantCity != "" && (addr.City() == nil || addr.City().String() != tt.wantCity) {
+					t.Errorf("Address().City() = %v, want %v", addr.City(), tt.wantCity)
+				}
+				if tt.wantStreet == "" && addr.Street() != nil {
+					t.Errorf("Address().Street() = %v, want nil", addr.Street())
+				}
+				if tt.wantStreet != "" && (addr.Street() == nil || addr.Street().String() != tt.wantStreet) {
+					t.Errorf("Address().Street() = %v, want %v", addr.Street(), tt.wantStreet)
+				}
+				if tt.wantBuilding == "" && addr.Building() != nil {
+					t.Errorf("Address().Building() = %v, want nil", addr.Building())
+				}
+				if tt.wantBuilding != "" && (addr.Building() == nil || addr.Building().String() != tt.wantBuilding) {
+					t.Errorf("Address().Building() = %v, want %v", addr.Building(), tt.wantBuilding)
 				}
 				if !c.CreatedAt().Equal(testCreatedAt) || !c.UpdatedAt().Equal(testUpdatedAt) {
 					t.Errorf("timestamps = %v/%v, want %v/%v", c.CreatedAt(), c.UpdatedAt(), testCreatedAt, testUpdatedAt)
@@ -520,16 +525,45 @@ func TestListByTenantID(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	t.Parallel()
 	updatedBirthDate := time.Date(1999, 12, 31, 0, 0, 0, 0, time.UTC)
+	phone, _ := contact.NewPhone("080-1234-5678")
+	email, _ := contact.NewEmail("updated@example.com")
+	postalCode, _ := address.NewPostalCode("543-2100")
+	prefecture, _ := address.NewPrefecture("大阪府")
+	city, _ := address.NewCity("大阪市")
+	street, _ := address.NewStreet("2-2-2")
+	building, _ := address.NewBuilding("更新ビル")
+	addr := address.NewAddress(postalCode, prefecture, city, street, building)
+	emergencyContactName, _ := customer.NewEmergencyContactName("更新 花子")
+	emergencyContactRelationship, _ := customer.NewEmergencyContactRelationship("母")
+	emergencyContactPhone, _ := contact.NewPhone("070-1234-5678")
+	organizationID, _ := organization.NewOrganizationIDFromString(testOrganizationID)
+
 	tests := []struct {
-		name    string
-		success bool
-		wantErr error
-		setup   func(mock sqlmock.Sqlmock, customer customer.Customer)
+		name                         string
+		success                      bool
+		wantErr                      error
+		birthDate                    time.Time
+		phone                        *contact.Phone
+		email                        *contact.Email
+		address                      address.Address
+		emergencyContactName         *customer.EmergencyContactName
+		emergencyContactRelationship *customer.EmergencyContactRelationship
+		emergencyContactPhone        *contact.Phone
+		organizationID               *organization.OrganizationID
+		setup                        func(mock sqlmock.Sqlmock, customer customer.Customer)
 	}{
 		{
-			name:    "success update customer",
-			success: true,
-			wantErr: nil,
+			name:                         "success update customer",
+			success:                      true,
+			wantErr:                      nil,
+			birthDate:                    updatedBirthDate,
+			phone:                        phone,
+			email:                        email,
+			address:                      addr,
+			emergencyContactName:         emergencyContactName,
+			emergencyContactRelationship: emergencyContactRelationship,
+			emergencyContactPhone:        emergencyContactPhone,
+			organizationID:               &organizationID,
 			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
 				mock.ExpectBegin()
 
@@ -541,9 +575,39 @@ func TestUpdate(t *testing.T) {
 			},
 		},
 		{
-			name:    "failure customer not found",
-			success: false,
-			wantErr: customer.ErrCustomerNotFound,
+			name:                         "success update customer clearing optional fields",
+			success:                      true,
+			wantErr:                      nil,
+			birthDate:                    testBirthDate,
+			phone:                        nil,
+			email:                        nil,
+			address:                      address.Address{},
+			emergencyContactName:         nil,
+			emergencyContactRelationship: nil,
+			emergencyContactPhone:        nil,
+			organizationID:               nil,
+			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
+				mock.ExpectBegin()
+
+				mock.ExpectExec(regexp.QuoteMeta(`UPDATE "customers" SET "tenant_id"=$1,"name"=$2,"name_kana"=$3,"gender"=$4,"birth_date"=$5,"phone"=$6,"email"=$7,"postal_code"=$8,"prefecture"=$9,"city"=$10,"street"=$11,"building"=$12,"emergency_contact_name"=$13,"emergency_contact_relationship"=$14,"emergency_contact_phone"=$15,"organization_id"=$16,"created_at"=$17,"updated_at"=$18 WHERE id = $19`)).
+					WithArgs(customer.TenantID(), customer.Name(), customer.NameKana(), customer.Gender(), testBirthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, testCreatedAt, testUpdatedAt, customer.ID()).
+					WillReturnResult(sqlmock.NewResult(0, 1))
+
+				mock.ExpectCommit()
+			},
+		},
+		{
+			name:                         "failure customer not found",
+			success:                      false,
+			wantErr:                      customer.ErrCustomerNotFound,
+			birthDate:                    updatedBirthDate,
+			phone:                        phone,
+			email:                        email,
+			address:                      addr,
+			emergencyContactName:         emergencyContactName,
+			emergencyContactRelationship: emergencyContactRelationship,
+			emergencyContactPhone:        emergencyContactPhone,
+			organizationID:               &organizationID,
 			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
 				mock.ExpectBegin()
 
@@ -555,9 +619,17 @@ func TestUpdate(t *testing.T) {
 			},
 		},
 		{
-			name:    "failure update customer error",
-			success: false,
-			wantErr: nil,
+			name:                         "failure update customer error",
+			success:                      false,
+			wantErr:                      nil,
+			birthDate:                    updatedBirthDate,
+			phone:                        phone,
+			email:                        email,
+			address:                      addr,
+			emergencyContactName:         emergencyContactName,
+			emergencyContactRelationship: emergencyContactRelationship,
+			emergencyContactPhone:        emergencyContactPhone,
+			organizationID:               &organizationID,
 			setup: func(mock sqlmock.Sqlmock, customer customer.Customer) {
 				mock.ExpectBegin()
 
@@ -587,37 +659,21 @@ func TestUpdate(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			phone, _ := customer.NewPhone("080-1234-5678")
-			email, _ := customer.NewEmail("updated@example.com")
-			postalCode, _ := customer.NewPostalCode("543-2100")
-			prefecture, _ := customer.NewPrefecture("大阪府")
-			city, _ := customer.NewCity("大阪市")
-			street, _ := customer.NewStreet("2-2-2")
-			building, _ := customer.NewBuilding("更新ビル")
-			emergencyContactName, _ := customer.NewEmergencyContactName("更新 花子")
-			emergencyContactRelationship, _ := customer.NewEmergencyContactRelationship("母")
-			emergencyContactPhone, _ := customer.NewPhone("070-1234-5678")
-			organizationID, _ := organization.NewOrganizationIDFromString(testOrganizationID)
-
 			mockCustomer := mockscustomer.NewMockCustomer(ctrl)
 			mockCustomer.EXPECT().ID().Return(customer.CustomerID{UUID: uuid.New()}).AnyTimes()
 			mockCustomer.EXPECT().TenantID().Return(tenant.TenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")).AnyTimes()
 			mockCustomer.EXPECT().Name().Return(customer.Name("updated customer")).AnyTimes()
 			mockCustomer.EXPECT().NameKana().Return(customer.NameKana("コウシンカナ")).AnyTimes()
 			mockCustomer.EXPECT().Gender().Return(customer.GenderFemale).AnyTimes()
-			mockCustomer.EXPECT().BirthDate().Return(customer.BirthDate{Time: updatedBirthDate}).AnyTimes()
+			mockCustomer.EXPECT().BirthDate().Return(customer.BirthDate{Time: tt.birthDate}).AnyTimes()
 			mockCustomer.EXPECT().IsActive().Return(false).AnyTimes()
-			mockCustomer.EXPECT().Phone().Return(phone).AnyTimes()
-			mockCustomer.EXPECT().Email().Return(email).AnyTimes()
-			mockCustomer.EXPECT().PostalCode().Return(postalCode).AnyTimes()
-			mockCustomer.EXPECT().Prefecture().Return(prefecture).AnyTimes()
-			mockCustomer.EXPECT().City().Return(city).AnyTimes()
-			mockCustomer.EXPECT().Street().Return(street).AnyTimes()
-			mockCustomer.EXPECT().Building().Return(building).AnyTimes()
-			mockCustomer.EXPECT().EmergencyContactName().Return(emergencyContactName).AnyTimes()
-			mockCustomer.EXPECT().EmergencyContactRelationship().Return(emergencyContactRelationship).AnyTimes()
-			mockCustomer.EXPECT().EmergencyContactPhone().Return(emergencyContactPhone).AnyTimes()
-			mockCustomer.EXPECT().OrganizationID().Return(&organizationID).AnyTimes()
+			mockCustomer.EXPECT().Phone().Return(tt.phone).AnyTimes()
+			mockCustomer.EXPECT().Email().Return(tt.email).AnyTimes()
+			mockCustomer.EXPECT().Address().Return(tt.address).AnyTimes()
+			mockCustomer.EXPECT().EmergencyContactName().Return(tt.emergencyContactName).AnyTimes()
+			mockCustomer.EXPECT().EmergencyContactRelationship().Return(tt.emergencyContactRelationship).AnyTimes()
+			mockCustomer.EXPECT().EmergencyContactPhone().Return(tt.emergencyContactPhone).AnyTimes()
+			mockCustomer.EXPECT().OrganizationID().Return(tt.organizationID).AnyTimes()
 			mockCustomer.EXPECT().CreatedAt().Return(testCreatedAt).AnyTimes()
 			mockCustomer.EXPECT().UpdatedAt().Return(testUpdatedAt).AnyTimes()
 
@@ -640,61 +696,6 @@ func TestUpdate(t *testing.T) {
 				t.Errorf("there were unfulfilled expectations: %s", err)
 			}
 		})
-	}
-}
-
-func TestUpdateNilOptionals(t *testing.T) {
-	t.Parallel()
-
-	sqlDB, mock, err := sqlmock.New()
-	if err != nil {
-		t.Fatalf("failed to new sqlmock: %s", err)
-	}
-
-	gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
-	if err != nil {
-		t.Fatalf("failed to open gorm: %s", err)
-	}
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	mockCustomer := mockscustomer.NewMockCustomer(ctrl)
-	mockCustomer.EXPECT().ID().Return(customer.CustomerID{UUID: uuid.New()}).AnyTimes()
-	mockCustomer.EXPECT().TenantID().Return(tenant.TenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")).AnyTimes()
-	mockCustomer.EXPECT().Name().Return(customer.Name("updated customer")).AnyTimes()
-	mockCustomer.EXPECT().NameKana().Return(customer.NameKana("コウシンカナ")).AnyTimes()
-	mockCustomer.EXPECT().Gender().Return(customer.GenderFemale).AnyTimes()
-	mockCustomer.EXPECT().BirthDate().Return(customer.BirthDate{Time: testBirthDate}).AnyTimes()
-	mockCustomer.EXPECT().IsActive().Return(true).AnyTimes()
-	mockCustomer.EXPECT().Phone().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().Email().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().PostalCode().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().Prefecture().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().City().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().Street().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().Building().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().EmergencyContactName().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().EmergencyContactRelationship().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().EmergencyContactPhone().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().OrganizationID().Return(nil).AnyTimes()
-	mockCustomer.EXPECT().CreatedAt().Return(testCreatedAt).AnyTimes()
-	mockCustomer.EXPECT().UpdatedAt().Return(testUpdatedAt).AnyTimes()
-
-	mock.ExpectBegin()
-	mock.ExpectExec(regexp.QuoteMeta(`UPDATE "customers" SET "tenant_id"=$1,"name"=$2,"name_kana"=$3,"gender"=$4,"birth_date"=$5,"phone"=$6,"email"=$7,"postal_code"=$8,"prefecture"=$9,"city"=$10,"street"=$11,"building"=$12,"emergency_contact_name"=$13,"emergency_contact_relationship"=$14,"emergency_contact_phone"=$15,"organization_id"=$16,"created_at"=$17,"updated_at"=$18 WHERE id = $19`)).
-		WithArgs(mockCustomer.TenantID(), mockCustomer.Name(), mockCustomer.NameKana(), mockCustomer.Gender(), testBirthDate, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, testCreatedAt, testUpdatedAt, mockCustomer.ID()).
-		WillReturnResult(sqlmock.NewResult(0, 1))
-	mock.ExpectCommit()
-
-	repo := NewCustomerRepository(gormDB)
-
-	if err := repo.Update(context.Background(), mockCustomer); err != nil {
-		t.Errorf("expected no error, but got %v", err)
-	}
-
-	if err := mock.ExpectationsWereMet(); err != nil {
-		t.Errorf("there were unfulfilled expectations: %s", err)
 	}
 }
 
@@ -777,11 +778,7 @@ func TestUpdateActive(t *testing.T) {
 			mockCustomer.EXPECT().IsActive().Return(false).AnyTimes()
 			mockCustomer.EXPECT().Phone().Return(nil).AnyTimes()
 			mockCustomer.EXPECT().Email().Return(nil).AnyTimes()
-			mockCustomer.EXPECT().PostalCode().Return(nil).AnyTimes()
-			mockCustomer.EXPECT().Prefecture().Return(nil).AnyTimes()
-			mockCustomer.EXPECT().City().Return(nil).AnyTimes()
-			mockCustomer.EXPECT().Street().Return(nil).AnyTimes()
-			mockCustomer.EXPECT().Building().Return(nil).AnyTimes()
+			mockCustomer.EXPECT().Address().Return(address.Address{}).AnyTimes()
 			mockCustomer.EXPECT().EmergencyContactName().Return(nil).AnyTimes()
 			mockCustomer.EXPECT().EmergencyContactRelationship().Return(nil).AnyTimes()
 			mockCustomer.EXPECT().EmergencyContactPhone().Return(nil).AnyTimes()
