@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package measurementitem.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/qkitzero/fitness-service/gen/go/measurementitem/v1";
+
+service MeasurementItemService {
+  rpc ListMeasurementItems(ListMeasurementItemsRequest) returns (ListMeasurementItemsResponse) {
+    option (google.api.http) = {get: "/v1/measurement-items"};
+  }
+}
+
+enum Category {
+  CATEGORY_UNSPECIFIED = 0;
+  CATEGORY_VITAL = 1;
+  CATEGORY_PHYSIQUE = 2;
+  CATEGORY_BODY_COMPOSITION = 3;
+  CATEGORY_MOTOR_FUNCTION = 4;
+}
+
+enum Unit {
+  UNIT_UNSPECIFIED = 0;
+  UNIT_KG = 1;
+  UNIT_CM = 2;
+  UNIT_SEC = 3;
+  UNIT_COUNT = 4;
+  UNIT_MMHG = 5;
+  UNIT_PERCENT = 6;
+  UNIT_BPM = 7;
+}
+
+enum ValueType {
+  VALUE_TYPE_UNSPECIFIED = 0;
+  VALUE_TYPE_NUMERIC = 1;
+  VALUE_TYPE_PAIRED = 2;
+  VALUE_TYPE_CHOICE = 3;
+}
+
+message MeasurementItem {
+  string measurement_item_id = 1;
+  string code = 2;
+  string name = 3;
+  Category category = 4;
+  Unit unit = 5;
+  uint32 trial_count = 6;
+  bool bilateral = 7;
+  ValueType value_type = 8;
+}
+
+message ListMeasurementItemsRequest {}
+
+message ListMeasurementItemsResponse {
+  repeated MeasurementItem measurement_items = 1;
+}
