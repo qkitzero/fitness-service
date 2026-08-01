@@ -10,6 +10,8 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"github.com/qkitzero/fitness-service/internal/domain/measurementitem"
 )
 
 func TestList(t *testing.T) {
@@ -210,6 +212,135 @@ func TestList(t *testing.T) {
 					}
 					if !m.UpdatedAt().Equal(updatedAt) {
 						t.Errorf("measurementItems[%d].UpdatedAt() = %v, want %v", i, m.UpdatedAt(), updatedAt)
+					}
+				}
+			}
+
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
+func TestFindByIDs(t *testing.T) {
+	t.Parallel()
+	createdAt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	updatedAt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
+	gripStrengthID := "45c2f5cd-ae75-4b2e-8302-69051f0343d5"
+	pulseRateID := "0506df56-d97f-445a-83fb-92b7843af9a4"
+	unknownID := "00000000-0000-0000-0000-000000000000"
+	columns := []string{"id", "code", "name", "category", "unit", "trial_count", "bilateral", "value_type", "created_at", "updated_at"}
+	findByIDsSQL := `SELECT * FROM "measurement_items" WHERE id IN ($1,$2)`
+	tests := []struct {
+		name      string
+		success   bool
+		ids       []string
+		wantCodes []string
+		setup     func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name:      "success find measurement items by ids",
+			success:   true,
+			ids:       []string{gripStrengthID, pulseRateID},
+			wantCodes: []string{"grip_strength", "pulse_rate"},
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(findByIDsSQL)).
+					WithArgs(gripStrengthID, pulseRateID).
+					WillReturnRows(sqlmock.NewRows(columns).
+						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", createdAt, updatedAt).
+						AddRow(pulseRateID, "pulse_rate", "脈拍", "vital", "bpm", 1, false, "numeric", createdAt, updatedAt))
+			},
+		},
+		{
+			name:      "success unknown id is not returned",
+			success:   true,
+			ids:       []string{gripStrengthID, unknownID},
+			wantCodes: []string{"grip_strength"},
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(findByIDsSQL)).
+					WithArgs(gripStrengthID, unknownID).
+					WillReturnRows(sqlmock.NewRows(columns).
+						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", createdAt, updatedAt))
+			},
+		},
+		{
+			name:      "success no ids does not query",
+			success:   true,
+			ids:       nil,
+			wantCodes: []string{},
+			setup:     func(mock sqlmock.Sqlmock) {},
+		},
+		{
+			name:    "failure find measurement items error",
+			success: false,
+			ids:     []string{gripStrengthID, pulseRateID},
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(findByIDsSQL)).
+					WithArgs(gripStrengthID, pulseRateID).
+					WillReturnError(errors.New("find measurement items error"))
+			},
+		},
+		{
+			name:    "failure unknown category",
+			success: false,
+			ids:     []string{gripStrengthID, pulseRateID},
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(findByIDsSQL)).
+					WithArgs(gripStrengthID, pulseRateID).
+					WillReturnRows(sqlmock.NewRows(columns).
+						AddRow(gripStrengthID, "grip_strength", "握力", "vitals", "kg", 2, true, "numeric", createdAt, updatedAt))
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			sqlDB, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("failed to new sqlmock: %s", err)
+			}
+
+			gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
+			if err != nil {
+				t.Fatalf("failed to open gorm: %s", err)
+			}
+
+			tt.setup(mock)
+
+			repo := NewMeasurementItemRepository(gormDB)
+
+			measurementItemIDs := make([]measurementitem.MeasurementItemID, 0, len(tt.ids))
+			for _, id := range tt.ids {
+				measurementItemID, err := measurementitem.NewMeasurementItemIDFromString(id)
+				if err != nil {
+					t.Fatalf("failed to new measurement item id: %v", err)
+				}
+				measurementItemIDs = append(measurementItemIDs, measurementItemID)
+			}
+
+			measurementItems, err := repo.FindByIDs(context.Background(), measurementItemIDs)
+			if tt.success && err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+			if !tt.success && err == nil {
+				t.Errorf("expected error, but got nil")
+			}
+			if !tt.success && measurementItems != nil {
+				t.Errorf("expected no measurement items on failure, but got %v", len(measurementItems))
+			}
+			if tt.success {
+				if len(measurementItems) != len(tt.wantCodes) {
+					t.Errorf("len(measurementItems) = %v, want %v", len(measurementItems), len(tt.wantCodes))
+				}
+				for i := range tt.wantCodes {
+					if i >= len(measurementItems) {
+						break
+					}
+					if measurementItems[i].Code().String() != tt.wantCodes[i] {
+						t.Errorf("measurementItems[%d].Code() = %v, want %v", i, measurementItems[i].Code().String(), tt.wantCodes[i])
 					}
 				}
 			}

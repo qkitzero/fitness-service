@@ -233,6 +233,9 @@ func mapCustomerError(err error, op string) error {
 	if errors.Is(err, domaincustomer.ErrOrganizationNotInTenant) {
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
+	if errors.Is(err, domaincustomer.ErrCustomerInUse) {
+		return status.Error(codes.FailedPrecondition, err.Error())
+	}
 	if s, ok := status.FromError(err); ok {
 		switch s.Code() {
 		case codes.Unauthenticated, codes.PermissionDenied:

@@ -396,6 +396,7 @@ func TestDeleteCustomer(t *testing.T) {
 		{"failure usecase error", sampleCustomerID, true, fmt.Errorf("delete customer error"), codes.Internal},
 		{"failure not tenant member", sampleCustomerID, true, tenant.ErrNotMember, codes.PermissionDenied},
 		{"failure customer not found", sampleCustomerID, true, customer.ErrCustomerNotFound, codes.NotFound},
+		{"failure customer in use", sampleCustomerID, true, customer.ErrCustomerInUse, codes.FailedPrecondition},
 		{"failure unauthenticated is preserved", sampleCustomerID, true, status.Error(codes.Unauthenticated, "auth"), codes.Unauthenticated},
 		{"failure downstream code is not forwarded", sampleCustomerID, true, status.Error(codes.NotFound, "user not found"), codes.Internal},
 	}

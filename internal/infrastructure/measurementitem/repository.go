@@ -58,6 +58,28 @@ func toDomain(m MeasurementItemModel) (measurementitem.MeasurementItem, error) {
 	), nil
 }
 
+func (r *measurementItemRepository) FindByIDs(ctx context.Context, measurementItemIDs []measurementitem.MeasurementItemID) ([]measurementitem.MeasurementItem, error) {
+	if len(measurementItemIDs) == 0 {
+		return []measurementitem.MeasurementItem{}, nil
+	}
+
+	var measurementItemModels []MeasurementItemModel
+	if err := r.db.WithContext(ctx).Where("id IN ?", measurementItemIDs).Find(&measurementItemModels).Error; err != nil {
+		return nil, err
+	}
+
+	measurementItems := make([]measurementitem.MeasurementItem, 0, len(measurementItemModels))
+	for _, measurementItemModel := range measurementItemModels {
+		measurementItem, err := toDomain(measurementItemModel)
+		if err != nil {
+			return nil, err
+		}
+		measurementItems = append(measurementItems, measurementItem)
+	}
+
+	return measurementItems, nil
+}
+
 func (r *measurementItemRepository) List(ctx context.Context) ([]measurementitem.MeasurementItem, error) {
 	var measurementItemModels []MeasurementItemModel
 	if err := r.db.WithContext(ctx).Find(&measurementItemModels).Error; err != nil {

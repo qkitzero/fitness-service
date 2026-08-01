@@ -23,6 +23,14 @@ func (b BirthDate) Value() (driver.Value, error) {
 	return b.Time, nil
 }
 
+func (b BirthDate) AgeAt(t time.Time) int {
+	age := t.Year() - b.Year()
+	if t.Month() < b.Month() || (t.Month() == b.Month() && t.Day() < b.Day()) {
+		age--
+	}
+	return age
+}
+
 func NewBirthDate(year, month, day int32) (BirthDate, error) {
 	birthDate := time.Date(int(year), time.Month(month), int(day), 0, 0, 0, 0, time.UTC)
 
