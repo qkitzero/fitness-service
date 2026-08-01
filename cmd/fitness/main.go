@@ -20,10 +20,12 @@ import (
 
 	authv1 "github.com/qkitzero/auth-service/gen/go/auth/v1"
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
+	measurementv1 "github.com/qkitzero/fitness-service/gen/go/measurement/v1"
 	measurementitemv1 "github.com/qkitzero/fitness-service/gen/go/measurementitem/v1"
 	organizationv1 "github.com/qkitzero/fitness-service/gen/go/organization/v1"
 	tenantv1 "github.com/qkitzero/fitness-service/gen/go/tenant/v1"
 	appcustomer "github.com/qkitzero/fitness-service/internal/application/customer"
+	appmeasurement "github.com/qkitzero/fitness-service/internal/application/measurement"
 	appmeasurementitem "github.com/qkitzero/fitness-service/internal/application/measurementitem"
 	apporganization "github.com/qkitzero/fitness-service/internal/application/organization"
 	apptenant "github.com/qkitzero/fitness-service/internal/application/tenant"
@@ -31,10 +33,12 @@ import (
 	apiuser "github.com/qkitzero/fitness-service/internal/infrastructure/api/user"
 	infracustomer "github.com/qkitzero/fitness-service/internal/infrastructure/customer"
 	"github.com/qkitzero/fitness-service/internal/infrastructure/db"
+	inframeasurement "github.com/qkitzero/fitness-service/internal/infrastructure/measurement"
 	inframeasurementitem "github.com/qkitzero/fitness-service/internal/infrastructure/measurementitem"
 	infraorganization "github.com/qkitzero/fitness-service/internal/infrastructure/organization"
 	infratenant "github.com/qkitzero/fitness-service/internal/infrastructure/tenant"
 	grpccustomer "github.com/qkitzero/fitness-service/internal/interface/grpc/customer"
+	grpcmeasurement "github.com/qkitzero/fitness-service/internal/interface/grpc/measurement"
 	grpcmeasurementitem "github.com/qkitzero/fitness-service/internal/interface/grpc/measurementitem"
 	grpcorganization "github.com/qkitzero/fitness-service/internal/interface/grpc/organization"
 	grpctenant "github.com/qkitzero/fitness-service/internal/interface/grpc/tenant"
@@ -147,6 +151,7 @@ func run() error {
 	authServiceClient := authv1.NewAuthServiceClient(authConn)
 	groupServiceClient := groupv1.NewGroupServiceClient(userConn)
 	customerRepository := infracustomer.NewCustomerRepository(gormDB)
+	measurementRepository := inframeasurement.NewMeasurementRepository(gormDB)
 	measurementItemRepository := inframeasurementitem.NewMeasurementItemRepository(gormDB)
 	organizationRepository := infraorganization.NewOrganizationRepository(gormDB)
 	tenantProfileRepository := infratenant.NewProfileRepository(gormDB)
@@ -154,24 +159,28 @@ func run() error {
 	authService := apiauth.NewAuthService(authServiceClient)
 	userService := apiuser.NewUserService(groupServiceClient)
 	customerUsecase := appcustomer.NewCustomerUsecase(authService, userService, customerRepository, organizationRepository)
+	measurementUsecase := appmeasurement.NewMeasurementUsecase(authService, userService, measurementRepository, customerRepository, measurementItemRepository)
 	measurementItemUsecase := appmeasurementitem.NewMeasurementItemUsecase(authService, measurementItemRepository)
 	organizationUsecase := apporganization.NewOrganizationUsecase(authService, userService, organizationRepository)
 	tenantProfileUsecase := apptenant.NewProfileUsecase(authService, userService, tenantProfileRepository)
 
 	healthServer := health.NewServer()
 	customerHandler := grpccustomer.NewCustomerHandler(customerUsecase)
+	measurementHandler := grpcmeasurement.NewMeasurementHandler(measurementUsecase)
 	measurementItemHandler := grpcmeasurementitem.NewMeasurementItemHandler(measurementItemUsecase)
 	organizationHandler := grpcorganization.NewOrganizationHandler(organizationUsecase)
 	tenantProfileHandler := grpctenant.NewProfileHandler(tenantProfileUsecase)
 
 	grpc_health_v1.RegisterHealthServer(server, healthServer)
 	customerv1.RegisterCustomerServiceServer(server, customerHandler)
+	measurementv1.RegisterMeasurementServiceServer(server, measurementHandler)
 	measurementitemv1.RegisterMeasurementItemServiceServer(server, measurementItemHandler)
 	organizationv1.RegisterOrganizationServiceServer(server, organizationHandler)
 	tenantv1.RegisterProfileServiceServer(server, tenantProfileHandler)
 
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("customer", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("measurement", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("measurementitem", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("organization", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("tenant", grpc_health_v1.HealthCheckResponse_SERVING)
