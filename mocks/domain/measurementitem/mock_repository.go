@@ -41,6 +41,21 @@ func (m *MockMeasurementItemRepository) EXPECT() *MockMeasurementItemRepositoryM
 	return m.recorder
 }
 
+// FindByIDs mocks base method.
+func (m *MockMeasurementItemRepository) FindByIDs(ctx context.Context, measurementItemIDs []measurementitem.MeasurementItemID) ([]measurementitem.MeasurementItem, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindByIDs", ctx, measurementItemIDs)
+	ret0, _ := ret[0].([]measurementitem.MeasurementItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// FindByIDs indicates an expected call of FindByIDs.
+func (mr *MockMeasurementItemRepositoryMockRecorder) FindByIDs(ctx, measurementItemIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindByIDs", reflect.TypeOf((*MockMeasurementItemRepository)(nil).FindByIDs), ctx, measurementItemIDs)
+}
+
 // List mocks base method.
 func (m *MockMeasurementItemRepository) List(ctx context.Context) ([]measurementitem.MeasurementItem, error) {
 	m.ctrl.T.Helper()
