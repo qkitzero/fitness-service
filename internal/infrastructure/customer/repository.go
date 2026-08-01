@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 
 	"github.com/qkitzero/fitness-service/internal/domain/address"
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
 	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
+
+const foreignKeyViolationCode = "23503"
 
 type customerRepository struct {
 	db *gorm.DB
@@ -173,6 +176,10 @@ func (r *customerRepository) Delete(ctx context.Context, id customer.CustomerID)
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		result := tx.Where("id = ?", id).Delete(&CustomerModel{})
 		if result.Error != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(result.Error, &pgErr) && pgErr.Code == foreignKeyViolationCode {
+				return customer.ErrCustomerInUse
+			}
 			return result.Error
 		}
 		if result.RowsAffected == 0 {
