@@ -1,0 +1,20 @@
+INSERT INTO measurement_items (id, code, name, category, unit, trial_count, bilateral, value_type, created_at, updated_at)
+VALUES
+  ('c229b597-a5a0-4e02-9a47-10512f366005', 'blood_pressure', '血圧', 'vital', 'mmHg', 1, FALSE, 'paired', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('0506df56-d97f-445a-83fb-92b7843af9a4', 'pulse_rate', '脈拍', 'vital', 'bpm', 1, FALSE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('80389534-2f6d-4e59-82b9-11f9f93d00cf', 'height', '身長', 'physique', 'cm', 1, FALSE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('99b20390-501d-4663-a685-cff1d87a215b', 'weight', '体重', 'physique', 'kg', 1, FALSE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('e9b4d4cc-6edd-49d5-9ccd-ed2754e1c13d', 'body_fat_percentage', '体脂肪率', 'body_composition', 'percent', 1, FALSE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('1d98b4c8-676e-4c1b-8d01-b092e571d6af', 'muscle_mass', '筋肉量', 'body_composition', 'kg', 1, FALSE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('45c2f5cd-ae75-4b2e-8302-69051f0343d5', 'grip_strength', '握力', 'motor_function', 'kg', 2, TRUE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('1cd5eaa0-1d4b-46cb-9271-5a9650d86f99', 'stand_up_test', '立ち上がり', 'motor_function', 'cm', 1, TRUE, 'choice', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('2625e4d7-7608-45d1-a41b-304f40c6c721', 'cs30', 'CS-30（30秒立ち座り）', 'motor_function', 'count', 1, FALSE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('700ef351-eed2-478e-9e54-2574ea070ac2', 'sit_and_reach', '長座体前屈', 'motor_function', 'cm', 2, FALSE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('b82c3401-8a1d-4525-8e36-d01847df8786', 'stick_reaction', '棒反応時間', 'motor_function', 'cm', 5, FALSE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('b6eb205b-eba4-4303-b549-3ec6c70163ee', 'eyes_closed_one_leg_stand', '閉眼片足立ち', 'motor_function', 'sec', 2, TRUE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('947be599-166f-4c74-b0d6-086dcdd4fcc3', 'eyes_open_one_leg_stand', '開眼片足立ち', 'motor_function', 'sec', 2, TRUE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('97e8ca3e-72ab-4059-9ce4-850cc4fe7cc4', 'functional_reach', 'FRT（手伸ばしテスト）', 'motor_function', 'cm', 2, FALSE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('5ace8806-a042-4b9f-9b7e-49b0d392a6fb', 'two_step', '2ステップ', 'motor_function', 'cm', 2, FALSE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('633df4f0-3d55-4a30-bc7b-4ca1df3ea920', 'timed_up_and_go', 'TUG（タイム・アップ・ゴー）', 'motor_function', 'sec', 2, FALSE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('399bc82e-ea43-48ed-b7a8-85ee4907277f', 'walk_5m', '5m歩行', 'motor_function', 'sec', 2, FALSE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC'),
+  ('32ea7f00-d3ee-4197-ac0e-9373a033b69e', 'side_step', '反復横跳び', 'motor_function', 'count', 1, FALSE, 'numeric', NOW() AT TIME ZONE 'UTC', NOW() AT TIME ZONE 'UTC');

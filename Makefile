@@ -31,6 +31,13 @@ mock-gen:
 	go tool mockgen -source=internal/domain/customer/customer.go -destination=mocks/domain/customer/mock_customer.go -package=mocks
 	go tool mockgen -source=internal/domain/customer/repository.go -destination=mocks/domain/customer/mock_repository.go -package=mocks
 	go tool mockgen -source=internal/application/customer/usecase.go -destination=mocks/application/customer/mock_usecase.go -package=mocks
+	go tool mockgen -source=internal/domain/measurement/measurement.go -destination=mocks/domain/measurement/mock_measurement.go -package=mocks
+	go tool mockgen -source=internal/domain/measurement/measurement_entry.go -destination=mocks/domain/measurement/mock_measurement_entry.go -package=mocks
+	go tool mockgen -source=internal/domain/measurement/repository.go -destination=mocks/domain/measurement/mock_repository.go -package=mocks
+	go tool mockgen -source=internal/application/measurement/usecase.go -destination=mocks/application/measurement/mock_usecase.go -package=mocks
+	go tool mockgen -source=internal/domain/measurementitem/measurement_item.go -destination=mocks/domain/measurementitem/mock_measurement_item.go -package=mocks
+	go tool mockgen -source=internal/domain/measurementitem/repository.go -destination=mocks/domain/measurementitem/mock_repository.go -package=mocks
+	go tool mockgen -source=internal/application/measurementitem/usecase.go -destination=mocks/application/measurementitem/mock_usecase.go -package=mocks
 	go tool mockgen -source=internal/domain/organization/organization.go -destination=mocks/domain/organization/mock_organization.go -package=mocks
 	go tool mockgen -source=internal/domain/organization/repository.go -destination=mocks/domain/organization/mock_repository.go -package=mocks
 	go tool mockgen -source=internal/application/organization/usecase.go -destination=mocks/application/organization/mock_usecase.go -package=mocks

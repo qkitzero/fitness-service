@@ -9,6 +9,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"go.uber.org/mock/gomock"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -843,6 +844,21 @@ func TestDelete(t *testing.T) {
 				mock.ExpectExec(regexp.QuoteMeta(`DELETE FROM "customers" WHERE id = $1`)).
 					WithArgs(customerID).
 					WillReturnResult(sqlmock.NewResult(0, 0))
+
+				mock.ExpectRollback()
+			},
+		},
+		{
+			name:       "failure customer referenced by another table",
+			success:    false,
+			wantErr:    customer.ErrCustomerInUse,
+			customerID: customer.CustomerID{UUID: uuid.New()},
+			setup: func(mock sqlmock.Sqlmock, customerID customer.CustomerID) {
+				mock.ExpectBegin()
+
+				mock.ExpectExec(regexp.QuoteMeta(`DELETE FROM "customers" WHERE id = $1`)).
+					WithArgs(customerID).
+					WillReturnError(&pgconn.PgError{Code: "23503", ConstraintName: "fk_measurements_customer"})
 
 				mock.ExpectRollback()
 			},
