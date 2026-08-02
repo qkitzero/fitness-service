@@ -29,11 +29,11 @@ func TestNewMeasurementEntry(t *testing.T) {
 	standUpTestCode, _ := measurementitem.NewCode("stand_up_test")
 	standUpTestName, _ := measurementitem.NewName("立ち上がり")
 
-	pulseRate := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), pulseRateCode, pulseRateName, vital, bpm, singleTrial, false, measurementitem.ValueTypeNumeric, itemCreatedAt, itemUpdatedAt)
-	bloodPressure := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), bloodPressureCode, bloodPressureName, vital, mmHg, singleTrial, false, measurementitem.ValueTypePaired, itemCreatedAt, itemUpdatedAt)
-	gripStrength := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, true, measurementitem.ValueTypeNumeric, itemCreatedAt, itemUpdatedAt)
-	standUpTest := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), standUpTestCode, standUpTestName, motorFunction, cm, singleTrial, true, measurementitem.ValueTypeChoice, itemCreatedAt, itemUpdatedAt)
-	unknownValueType := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), pulseRateCode, pulseRateName, vital, bpm, singleTrial, false, measurementitem.ValueType("range"), itemCreatedAt, itemUpdatedAt)
+	pulseRate := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), pulseRateCode, pulseRateName, vital, bpm, singleTrial, false, measurementitem.ValueTypeNumeric, nil, nil, itemCreatedAt, itemUpdatedAt)
+	bloodPressure := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), bloodPressureCode, bloodPressureName, vital, mmHg, singleTrial, false, measurementitem.ValueTypePaired, nil, nil, itemCreatedAt, itemUpdatedAt)
+	gripStrength := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, true, measurementitem.ValueTypeNumeric, nil, nil, itemCreatedAt, itemUpdatedAt)
+	standUpTest := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), standUpTestCode, standUpTestName, motorFunction, cm, singleTrial, true, measurementitem.ValueTypeChoice, nil, nil, itemCreatedAt, itemUpdatedAt)
+	unknownValueType := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), pulseRateCode, pulseRateName, vital, bpm, singleTrial, false, measurementitem.ValueType("range"), nil, nil, itemCreatedAt, itemUpdatedAt)
 	note, _ := NewNote("ふらつきあり")
 
 	tests := []struct {

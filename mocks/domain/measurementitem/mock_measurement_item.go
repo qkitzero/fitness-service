@@ -97,6 +97,20 @@ func (mr *MockMeasurementItemMockRecorder) CreatedAt() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatedAt", reflect.TypeOf((*MockMeasurementItem)(nil).CreatedAt))
 }
 
+// Elements mocks base method.
+func (m *MockMeasurementItem) Elements() []measurementitem.Element {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Elements")
+	ret0, _ := ret[0].([]measurementitem.Element)
+	return ret0
+}
+
+// Elements indicates an expected call of Elements.
+func (mr *MockMeasurementItemMockRecorder) Elements() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Elements", reflect.TypeOf((*MockMeasurementItem)(nil).Elements))
+}
+
 // ID mocks base method.
 func (m *MockMeasurementItem) ID() measurementitem.MeasurementItemID {
 	m.ctrl.T.Helper()
@@ -123,6 +137,20 @@ func (m *MockMeasurementItem) Name() measurementitem.Name {
 func (mr *MockMeasurementItemMockRecorder) Name() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockMeasurementItem)(nil).Name))
+}
+
+// ScoreDirection mocks base method.
+func (m *MockMeasurementItem) ScoreDirection() *measurementitem.ScoreDirection {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScoreDirection")
+	ret0, _ := ret[0].(*measurementitem.ScoreDirection)
+	return ret0
+}
+
+// ScoreDirection indicates an expected call of ScoreDirection.
+func (mr *MockMeasurementItemMockRecorder) ScoreDirection() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScoreDirection", reflect.TypeOf((*MockMeasurementItem)(nil).ScoreDirection))
 }
 
 // TrialCount mocks base method.

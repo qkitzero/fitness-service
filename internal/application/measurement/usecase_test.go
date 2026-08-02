@@ -39,7 +39,7 @@ func TestCreateMeasurement(t *testing.T) {
 	twoTrials, _ := measurementitem.NewTrialCount(2)
 	gripStrengthCode, _ := measurementitem.NewCode("grip_strength")
 	gripStrengthName, _ := measurementitem.NewName("握力")
-	gripStrength := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, true, measurementitem.ValueTypeNumeric, itemCreatedAt, itemUpdatedAt)
+	gripStrength := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, true, measurementitem.ValueTypeNumeric, nil, nil, itemCreatedAt, itemUpdatedAt)
 
 	completeEntryInputs := func() []MeasurementEntryInput {
 		firstTrial, _ := measurement.NewTrialIndex(1)
@@ -548,7 +548,7 @@ func TestUpdateMeasurement(t *testing.T) {
 	singleTrial, _ := measurementitem.NewTrialCount(1)
 	pulseRateCode, _ := measurementitem.NewCode("pulse_rate")
 	pulseRateName, _ := measurementitem.NewName("脈拍")
-	pulseRate := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), pulseRateCode, pulseRateName, vital, bpm, singleTrial, false, measurementitem.ValueTypeNumeric, itemCreatedAt, itemUpdatedAt)
+	pulseRate := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), pulseRateCode, pulseRateName, vital, bpm, singleTrial, false, measurementitem.ValueTypeNumeric, nil, nil, itemCreatedAt, itemUpdatedAt)
 
 	completeEntryInputs := func() []MeasurementEntryInput {
 		trialIndex, _ := measurement.NewTrialIndex(1)
