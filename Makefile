@@ -41,6 +41,10 @@ mock-gen:
 	go tool mockgen -source=internal/domain/organization/organization.go -destination=mocks/domain/organization/mock_organization.go -package=mocks
 	go tool mockgen -source=internal/domain/organization/repository.go -destination=mocks/domain/organization/mock_repository.go -package=mocks
 	go tool mockgen -source=internal/application/organization/usecase.go -destination=mocks/application/organization/mock_usecase.go -package=mocks
+	go tool mockgen -source=internal/domain/standard/age_group_standard.go -destination=mocks/domain/standard/mock_age_group_standard.go -package=mocks
+	go tool mockgen -source=internal/domain/standard/age_group_standard_repository.go -destination=mocks/domain/standard/mock_age_group_standard_repository.go -package=mocks
+	go tool mockgen -source=internal/domain/standard/rank_standard.go -destination=mocks/domain/standard/mock_rank_standard.go -package=mocks
+	go tool mockgen -source=internal/domain/standard/rank_standard_repository.go -destination=mocks/domain/standard/mock_rank_standard_repository.go -package=mocks
 	go tool mockgen -source=internal/domain/tenant/profile.go -destination=mocks/domain/tenant/mock_profile.go -package=mocks
 	go tool mockgen -source=internal/domain/tenant/profile_repository.go -destination=mocks/domain/tenant/mock_profile_repository.go -package=mocks
 	go tool mockgen -source=internal/application/tenant/usecase.go -destination=mocks/application/tenant/mock_usecase.go -package=mocks
