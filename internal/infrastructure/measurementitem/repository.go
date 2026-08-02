@@ -18,6 +18,23 @@ func NewMeasurementItemRepository(db *gorm.DB) measurementitem.MeasurementItemRe
 	return &measurementItemRepository{db: db}
 }
 
+func toElements(m MeasurementItemModel) ([]measurementitem.Element, error) {
+	elements := make([]measurementitem.Element, 0, len(m.Elements))
+	for _, elementModel := range m.Elements {
+		element, err := measurementitem.NewElement(elementModel.Element.String())
+		if err != nil {
+			return nil, fmt.Errorf("measurement item %q: %w", m.Code, err)
+		}
+		elements = append(elements, element)
+	}
+
+	sort.Slice(elements, func(i, j int) bool {
+		return elements[i].Order() < elements[j].Order()
+	})
+
+	return elements, nil
+}
+
 func toDomain(m MeasurementItemModel) (measurementitem.MeasurementItem, error) {
 	code, err := measurementitem.NewCode(m.Code.String())
 	if err != nil {
@@ -43,6 +60,18 @@ func toDomain(m MeasurementItemModel) (measurementitem.MeasurementItem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("measurement item %q: %w", m.Code, err)
 	}
+	var scoreDirection *measurementitem.ScoreDirection
+	if m.ScoreDirection != nil {
+		s, err := measurementitem.NewScoreDirection(m.ScoreDirection.String())
+		if err != nil {
+			return nil, fmt.Errorf("measurement item %q: %w", m.Code, err)
+		}
+		scoreDirection = &s
+	}
+	elements, err := toElements(m)
+	if err != nil {
+		return nil, err
+	}
 
 	return measurementitem.NewMeasurementItem(
 		m.ID,
@@ -53,9 +82,15 @@ func toDomain(m MeasurementItemModel) (measurementitem.MeasurementItem, error) {
 		trialCount,
 		m.Bilateral,
 		valueType,
+		scoreDirection,
+		elements,
 		m.CreatedAt,
 		m.UpdatedAt,
 	), nil
+}
+
+func withElements(db *gorm.DB) *gorm.DB {
+	return db.Preload("Elements")
 }
 
 func (r *measurementItemRepository) FindByIDs(ctx context.Context, measurementItemIDs []measurementitem.MeasurementItemID) ([]measurementitem.MeasurementItem, error) {
@@ -64,7 +99,7 @@ func (r *measurementItemRepository) FindByIDs(ctx context.Context, measurementIt
 	}
 
 	var measurementItemModels []MeasurementItemModel
-	if err := r.db.WithContext(ctx).Where("id IN ?", measurementItemIDs).Find(&measurementItemModels).Error; err != nil {
+	if err := withElements(r.db.WithContext(ctx)).Where("id IN ?", measurementItemIDs).Find(&measurementItemModels).Error; err != nil {
 		return nil, err
 	}
 
@@ -82,7 +117,7 @@ func (r *measurementItemRepository) FindByIDs(ctx context.Context, measurementIt
 
 func (r *measurementItemRepository) List(ctx context.Context) ([]measurementitem.MeasurementItem, error) {
 	var measurementItemModels []MeasurementItemModel
-	if err := r.db.WithContext(ctx).Find(&measurementItemModels).Error; err != nil {
+	if err := withElements(r.db.WithContext(ctx)).Find(&measurementItemModels).Error; err != nil {
 		return nil, err
 	}
 

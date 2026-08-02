@@ -13,21 +13,25 @@ type MeasurementItem interface {
 	TrialCount() TrialCount
 	Bilateral() bool
 	ValueType() ValueType
+	ScoreDirection() *ScoreDirection
+	Elements() []Element
 	CreatedAt() time.Time
 	UpdatedAt() time.Time
 }
 
 type measurementItem struct {
-	id         MeasurementItemID
-	code       Code
-	name       Name
-	category   Category
-	unit       Unit
-	trialCount TrialCount
-	bilateral  bool
-	valueType  ValueType
-	createdAt  time.Time
-	updatedAt  time.Time
+	id             MeasurementItemID
+	code           Code
+	name           Name
+	category       Category
+	unit           Unit
+	trialCount     TrialCount
+	bilateral      bool
+	valueType      ValueType
+	scoreDirection *ScoreDirection
+	elements       []Element
+	createdAt      time.Time
+	updatedAt      time.Time
 }
 
 func (m measurementItem) ID() MeasurementItemID {
@@ -62,6 +66,20 @@ func (m measurementItem) ValueType() ValueType {
 	return m.valueType
 }
 
+func (m measurementItem) ScoreDirection() *ScoreDirection {
+	if m.scoreDirection == nil {
+		return nil
+	}
+	s := *m.scoreDirection
+	return &s
+}
+
+func (m measurementItem) Elements() []Element {
+	elements := make([]Element, len(m.elements))
+	copy(elements, m.elements)
+	return elements
+}
+
 func (m measurementItem) CreatedAt() time.Time {
 	return m.createdAt
 }
@@ -79,10 +97,12 @@ func NewMeasurementItem(
 	trialCount TrialCount,
 	bilateral bool,
 	valueType ValueType,
+	scoreDirection *ScoreDirection,
+	elements []Element,
 	createdAt time.Time,
 	updatedAt time.Time,
 ) MeasurementItem {
-	return &measurementItem{
+	m := &measurementItem{
 		id:         id,
 		code:       code,
 		name:       name,
@@ -91,7 +111,14 @@ func NewMeasurementItem(
 		trialCount: trialCount,
 		bilateral:  bilateral,
 		valueType:  valueType,
+		elements:   make([]Element, len(elements)),
 		createdAt:  createdAt,
 		updatedAt:  updatedAt,
 	}
+	copy(m.elements, elements)
+	if scoreDirection != nil {
+		s := *scoreDirection
+		m.scoreDirection = &s
+	}
+	return m
 }
