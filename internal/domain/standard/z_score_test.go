@@ -47,3 +47,31 @@ func TestNewZScore(t *testing.T) {
 		})
 	}
 }
+
+func TestMeanZScore(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		zScores []ZScore
+		want    ZScore
+	}{
+		{"mean of a single z score", []ZScore{ZScore(1.5)}, ZScore(1.5)},
+		{"mean of positive z scores", []ZScore{ZScore(0.5), ZScore(1.5)}, ZScore(1)},
+		{"mean of negative z scores", []ZScore{ZScore(-0.5), ZScore(-1.5)}, ZScore(-1)},
+		{"mean of opposite z scores", []ZScore{ZScore(-1.5), ZScore(1.5)}, ZScore(0)},
+		{"exact half is rounded away from zero", []ZScore{ZScore(-0.68), ZScore(1.67)}, ZScore(0.5)},
+		{"exact negative half is rounded away from zero", []ZScore{ZScore(0.68), ZScore(-1.67)}, ZScore(-0.5)},
+		{"repeating mean is rounded to two decimals", []ZScore{ZScore(1), ZScore(1), ZScore(0)}, ZScore(0.67)},
+		{"mean of no z scores", nil, ZScore(0)},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := MeanZScore(tt.zScores); got != tt.want {
+				t.Errorf("MeanZScore() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

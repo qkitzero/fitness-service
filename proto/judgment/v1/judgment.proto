@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package judgment.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/qkitzero/fitness-service/gen/go/judgment/v1";
+
+service JudgmentService {
+  rpc GetJudgment(GetJudgmentRequest) returns (GetJudgmentResponse) {
+    option (google.api.http) = {get: "/v1/measurement/{measurement_id}/judgment"};
+  }
+  rpc UpsertJudgmentAdvice(UpsertJudgmentAdviceRequest) returns (UpsertJudgmentAdviceResponse) {
+    option (google.api.http) = {
+      put: "/v1/measurement/{measurement_id}/judgment/advice"
+      body: "*"
+    };
+  }
+}
+
+enum Rank {
+  RANK_UNSPECIFIED = 0;
+  RANK_A = 1;
+  RANK_B = 2;
+  RANK_C = 3;
+  RANK_D = 4;
+  RANK_E = 5;
+}
+
+enum Element {
+  ELEMENT_UNSPECIFIED = 0;
+  ELEMENT_MUSCLE_STRENGTH = 1;
+  ELEMENT_MUSCLE_ENDURANCE = 2;
+  ELEMENT_FLEXIBILITY = 3;
+  ELEMENT_AGILITY = 4;
+  ELEMENT_BALANCE = 5;
+  ELEMENT_MOBILITY = 6;
+}
+
+message ItemEvaluation {
+  string measurement_item_id = 1;
+  double value = 2;
+  double mean = 3;
+  double z_score = 4;
+  Rank rank = 5;
+}
+
+message ElementEvaluation {
+  Element element = 1;
+  double z_score = 2;
+  Rank rank = 3;
+}
+
+message Judgment {
+  string measurement_id = 1;
+  repeated ItemEvaluation item_evaluations = 2;
+  repeated ElementEvaluation element_evaluations = 3;
+  optional uint32 motor_age = 4;
+  optional string advice = 5;
+  bool is_draft = 6;
+}
+
+message GetJudgmentRequest {
+  string measurement_id = 1;
+}
+
+message GetJudgmentResponse {
+  Judgment judgment = 1;
+}
+
+message UpsertJudgmentAdviceRequest {
+  string measurement_id = 1;
+  optional string advice = 2;
+}
+
+message UpsertJudgmentAdviceResponse {
+  string measurement_id = 1;
+  optional string advice = 2;
+}

@@ -24,6 +24,13 @@ func (a AgeRange) Contains(age int) bool {
 	return age >= a.from && age <= a.to
 }
 
+func (a AgeRange) Median() int {
+	if a.to == ageRangeMax {
+		return a.from
+	}
+	return a.from + (a.to-a.from+1)/2
+}
+
 func NewAgeRange(from, to int) (AgeRange, error) {
 	if from < ageRangeMin || from > ageRangeMax {
 		return AgeRange{}, fmt.Errorf("invalid age range")

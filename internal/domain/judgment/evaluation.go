@@ -1,0 +1,317 @@
+package judgment
+
+import (
+	"math"
+	"sort"
+
+	"github.com/qkitzero/fitness-service/internal/domain/measurement"
+	"github.com/qkitzero/fitness-service/internal/domain/measurementitem"
+	"github.com/qkitzero/fitness-service/internal/domain/standard"
+)
+
+const evaluationScale = 100
+
+type Evaluation interface {
+	ItemEvaluations() []ItemEvaluation
+	ElementEvaluations() []ElementEvaluation
+	MotorAge() *MotorAge
+}
+
+type evaluation struct {
+	itemEvaluations    []ItemEvaluation
+	elementEvaluations []ElementEvaluation
+	motorAge           *MotorAge
+}
+
+func (e evaluation) ItemEvaluations() []ItemEvaluation {
+	itemEvaluations := make([]ItemEvaluation, len(e.itemEvaluations))
+	copy(itemEvaluations, e.itemEvaluations)
+	return itemEvaluations
+}
+
+func (e evaluation) ElementEvaluations() []ElementEvaluation {
+	elementEvaluations := make([]ElementEvaluation, len(e.elementEvaluations))
+	copy(elementEvaluations, e.elementEvaluations)
+	return elementEvaluations
+}
+
+func (e evaluation) MotorAge() *MotorAge {
+	if e.motorAge == nil {
+		return nil
+	}
+	m := *e.motorAge
+	return &m
+}
+
+type judgedItem struct {
+	item  measurementitem.MeasurementItem
+	value measurement.Value
+}
+
+func toHundredths(f float64) int64 {
+	return int64(math.Round(f * evaluationScale))
+}
+
+func fromHundredths(hundredths int64) float64 {
+	return float64(hundredths) / evaluationScale
+}
+
+func divideRounded(numerator, denominator int64) int64 {
+	if numerator < 0 {
+		return -((-2*numerator + denominator) / (2 * denominator))
+	}
+	return (2*numerator + denominator) / (2 * denominator)
+}
+
+func isBetter(candidate, current int64, scoreDirection measurementitem.ScoreDirection) bool {
+	if scoreDirection == measurementitem.ScoreDirectionLowerIsBetter {
+		return candidate < current
+	}
+	return candidate > current
+}
+
+func representativeValue(entry measurement.MeasurementEntry, item measurementitem.MeasurementItem, scoreDirection measurementitem.ScoreDirection) (measurement.Value, bool) {
+	bestBySide := make(map[measurement.Side]int64)
+	sides := make([]measurement.Side, 0, 2)
+	for _, measurementValue := range entry.Values() {
+		value := measurementValue.Value()
+		if value == nil {
+			continue
+		}
+		hundredths := toHundredths(value.Float64())
+		side := measurementValue.Side()
+		best, ok := bestBySide[side]
+		if !ok {
+			bestBySide[side] = hundredths
+			sides = append(sides, side)
+			continue
+		}
+		if isBetter(hundredths, best, scoreDirection) {
+			bestBySide[side] = hundredths
+		}
+	}
+	if len(sides) == 0 {
+		return measurement.Value(0), false
+	}
+
+	representative := bestBySide[sides[0]]
+	if item.SideAggregation() == measurementitem.SideAggregationBest {
+		for _, side := range sides[1:] {
+			if isBetter(bestBySide[side], representative, scoreDirection) {
+				representative = bestBySide[side]
+			}
+		}
+	} else {
+		sum := int64(0)
+		for _, side := range sides {
+			sum += bestBySide[side]
+		}
+		representative = divideRounded(sum, int64(len(sides)))
+	}
+
+	value, err := measurement.NewValue(fromHundredths(representative))
+	if err != nil {
+		return measurement.Value(0), false
+	}
+
+	return value, true
+}
+
+func findAgeGroupStandard(ageGroupStandards []standard.AgeGroupStandard, age int) (standard.AgeGroupStandard, bool) {
+	for _, ageGroupStandard := range ageGroupStandards {
+		if ageGroupStandard.AgeRange().Contains(age) {
+			return ageGroupStandard, true
+		}
+	}
+	return nil, false
+}
+
+func zScoreHundredths(value measurement.Value, ageGroupStandard standard.AgeGroupStandard, scoreDirection measurementitem.ScoreDirection) int64 {
+	deviation := toHundredths(value.Float64()) - toHundredths(ageGroupStandard.Mean().Float64())
+	zScore := divideRounded(evaluationScale*deviation, toHundredths(ageGroupStandard.StandardDeviation().Float64()))
+	if scoreDirection == measurementitem.ScoreDirectionLowerIsBetter {
+		return -zScore
+	}
+	return zScore
+}
+
+func findRank(rankStandards []standard.RankStandard, zScore standard.ZScore) (standard.Rank, bool) {
+	for _, rankStandard := range rankStandards {
+		if zScoreMin := rankStandard.ZScoreMin(); zScoreMin != nil && zScore < *zScoreMin {
+			continue
+		}
+		if zScoreMax := rankStandard.ZScoreMax(); zScoreMax != nil && zScore >= *zScoreMax {
+			continue
+		}
+		return rankStandard.Rank(), true
+	}
+	return standard.Rank(""), false
+}
+
+func newElementEvaluations(
+	itemEvaluations []ItemEvaluation,
+	itemByID map[measurementitem.MeasurementItemID]measurementitem.MeasurementItem,
+	rankStandards []standard.RankStandard,
+) []ElementEvaluation {
+	zScoresByElement := make(map[measurementitem.Element][]standard.ZScore)
+	elements := make([]measurementitem.Element, 0, len(itemEvaluations))
+	for _, itemEvaluation := range itemEvaluations {
+		for _, element := range itemByID[itemEvaluation.MeasurementItemID()].Elements() {
+			if _, ok := zScoresByElement[element]; !ok {
+				elements = append(elements, element)
+			}
+			zScoresByElement[element] = append(zScoresByElement[element], itemEvaluation.ZScore())
+		}
+	}
+
+	sort.Slice(elements, func(i, j int) bool {
+		return elements[i].Order() < elements[j].Order()
+	})
+
+	elementEvaluations := make([]ElementEvaluation, 0, len(elements))
+	for _, element := range elements {
+		zScore := standard.MeanZScore(zScoresByElement[element])
+		rank, ok := findRank(rankStandards, zScore)
+		if !ok {
+			continue
+		}
+
+		elementEvaluations = append(elementEvaluations, newElementEvaluation(element, zScore, rank))
+	}
+
+	return elementEvaluations
+}
+
+func newMotorAge(
+	judgedItems []judgedItem,
+	ageGroupStandardsByItemID map[measurementitem.MeasurementItemID][]standard.AgeGroupStandard,
+) *MotorAge {
+	standardsByItemAndAgeRange := make(map[measurementitem.MeasurementItemID]map[standard.AgeRange]standard.AgeGroupStandard, len(judgedItems))
+	ageRanges := make([]standard.AgeRange, 0)
+	for _, judged := range judgedItems {
+		standardsByAgeRange := make(map[standard.AgeRange]standard.AgeGroupStandard)
+		for _, ageGroupStandard := range ageGroupStandardsByItemID[judged.item.ID()] {
+			standardsByAgeRange[ageGroupStandard.AgeRange()] = ageGroupStandard
+		}
+		standardsByItemAndAgeRange[judged.item.ID()] = standardsByAgeRange
+	}
+
+	seen := make(map[standard.AgeRange]struct{})
+	for _, standardsByAgeRange := range standardsByItemAndAgeRange {
+		for ageRange := range standardsByAgeRange {
+			if _, ok := seen[ageRange]; ok {
+				continue
+			}
+			seen[ageRange] = struct{}{}
+			ageRanges = append(ageRanges, ageRange)
+		}
+	}
+	if len(ageRanges) == 0 {
+		return nil
+	}
+
+	coveringItems := make([]judgedItem, 0, len(judgedItems))
+	for _, judged := range judgedItems {
+		if len(standardsByItemAndAgeRange[judged.item.ID()]) == len(ageRanges) {
+			coveringItems = append(coveringItems, judged)
+		}
+	}
+	if len(coveringItems) == 0 {
+		return nil
+	}
+
+	sort.Slice(ageRanges, func(i, j int) bool {
+		if ageRanges[i].From() != ageRanges[j].From() {
+			return ageRanges[i].From() < ageRanges[j].From()
+		}
+		return ageRanges[i].To() < ageRanges[j].To()
+	})
+
+	best := ageRanges[0]
+	bestDistance := int64(-1)
+	for _, ageRange := range ageRanges {
+		distance := int64(0)
+		for _, judged := range coveringItems {
+			zScore := zScoreHundredths(judged.value, standardsByItemAndAgeRange[judged.item.ID()][ageRange], *judged.item.ScoreDirection())
+			if zScore < 0 {
+				zScore = -zScore
+			}
+			distance += zScore
+		}
+		if bestDistance < 0 || distance < bestDistance {
+			best = ageRange
+			bestDistance = distance
+		}
+	}
+
+	motorAge := NewMotorAge(best)
+
+	return &motorAge
+}
+
+func NewEvaluation(
+	m measurement.Measurement,
+	items []measurementitem.MeasurementItem,
+	gender standard.Gender,
+	age int,
+	ageGroupStandards []standard.AgeGroupStandard,
+	rankStandards []standard.RankStandard,
+) Evaluation {
+	itemByID := make(map[measurementitem.MeasurementItemID]measurementitem.MeasurementItem, len(items))
+	for _, item := range items {
+		itemByID[item.ID()] = item
+	}
+
+	ageGroupStandardsByItemID := make(map[measurementitem.MeasurementItemID][]standard.AgeGroupStandard)
+	for _, ageGroupStandard := range ageGroupStandards {
+		if ageGroupStandard.Gender() != gender {
+			continue
+		}
+		measurementItemID := ageGroupStandard.MeasurementItemID()
+		ageGroupStandardsByItemID[measurementItemID] = append(ageGroupStandardsByItemID[measurementItemID], ageGroupStandard)
+	}
+
+	entries := m.Entries()
+	itemEvaluations := make([]ItemEvaluation, 0, len(entries))
+	judgedItems := make([]judgedItem, 0, len(entries))
+	for _, entry := range entries {
+		if entry.Unmeasurable() {
+			continue
+		}
+		item, ok := itemByID[entry.MeasurementItemID()]
+		if !ok {
+			continue
+		}
+		scoreDirection := item.ScoreDirection()
+		if scoreDirection == nil {
+			continue
+		}
+		value, ok := representativeValue(entry, item, *scoreDirection)
+		if !ok {
+			continue
+		}
+		ageGroupStandard, ok := findAgeGroupStandard(ageGroupStandardsByItemID[item.ID()], age)
+		if !ok {
+			continue
+		}
+		zScore, err := standard.NewZScore(fromHundredths(zScoreHundredths(value, ageGroupStandard, *scoreDirection)))
+		if err != nil {
+			continue
+		}
+
+		judgedItems = append(judgedItems, judgedItem{item: item, value: value})
+
+		rank, ok := findRank(rankStandards, zScore)
+		if !ok {
+			continue
+		}
+
+		itemEvaluations = append(itemEvaluations, newItemEvaluation(item.ID(), value, ageGroupStandard.Mean(), zScore, rank))
+	}
+
+	return &evaluation{
+		itemEvaluations:    itemEvaluations,
+		elementEvaluations: newElementEvaluations(itemEvaluations, itemByID, rankStandards),
+		motorAge:           newMotorAge(judgedItems, ageGroupStandardsByItemID),
+	}
+}

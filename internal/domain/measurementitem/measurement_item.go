@@ -14,24 +14,26 @@ type MeasurementItem interface {
 	Bilateral() bool
 	ValueType() ValueType
 	ScoreDirection() *ScoreDirection
+	SideAggregation() SideAggregation
 	Elements() []Element
 	CreatedAt() time.Time
 	UpdatedAt() time.Time
 }
 
 type measurementItem struct {
-	id             MeasurementItemID
-	code           Code
-	name           Name
-	category       Category
-	unit           Unit
-	trialCount     TrialCount
-	bilateral      bool
-	valueType      ValueType
-	scoreDirection *ScoreDirection
-	elements       []Element
-	createdAt      time.Time
-	updatedAt      time.Time
+	id              MeasurementItemID
+	code            Code
+	name            Name
+	category        Category
+	unit            Unit
+	trialCount      TrialCount
+	bilateral       bool
+	valueType       ValueType
+	scoreDirection  *ScoreDirection
+	sideAggregation SideAggregation
+	elements        []Element
+	createdAt       time.Time
+	updatedAt       time.Time
 }
 
 func (m measurementItem) ID() MeasurementItemID {
@@ -74,6 +76,10 @@ func (m measurementItem) ScoreDirection() *ScoreDirection {
 	return &s
 }
 
+func (m measurementItem) SideAggregation() SideAggregation {
+	return m.sideAggregation
+}
+
 func (m measurementItem) Elements() []Element {
 	elements := make([]Element, len(m.elements))
 	copy(elements, m.elements)
@@ -98,22 +104,24 @@ func NewMeasurementItem(
 	bilateral bool,
 	valueType ValueType,
 	scoreDirection *ScoreDirection,
+	sideAggregation SideAggregation,
 	elements []Element,
 	createdAt time.Time,
 	updatedAt time.Time,
 ) MeasurementItem {
 	m := &measurementItem{
-		id:         id,
-		code:       code,
-		name:       name,
-		category:   category,
-		unit:       unit,
-		trialCount: trialCount,
-		bilateral:  bilateral,
-		valueType:  valueType,
-		elements:   make([]Element, len(elements)),
-		createdAt:  createdAt,
-		updatedAt:  updatedAt,
+		id:              id,
+		code:            code,
+		name:            name,
+		category:        category,
+		unit:            unit,
+		trialCount:      trialCount,
+		bilateral:       bilateral,
+		valueType:       valueType,
+		sideAggregation: sideAggregation,
+		elements:        make([]Element, len(elements)),
+		createdAt:       createdAt,
+		updatedAt:       updatedAt,
 	}
 	copy(m.elements, elements)
 	if scoreDirection != nil {

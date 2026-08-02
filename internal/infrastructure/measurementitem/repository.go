@@ -68,6 +68,10 @@ func toDomain(m MeasurementItemModel) (measurementitem.MeasurementItem, error) {
 		}
 		scoreDirection = &s
 	}
+	sideAggregation, err := measurementitem.NewSideAggregation(m.SideAggregation.String())
+	if err != nil {
+		return nil, fmt.Errorf("measurement item %q: %w", m.Code, err)
+	}
 	elements, err := toElements(m)
 	if err != nil {
 		return nil, err
@@ -83,6 +87,7 @@ func toDomain(m MeasurementItemModel) (measurementitem.MeasurementItem, error) {
 		m.Bilateral,
 		valueType,
 		scoreDirection,
+		sideAggregation,
 		elements,
 		m.CreatedAt,
 		m.UpdatedAt,

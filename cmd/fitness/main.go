@@ -20,11 +20,13 @@ import (
 
 	authv1 "github.com/qkitzero/auth-service/gen/go/auth/v1"
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
+	judgmentv1 "github.com/qkitzero/fitness-service/gen/go/judgment/v1"
 	measurementv1 "github.com/qkitzero/fitness-service/gen/go/measurement/v1"
 	measurementitemv1 "github.com/qkitzero/fitness-service/gen/go/measurementitem/v1"
 	organizationv1 "github.com/qkitzero/fitness-service/gen/go/organization/v1"
 	tenantv1 "github.com/qkitzero/fitness-service/gen/go/tenant/v1"
 	appcustomer "github.com/qkitzero/fitness-service/internal/application/customer"
+	appjudgment "github.com/qkitzero/fitness-service/internal/application/judgment"
 	appmeasurement "github.com/qkitzero/fitness-service/internal/application/measurement"
 	appmeasurementitem "github.com/qkitzero/fitness-service/internal/application/measurementitem"
 	apporganization "github.com/qkitzero/fitness-service/internal/application/organization"
@@ -33,11 +35,14 @@ import (
 	apiuser "github.com/qkitzero/fitness-service/internal/infrastructure/api/user"
 	infracustomer "github.com/qkitzero/fitness-service/internal/infrastructure/customer"
 	"github.com/qkitzero/fitness-service/internal/infrastructure/db"
+	infrajudgment "github.com/qkitzero/fitness-service/internal/infrastructure/judgment"
 	inframeasurement "github.com/qkitzero/fitness-service/internal/infrastructure/measurement"
 	inframeasurementitem "github.com/qkitzero/fitness-service/internal/infrastructure/measurementitem"
 	infraorganization "github.com/qkitzero/fitness-service/internal/infrastructure/organization"
+	infrastandard "github.com/qkitzero/fitness-service/internal/infrastructure/standard"
 	infratenant "github.com/qkitzero/fitness-service/internal/infrastructure/tenant"
 	grpccustomer "github.com/qkitzero/fitness-service/internal/interface/grpc/customer"
+	grpcjudgment "github.com/qkitzero/fitness-service/internal/interface/grpc/judgment"
 	grpcmeasurement "github.com/qkitzero/fitness-service/internal/interface/grpc/measurement"
 	grpcmeasurementitem "github.com/qkitzero/fitness-service/internal/interface/grpc/measurementitem"
 	grpcorganization "github.com/qkitzero/fitness-service/internal/interface/grpc/organization"
@@ -150,15 +155,19 @@ func run() error {
 
 	authServiceClient := authv1.NewAuthServiceClient(authConn)
 	groupServiceClient := groupv1.NewGroupServiceClient(userConn)
+	ageGroupStandardRepository := infrastandard.NewAgeGroupStandardRepository(gormDB)
 	customerRepository := infracustomer.NewCustomerRepository(gormDB)
+	judgmentRepository := infrajudgment.NewJudgmentRepository(gormDB)
 	measurementRepository := inframeasurement.NewMeasurementRepository(gormDB)
 	measurementItemRepository := inframeasurementitem.NewMeasurementItemRepository(gormDB)
 	organizationRepository := infraorganization.NewOrganizationRepository(gormDB)
+	rankStandardRepository := infrastandard.NewRankStandardRepository(gormDB)
 	tenantProfileRepository := infratenant.NewProfileRepository(gormDB)
 
 	authService := apiauth.NewAuthService(authServiceClient)
 	userService := apiuser.NewUserService(groupServiceClient)
 	customerUsecase := appcustomer.NewCustomerUsecase(authService, userService, customerRepository, organizationRepository)
+	judgmentUsecase := appjudgment.NewJudgmentUsecase(authService, userService, judgmentRepository, measurementRepository, customerRepository, measurementItemRepository, ageGroupStandardRepository, rankStandardRepository)
 	measurementUsecase := appmeasurement.NewMeasurementUsecase(authService, userService, measurementRepository, customerRepository, measurementItemRepository)
 	measurementItemUsecase := appmeasurementitem.NewMeasurementItemUsecase(authService, measurementItemRepository)
 	organizationUsecase := apporganization.NewOrganizationUsecase(authService, userService, organizationRepository)
@@ -166,6 +175,7 @@ func run() error {
 
 	healthServer := health.NewServer()
 	customerHandler := grpccustomer.NewCustomerHandler(customerUsecase)
+	judgmentHandler := grpcjudgment.NewJudgmentHandler(judgmentUsecase)
 	measurementHandler := grpcmeasurement.NewMeasurementHandler(measurementUsecase)
 	measurementItemHandler := grpcmeasurementitem.NewMeasurementItemHandler(measurementItemUsecase)
 	organizationHandler := grpcorganization.NewOrganizationHandler(organizationUsecase)
@@ -173,6 +183,7 @@ func run() error {
 
 	grpc_health_v1.RegisterHealthServer(server, healthServer)
 	customerv1.RegisterCustomerServiceServer(server, customerHandler)
+	judgmentv1.RegisterJudgmentServiceServer(server, judgmentHandler)
 	measurementv1.RegisterMeasurementServiceServer(server, measurementHandler)
 	measurementitemv1.RegisterMeasurementItemServiceServer(server, measurementItemHandler)
 	organizationv1.RegisterOrganizationServiceServer(server, organizationHandler)
@@ -180,6 +191,7 @@ func run() error {
 
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("customer", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("judgment", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("measurement", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("measurementitem", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("organization", grpc_health_v1.HealthCheckResponse_SERVING)
