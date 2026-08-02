@@ -153,6 +153,20 @@ func (mr *MockMeasurementItemMockRecorder) ScoreDirection() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScoreDirection", reflect.TypeOf((*MockMeasurementItem)(nil).ScoreDirection))
 }
 
+// SideAggregation mocks base method.
+func (m *MockMeasurementItem) SideAggregation() measurementitem.SideAggregation {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SideAggregation")
+	ret0, _ := ret[0].(measurementitem.SideAggregation)
+	return ret0
+}
+
+// SideAggregation indicates an expected call of SideAggregation.
+func (mr *MockMeasurementItemMockRecorder) SideAggregation() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SideAggregation", reflect.TypeOf((*MockMeasurementItem)(nil).SideAggregation))
+}
+
 // TrialCount mocks base method.
 func (m *MockMeasurementItem) TrialCount() measurementitem.TrialCount {
 	m.ctrl.T.Helper()

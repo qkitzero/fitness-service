@@ -34,7 +34,7 @@ const (
 )
 
 var (
-	measurementItemColumns = []string{"id", "code", "name", "category", "unit", "trial_count", "bilateral", "value_type", "score_direction", "created_at", "updated_at"}
+	measurementItemColumns = []string{"id", "code", "name", "category", "unit", "trial_count", "bilateral", "value_type", "score_direction", "side_aggregation", "created_at", "updated_at"}
 	elementColumns         = []string{"measurement_item_id", "element", "created_at", "updated_at"}
 )
 
@@ -72,14 +72,14 @@ func TestList(t *testing.T) {
 			wantElements:        [][]string{{}, {}, {}, {}, {}, {}, {"muscle_endurance"}, {"muscle_strength"}},
 			setup: func(mock sqlmock.Sqlmock) {
 				measurementItemRows := sqlmock.NewRows(measurementItemColumns).
-					AddRow(muscleMassID, "muscle_mass", "筋肉量", "body_composition", "kg", 1, false, "numeric", nil, createdAt, updatedAt).
-					AddRow(bodyFatPercentageID, "body_fat_percentage", "体脂肪率", "body_composition", "percent", 1, false, "numeric", nil, createdAt, updatedAt).
-					AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", "higher_is_better", createdAt, updatedAt).
-					AddRow(cs30ID, "cs30", "CS-30（30秒立ち座り）", "motor_function", "count", 1, false, "numeric", "higher_is_better", createdAt, updatedAt).
-					AddRow(weightID, "weight", "体重", "physique", "kg", 1, false, "numeric", nil, createdAt, updatedAt).
-					AddRow(heightID, "height", "身長", "physique", "cm", 1, false, "numeric", nil, createdAt, updatedAt).
-					AddRow(pulseRateID, "pulse_rate", "脈拍", "vital", "bpm", 1, false, "numeric", nil, createdAt, updatedAt).
-					AddRow(bloodPressureID, "blood_pressure", "血圧", "vital", "mmHg", 1, false, "paired", nil, createdAt, updatedAt)
+					AddRow(muscleMassID, "muscle_mass", "筋肉量", "body_composition", "kg", 1, false, "numeric", nil, "mean", createdAt, updatedAt).
+					AddRow(bodyFatPercentageID, "body_fat_percentage", "体脂肪率", "body_composition", "percent", 1, false, "numeric", nil, "mean", createdAt, updatedAt).
+					AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", "higher_is_better", "mean", createdAt, updatedAt).
+					AddRow(cs30ID, "cs30", "CS-30（30秒立ち座り）", "motor_function", "count", 1, false, "numeric", "higher_is_better", "mean", createdAt, updatedAt).
+					AddRow(weightID, "weight", "体重", "physique", "kg", 1, false, "numeric", nil, "mean", createdAt, updatedAt).
+					AddRow(heightID, "height", "身長", "physique", "cm", 1, false, "numeric", nil, "mean", createdAt, updatedAt).
+					AddRow(pulseRateID, "pulse_rate", "脈拍", "vital", "bpm", 1, false, "numeric", nil, "mean", createdAt, updatedAt).
+					AddRow(bloodPressureID, "blood_pressure", "血圧", "vital", "mmHg", 1, false, "paired", nil, "mean", createdAt, updatedAt)
 				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
 					WillReturnRows(measurementItemRows)
 				mock.ExpectQuery(regexp.QuoteMeta(elementsByEightItemIDsSQL)).
@@ -105,7 +105,7 @@ func TestList(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
 					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
-						AddRow(sideStepID, "side_step", "反復横跳び", "motor_function", "count", 1, false, "numeric", "higher_is_better", createdAt, updatedAt))
+						AddRow(sideStepID, "side_step", "反復横跳び", "motor_function", "count", 1, false, "numeric", "higher_is_better", "mean", createdAt, updatedAt))
 				mock.ExpectQuery(regexp.QuoteMeta(elementsByItemIDSQL)).
 					WithArgs(sideStepID).
 					WillReturnRows(sqlmock.NewRows(elementColumns).
@@ -145,7 +145,7 @@ func TestList(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
 					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
-						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", "higher_is_better", createdAt, updatedAt))
+						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", "higher_is_better", "mean", createdAt, updatedAt))
 				mock.ExpectQuery(regexp.QuoteMeta(elementsByItemIDSQL)).
 					WithArgs(gripStrengthID).
 					WillReturnError(errors.New("list measurement item elements error"))
@@ -157,7 +157,7 @@ func TestList(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
 					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
-						AddRow("not-a-uuid", "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", "higher_is_better", createdAt, updatedAt))
+						AddRow("not-a-uuid", "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", "higher_is_better", "mean", createdAt, updatedAt))
 			},
 		},
 		{
@@ -166,7 +166,7 @@ func TestList(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
 					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
-						AddRow(gripStrengthID, "GRIP STRENGTH!!", "握力", "motor_function", "kg", 2, true, "numeric", "higher_is_better", createdAt, updatedAt))
+						AddRow(gripStrengthID, "GRIP STRENGTH!!", "握力", "motor_function", "kg", 2, true, "numeric", "higher_is_better", "mean", createdAt, updatedAt))
 				mock.ExpectQuery(regexp.QuoteMeta(elementsByItemIDSQL)).
 					WithArgs(gripStrengthID).
 					WillReturnRows(sqlmock.NewRows(elementColumns))
@@ -178,7 +178,7 @@ func TestList(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
 					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
-						AddRow(gripStrengthID, "grip_strength", "", "motor_function", "kg", 2, true, "numeric", "higher_is_better", createdAt, updatedAt))
+						AddRow(gripStrengthID, "grip_strength", "", "motor_function", "kg", 2, true, "numeric", "higher_is_better", "mean", createdAt, updatedAt))
 				mock.ExpectQuery(regexp.QuoteMeta(elementsByItemIDSQL)).
 					WithArgs(gripStrengthID).
 					WillReturnRows(sqlmock.NewRows(elementColumns))
@@ -190,7 +190,7 @@ func TestList(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
 					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
-						AddRow(gripStrengthID, "grip_strength", "握力", "vitals", "kg", 2, true, "numeric", "higher_is_better", createdAt, updatedAt))
+						AddRow(gripStrengthID, "grip_strength", "握力", "vitals", "kg", 2, true, "numeric", "higher_is_better", "mean", createdAt, updatedAt))
 				mock.ExpectQuery(regexp.QuoteMeta(elementsByItemIDSQL)).
 					WithArgs(gripStrengthID).
 					WillReturnRows(sqlmock.NewRows(elementColumns))
@@ -202,7 +202,7 @@ func TestList(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
 					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
-						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kilogram", 2, true, "numeric", "higher_is_better", createdAt, updatedAt))
+						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kilogram", 2, true, "numeric", "higher_is_better", "mean", createdAt, updatedAt))
 				mock.ExpectQuery(regexp.QuoteMeta(elementsByItemIDSQL)).
 					WithArgs(gripStrengthID).
 					WillReturnRows(sqlmock.NewRows(elementColumns))
@@ -214,7 +214,7 @@ func TestList(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
 					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
-						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", -1, true, "numeric", "higher_is_better", createdAt, updatedAt))
+						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", -1, true, "numeric", "higher_is_better", "mean", createdAt, updatedAt))
 				mock.ExpectQuery(regexp.QuoteMeta(elementsByItemIDSQL)).
 					WithArgs(gripStrengthID).
 					WillReturnRows(sqlmock.NewRows(elementColumns))
@@ -226,7 +226,7 @@ func TestList(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
 					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
-						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "bogus", "higher_is_better", createdAt, updatedAt))
+						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "bogus", "higher_is_better", "mean", createdAt, updatedAt))
 				mock.ExpectQuery(regexp.QuoteMeta(elementsByItemIDSQL)).
 					WithArgs(gripStrengthID).
 					WillReturnRows(sqlmock.NewRows(elementColumns))
@@ -238,7 +238,19 @@ func TestList(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
 					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
-						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", "bigger_is_better", createdAt, updatedAt))
+						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", "bigger_is_better", "mean", createdAt, updatedAt))
+				mock.ExpectQuery(regexp.QuoteMeta(elementsByItemIDSQL)).
+					WithArgs(gripStrengthID).
+					WillReturnRows(sqlmock.NewRows(elementColumns))
+			},
+		},
+		{
+			name:    "failure unknown side aggregation",
+			success: false,
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
+					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
+						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", "higher_is_better", "median", createdAt, updatedAt))
 				mock.ExpectQuery(regexp.QuoteMeta(elementsByItemIDSQL)).
 					WithArgs(gripStrengthID).
 					WillReturnRows(sqlmock.NewRows(elementColumns))
@@ -250,7 +262,7 @@ func TestList(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
 					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
-						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", "higher_is_better", createdAt, updatedAt))
+						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", "higher_is_better", "mean", createdAt, updatedAt))
 				mock.ExpectQuery(regexp.QuoteMeta(elementsByItemIDSQL)).
 					WithArgs(gripStrengthID).
 					WillReturnRows(sqlmock.NewRows(elementColumns).
@@ -379,8 +391,8 @@ func TestFindByIDs(t *testing.T) {
 				mock.ExpectQuery(regexp.QuoteMeta(findByIDsSQL)).
 					WithArgs(gripStrengthID, pulseRateID).
 					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
-						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", "higher_is_better", createdAt, updatedAt).
-						AddRow(pulseRateID, "pulse_rate", "脈拍", "vital", "bpm", 1, false, "numeric", nil, createdAt, updatedAt))
+						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", "higher_is_better", "mean", createdAt, updatedAt).
+						AddRow(pulseRateID, "pulse_rate", "脈拍", "vital", "bpm", 1, false, "numeric", nil, "mean", createdAt, updatedAt))
 				mock.ExpectQuery(regexp.QuoteMeta(elementsByTwoItemIDsSQL)).
 					WithArgs(gripStrengthID, pulseRateID).
 					WillReturnRows(sqlmock.NewRows(elementColumns).
@@ -397,7 +409,7 @@ func TestFindByIDs(t *testing.T) {
 				mock.ExpectQuery(regexp.QuoteMeta(findByIDsSQL)).
 					WithArgs(gripStrengthID, unknownID).
 					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
-						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", "higher_is_better", createdAt, updatedAt))
+						AddRow(gripStrengthID, "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", "higher_is_better", "mean", createdAt, updatedAt))
 				mock.ExpectQuery(regexp.QuoteMeta(elementsByItemIDSQL)).
 					WithArgs(gripStrengthID).
 					WillReturnRows(sqlmock.NewRows(elementColumns).
@@ -430,7 +442,7 @@ func TestFindByIDs(t *testing.T) {
 				mock.ExpectQuery(regexp.QuoteMeta(findByIDsSQL)).
 					WithArgs(gripStrengthID, pulseRateID).
 					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
-						AddRow(gripStrengthID, "grip_strength", "握力", "vitals", "kg", 2, true, "numeric", "higher_is_better", createdAt, updatedAt))
+						AddRow(gripStrengthID, "grip_strength", "握力", "vitals", "kg", 2, true, "numeric", "higher_is_better", "mean", createdAt, updatedAt))
 				mock.ExpectQuery(regexp.QuoteMeta(elementsByItemIDSQL)).
 					WithArgs(gripStrengthID).
 					WillReturnRows(sqlmock.NewRows(elementColumns))
