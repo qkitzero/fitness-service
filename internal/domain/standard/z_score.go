@@ -31,3 +31,20 @@ func NewZScore(f float64) (ZScore, error) {
 	}
 	return ZScore(f), nil
 }
+
+func MeanZScore(zScores []ZScore) ZScore {
+	if len(zScores) == 0 {
+		return ZScore(0)
+	}
+
+	sum := int64(0)
+	for _, zScore := range zScores {
+		sum += int64(math.Round(zScore.Float64() * zScoreScale))
+	}
+
+	count := int64(len(zScores))
+	if sum < 0 {
+		return ZScore(float64(-((-2*sum + count) / (2 * count))) / zScoreScale)
+	}
+	return ZScore(float64((2*sum+count)/(2*count)) / zScoreScale)
+}
