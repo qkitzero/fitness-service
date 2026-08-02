@@ -1,10 +1,7 @@
 package judgment
 
-import "fmt"
-
-const (
-	motorAgeMin = 0
-	motorAgeMax = 150
+import (
+	"github.com/qkitzero/fitness-service/internal/domain/standard"
 )
 
 type MotorAge int
@@ -13,9 +10,6 @@ func (m MotorAge) Int() int {
 	return int(m)
 }
 
-func NewMotorAge(n int) (MotorAge, error) {
-	if n < motorAgeMin || n > motorAgeMax {
-		return MotorAge(0), fmt.Errorf("invalid motor age")
-	}
-	return MotorAge(n), nil
+func NewMotorAge(ageRange standard.AgeRange) MotorAge {
+	return MotorAge(ageRange.Median())
 }

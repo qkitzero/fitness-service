@@ -153,14 +153,14 @@ func newElementEvaluations(
 	itemByID map[measurementitem.MeasurementItemID]measurementitem.MeasurementItem,
 	rankStandards []standard.RankStandard,
 ) []ElementEvaluation {
-	zScoresByElement := make(map[measurementitem.Element][]int64)
+	zScoresByElement := make(map[measurementitem.Element][]standard.ZScore)
 	elements := make([]measurementitem.Element, 0, len(itemEvaluations))
 	for _, itemEvaluation := range itemEvaluations {
 		for _, element := range itemByID[itemEvaluation.MeasurementItemID()].Elements() {
 			if _, ok := zScoresByElement[element]; !ok {
 				elements = append(elements, element)
 			}
-			zScoresByElement[element] = append(zScoresByElement[element], toHundredths(itemEvaluation.ZScore().Float64()))
+			zScoresByElement[element] = append(zScoresByElement[element], itemEvaluation.ZScore())
 		}
 	}
 
@@ -170,16 +170,7 @@ func newElementEvaluations(
 
 	elementEvaluations := make([]ElementEvaluation, 0, len(elements))
 	for _, element := range elements {
-		zScores := zScoresByElement[element]
-		sum := int64(0)
-		for _, zScore := range zScores {
-			sum += zScore
-		}
-
-		zScore, err := standard.NewZScore(fromHundredths(divideRounded(sum, int64(len(zScores)))))
-		if err != nil {
-			continue
-		}
+		zScore := standard.MeanZScore(zScoresByElement[element])
 		rank, ok := findRank(rankStandards, zScore)
 		if !ok {
 			continue
@@ -253,10 +244,7 @@ func newMotorAge(
 		}
 	}
 
-	motorAge, err := NewMotorAge(best.Median())
-	if err != nil {
-		return nil
-	}
+	motorAge := NewMotorAge(best)
 
 	return &motorAge
 }
