@@ -31,6 +31,9 @@ mock-gen:
 	go tool mockgen -source=internal/domain/customer/customer.go -destination=mocks/domain/customer/mock_customer.go -package=mocks
 	go tool mockgen -source=internal/domain/customer/repository.go -destination=mocks/domain/customer/mock_repository.go -package=mocks
 	go tool mockgen -source=internal/application/customer/usecase.go -destination=mocks/application/customer/mock_usecase.go -package=mocks
+	go tool mockgen -source=internal/domain/judgment/judgment.go -destination=mocks/domain/judgment/mock_judgment.go -package=mocks
+	go tool mockgen -source=internal/domain/judgment/repository.go -destination=mocks/domain/judgment/mock_repository.go -package=mocks
+	go tool mockgen -source=internal/application/judgment/usecase.go -destination=mocks/application/judgment/mock_usecase.go -package=mocks
 	go tool mockgen -source=internal/domain/measurement/measurement.go -destination=mocks/domain/measurement/mock_measurement.go -package=mocks
 	go tool mockgen -source=internal/domain/measurement/measurement_entry.go -destination=mocks/domain/measurement/mock_measurement_entry.go -package=mocks
 	go tool mockgen -source=internal/domain/measurement/repository.go -destination=mocks/domain/measurement/mock_repository.go -package=mocks
@@ -41,6 +44,10 @@ mock-gen:
 	go tool mockgen -source=internal/domain/organization/organization.go -destination=mocks/domain/organization/mock_organization.go -package=mocks
 	go tool mockgen -source=internal/domain/organization/repository.go -destination=mocks/domain/organization/mock_repository.go -package=mocks
 	go tool mockgen -source=internal/application/organization/usecase.go -destination=mocks/application/organization/mock_usecase.go -package=mocks
+	go tool mockgen -source=internal/domain/standard/age_group_standard.go -destination=mocks/domain/standard/mock_age_group_standard.go -package=mocks
+	go tool mockgen -source=internal/domain/standard/age_group_standard_repository.go -destination=mocks/domain/standard/mock_age_group_standard_repository.go -package=mocks
+	go tool mockgen -source=internal/domain/standard/rank_standard.go -destination=mocks/domain/standard/mock_rank_standard.go -package=mocks
+	go tool mockgen -source=internal/domain/standard/rank_standard_repository.go -destination=mocks/domain/standard/mock_rank_standard_repository.go -package=mocks
 	go tool mockgen -source=internal/domain/tenant/profile.go -destination=mocks/domain/tenant/mock_profile.go -package=mocks
 	go tool mockgen -source=internal/domain/tenant/profile_repository.go -destination=mocks/domain/tenant/mock_profile_repository.go -package=mocks
 	go tool mockgen -source=internal/application/tenant/usecase.go -destination=mocks/application/tenant/mock_usecase.go -package=mocks

@@ -19,6 +19,7 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 
 	customerv1 "github.com/qkitzero/fitness-service/gen/go/customer/v1"
+	judgmentv1 "github.com/qkitzero/fitness-service/gen/go/judgment/v1"
 	measurementv1 "github.com/qkitzero/fitness-service/gen/go/measurement/v1"
 	measurementitemv1 "github.com/qkitzero/fitness-service/gen/go/measurementitem/v1"
 	organizationv1 "github.com/qkitzero/fitness-service/gen/go/organization/v1"
@@ -108,6 +109,10 @@ func run() error {
 
 	if err := customerv1.RegisterCustomerServiceHandler(ctx, mux, conn); err != nil {
 		return fmt.Errorf("register customer handler: %w", err)
+	}
+
+	if err := judgmentv1.RegisterJudgmentServiceHandler(ctx, mux, conn); err != nil {
+		return fmt.Errorf("register judgment handler: %w", err)
 	}
 
 	if err := measurementv1.RegisterMeasurementServiceHandler(ctx, mux, conn); err != nil {

@@ -7,6 +7,8 @@ import (
 
 func TestNewMeasurementItem(t *testing.T) {
 	t.Parallel()
+	higherIsBetter := ScoreDirectionHigherIsBetter
+	lowerIsBetter := ScoreDirectionLowerIsBetter
 	tests := []struct {
 		name            string
 		code            string
@@ -16,10 +18,16 @@ func TestNewMeasurementItem(t *testing.T) {
 		trialCount      int
 		bilateral       bool
 		valueType       string
+		scoreDirection  *ScoreDirection
+		sideAggregation SideAggregation
+		elements        []Element
 	}{
-		{"success new measurement item", "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric"},
-		{"success new measurement item without bilateral", "blood_pressure", "血圧", "vital", "mmHg", 1, false, "paired"},
-		{"success new measurement item of another category", "body_fat_percentage", "体脂肪率", "body_composition", "percent", 1, false, "numeric"},
+		{"success new measurement item", "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", &higherIsBetter, SideAggregationMean, []Element{ElementMuscleStrength}},
+		{"success new measurement item without bilateral", "blood_pressure", "血圧", "vital", "mmHg", 1, false, "paired", nil, SideAggregationMean, nil},
+		{"success new measurement item of another category", "body_fat_percentage", "体脂肪率", "body_composition", "percent", 1, false, "numeric", nil, SideAggregationMean, []Element{}},
+		{"success new measurement item scored lower is better", "walk_5m", "5m歩行", "motor_function", "sec", 2, false, "numeric", &lowerIsBetter, SideAggregationMean, []Element{ElementMobility}},
+		{"success new measurement item aggregated by the best side", "eyes_open_one_leg_stand", "開眼片足立ち", "motor_function", "sec", 2, true, "numeric", &higherIsBetter, SideAggregationBest, []Element{ElementBalance}},
+		{"success new measurement item of multiple elements", "side_step", "反復横跳び", "motor_function", "count", 1, false, "numeric", &higherIsBetter, SideAggregationMean, []Element{ElementAgility, ElementMobility}},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -36,7 +44,7 @@ func TestNewMeasurementItem(t *testing.T) {
 			createdAt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 			updatedAt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
 
-			m := NewMeasurementItem(id, code, measurementName, category, unit, trialCount, tt.bilateral, valueType, createdAt, updatedAt)
+			m := NewMeasurementItem(id, code, measurementName, category, unit, trialCount, tt.bilateral, valueType, tt.scoreDirection, tt.sideAggregation, tt.elements, createdAt, updatedAt)
 
 			if m.ID() != id {
 				t.Errorf("ID() = %v, want %v", m.ID(), id)
@@ -62,11 +70,86 @@ func TestNewMeasurementItem(t *testing.T) {
 			if m.ValueType() != valueType {
 				t.Errorf("ValueType() = %v, want %v", m.ValueType(), valueType)
 			}
+			if m.SideAggregation() != tt.sideAggregation {
+				t.Errorf("SideAggregation() = %v, want %v", m.SideAggregation(), tt.sideAggregation)
+			}
+			switch {
+			case tt.scoreDirection == nil:
+				if m.ScoreDirection() != nil {
+					t.Errorf("ScoreDirection() = %v, want nil", m.ScoreDirection())
+				}
+			case m.ScoreDirection() == nil:
+				t.Errorf("ScoreDirection() = nil, want %v", *tt.scoreDirection)
+			case *m.ScoreDirection() != *tt.scoreDirection:
+				t.Errorf("ScoreDirection() = %v, want %v", *m.ScoreDirection(), *tt.scoreDirection)
+			}
+			if len(m.Elements()) != len(tt.elements) {
+				t.Errorf("len(Elements()) = %v, want %v", len(m.Elements()), len(tt.elements))
+			}
+			for i, element := range tt.elements {
+				if i >= len(m.Elements()) {
+					break
+				}
+				if m.Elements()[i] != element {
+					t.Errorf("Elements()[%d] = %v, want %v", i, m.Elements()[i], element)
+				}
+			}
 			if !m.CreatedAt().Equal(createdAt) {
 				t.Errorf("CreatedAt() = %v, want %v", m.CreatedAt(), createdAt)
 			}
 			if !m.UpdatedAt().Equal(updatedAt) {
 				t.Errorf("UpdatedAt() = %v, want %v", m.UpdatedAt(), updatedAt)
+			}
+		})
+	}
+}
+
+func TestMeasurementItemIsolatesMutableState(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		mutate func(m MeasurementItem, scoreDirection *ScoreDirection, elements []Element)
+	}{
+		{
+			name: "mutating the constructor arguments does not affect the measurement item",
+			mutate: func(_ MeasurementItem, scoreDirection *ScoreDirection, elements []Element) {
+				*scoreDirection = ScoreDirectionLowerIsBetter
+				elements[0] = ElementMobility
+			},
+		},
+		{
+			name: "mutating the getter results does not affect the measurement item",
+			mutate: func(m MeasurementItem, _ *ScoreDirection, _ []Element) {
+				*m.ScoreDirection() = ScoreDirectionLowerIsBetter
+				m.Elements()[0] = ElementMobility
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			code, _ := NewCode("grip_strength")
+			measurementName, _ := NewName("握力")
+			category, _ := NewCategory("motor_function")
+			unit, _ := NewUnit("kg")
+			trialCount, _ := NewTrialCount(2)
+			valueType, _ := NewValueType("numeric")
+			createdAt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+			updatedAt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
+			scoreDirection := ScoreDirectionHigherIsBetter
+			elements := []Element{ElementMuscleStrength}
+
+			m := NewMeasurementItem(NewMeasurementItemID(), code, measurementName, category, unit, trialCount, true, valueType, &scoreDirection, SideAggregationMean, elements, createdAt, updatedAt)
+
+			tt.mutate(m, &scoreDirection, elements)
+
+			if *m.ScoreDirection() != ScoreDirectionHigherIsBetter {
+				t.Errorf("ScoreDirection() = %v, want %v", *m.ScoreDirection(), ScoreDirectionHigherIsBetter)
+			}
+			if m.Elements()[0] != ElementMuscleStrength {
+				t.Errorf("Elements()[0] = %v, want %v", m.Elements()[0], ElementMuscleStrength)
 			}
 		})
 	}
