@@ -90,7 +90,7 @@ func toProtoMeasurementItem(m domainmeasurementitem.MeasurementItem) (*measureme
 		return nil, err
 	}
 	trialCount := m.TrialCount().Int()
-	if trialCount < 0 || trialCount > math.MaxUint32 {
+	if trialCount < 0 || int64(trialCount) > math.MaxUint32 {
 		return nil, fmt.Errorf("trial count %d out of range", trialCount)
 	}
 

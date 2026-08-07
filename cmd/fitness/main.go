@@ -25,12 +25,14 @@ import (
 	measurementitemv1 "github.com/qkitzero/fitness-service/gen/go/measurementitem/v1"
 	organizationv1 "github.com/qkitzero/fitness-service/gen/go/organization/v1"
 	tenantv1 "github.com/qkitzero/fitness-service/gen/go/tenant/v1"
+	trainingv1 "github.com/qkitzero/fitness-service/gen/go/training/v1"
 	appcustomer "github.com/qkitzero/fitness-service/internal/application/customer"
 	appjudgment "github.com/qkitzero/fitness-service/internal/application/judgment"
 	appmeasurement "github.com/qkitzero/fitness-service/internal/application/measurement"
 	appmeasurementitem "github.com/qkitzero/fitness-service/internal/application/measurementitem"
 	apporganization "github.com/qkitzero/fitness-service/internal/application/organization"
 	apptenant "github.com/qkitzero/fitness-service/internal/application/tenant"
+	apptraining "github.com/qkitzero/fitness-service/internal/application/training"
 	apiauth "github.com/qkitzero/fitness-service/internal/infrastructure/api/auth"
 	apiuser "github.com/qkitzero/fitness-service/internal/infrastructure/api/user"
 	infracustomer "github.com/qkitzero/fitness-service/internal/infrastructure/customer"
@@ -41,12 +43,14 @@ import (
 	infraorganization "github.com/qkitzero/fitness-service/internal/infrastructure/organization"
 	infrastandard "github.com/qkitzero/fitness-service/internal/infrastructure/standard"
 	infratenant "github.com/qkitzero/fitness-service/internal/infrastructure/tenant"
+	infratraining "github.com/qkitzero/fitness-service/internal/infrastructure/training"
 	grpccustomer "github.com/qkitzero/fitness-service/internal/interface/grpc/customer"
 	grpcjudgment "github.com/qkitzero/fitness-service/internal/interface/grpc/judgment"
 	grpcmeasurement "github.com/qkitzero/fitness-service/internal/interface/grpc/measurement"
 	grpcmeasurementitem "github.com/qkitzero/fitness-service/internal/interface/grpc/measurementitem"
 	grpcorganization "github.com/qkitzero/fitness-service/internal/interface/grpc/organization"
 	grpctenant "github.com/qkitzero/fitness-service/internal/interface/grpc/tenant"
+	grpctraining "github.com/qkitzero/fitness-service/internal/interface/grpc/training"
 	groupv1 "github.com/qkitzero/user-service/gen/go/group/v1"
 )
 
@@ -163,6 +167,7 @@ func run() error {
 	organizationRepository := infraorganization.NewOrganizationRepository(gormDB)
 	rankStandardRepository := infrastandard.NewRankStandardRepository(gormDB)
 	tenantProfileRepository := infratenant.NewProfileRepository(gormDB)
+	trainingMenuRepository := infratraining.NewTrainingMenuRepository(gormDB)
 
 	authService := apiauth.NewAuthService(authServiceClient)
 	userService := apiuser.NewUserService(groupServiceClient)
@@ -172,6 +177,7 @@ func run() error {
 	measurementItemUsecase := appmeasurementitem.NewMeasurementItemUsecase(authService, measurementItemRepository)
 	organizationUsecase := apporganization.NewOrganizationUsecase(authService, userService, organizationRepository)
 	tenantProfileUsecase := apptenant.NewProfileUsecase(authService, userService, tenantProfileRepository)
+	trainingMenuUsecase := apptraining.NewTrainingMenuUsecase(authService, trainingMenuRepository)
 
 	healthServer := health.NewServer()
 	customerHandler := grpccustomer.NewCustomerHandler(customerUsecase)
@@ -180,6 +186,7 @@ func run() error {
 	measurementItemHandler := grpcmeasurementitem.NewMeasurementItemHandler(measurementItemUsecase)
 	organizationHandler := grpcorganization.NewOrganizationHandler(organizationUsecase)
 	tenantProfileHandler := grpctenant.NewProfileHandler(tenantProfileUsecase)
+	trainingMenuHandler := grpctraining.NewTrainingMenuHandler(trainingMenuUsecase)
 
 	grpc_health_v1.RegisterHealthServer(server, healthServer)
 	customerv1.RegisterCustomerServiceServer(server, customerHandler)
@@ -188,6 +195,7 @@ func run() error {
 	measurementitemv1.RegisterMeasurementItemServiceServer(server, measurementItemHandler)
 	organizationv1.RegisterOrganizationServiceServer(server, organizationHandler)
 	tenantv1.RegisterProfileServiceServer(server, tenantProfileHandler)
+	trainingv1.RegisterTrainingMenuServiceServer(server, trainingMenuHandler)
 
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("customer", grpc_health_v1.HealthCheckResponse_SERVING)
@@ -196,6 +204,7 @@ func run() error {
 	healthServer.SetServingStatus("measurementitem", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("organization", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("tenant", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("training", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	if cfg.Env == "development" {
 		reflection.Register(server)
