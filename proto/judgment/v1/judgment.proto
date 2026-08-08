@@ -16,6 +16,15 @@ service JudgmentService {
       body: "*"
     };
   }
+  rpc UpsertPrescription(UpsertPrescriptionRequest) returns (UpsertPrescriptionResponse) {
+    option (google.api.http) = {
+      put: "/v1/measurement/{measurement_id}/prescription"
+      body: "*"
+    };
+  }
+  rpc DeletePrescription(DeletePrescriptionRequest) returns (DeletePrescriptionResponse) {
+    option (google.api.http) = {delete: "/v1/measurement/{measurement_id}/prescription"};
+  }
 }
 
 enum Rank {
@@ -37,6 +46,28 @@ enum Element {
   ELEMENT_MOBILITY = 6;
 }
 
+enum PrescriptionSource {
+  PRESCRIPTION_SOURCE_UNSPECIFIED = 0;
+  PRESCRIPTION_SOURCE_ELEMENT = 1;
+  PRESCRIPTION_SOURCE_FIXED = 2;
+  PRESCRIPTION_SOURCE_AGE_DECADE = 3;
+  PRESCRIPTION_SOURCE_MANUAL = 4;
+}
+
+enum PrescribedPart {
+  PRESCRIBED_PART_UNSPECIFIED = 0;
+  PRESCRIBED_PART_UPPER_LIMB = 1;
+  PRESCRIBED_PART_LOWER_LIMB = 2;
+  PRESCRIBED_PART_WHOLE_BODY = 3;
+}
+
+enum PrescribedUnit {
+  PRESCRIBED_UNIT_UNSPECIFIED = 0;
+  PRESCRIBED_UNIT_REPS = 1;
+  PRESCRIBED_UNIT_SECONDS = 2;
+  PRESCRIBED_UNIT_MINUTES = 3;
+}
+
 message ItemEvaluation {
   string measurement_item_id = 1;
   double value = 2;
@@ -51,6 +82,26 @@ message ElementEvaluation {
   Rank rank = 3;
 }
 
+message PrescribedMenu {
+  PrescriptionSource source = 1;
+  optional Element element = 2;
+  optional PrescribedPart part = 3;
+  string training_menu_id = 4;
+  string training_menu_name = 5;
+  uint32 amount = 6;
+  PrescribedUnit unit = 7;
+  uint32 sets = 8;
+}
+
+message PrescribedMenuInput {
+  optional Element element = 1;
+  optional PrescribedPart part = 2;
+  string training_menu_id = 3;
+  uint32 amount = 4;
+  PrescribedUnit unit = 5;
+  uint32 sets = 6;
+}
+
 message Judgment {
   string measurement_id = 1;
   repeated ItemEvaluation item_evaluations = 2;
@@ -58,6 +109,7 @@ message Judgment {
   optional uint32 motor_age = 4;
   optional string advice = 5;
   bool is_draft = 6;
+  repeated PrescribedMenu prescribed_menus = 7;
 }
 
 message GetJudgmentRequest {
@@ -77,3 +129,19 @@ message UpsertJudgmentAdviceResponse {
   string measurement_id = 1;
   optional string advice = 2;
 }
+
+message UpsertPrescriptionRequest {
+  string measurement_id = 1;
+  repeated PrescribedMenuInput prescribed_menus = 2;
+}
+
+message UpsertPrescriptionResponse {
+  string measurement_id = 1;
+  repeated PrescribedMenu prescribed_menus = 2;
+}
+
+message DeletePrescriptionRequest {
+  string measurement_id = 1;
+}
+
+message DeletePrescriptionResponse {}

@@ -21,6 +21,8 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	JudgmentService_GetJudgment_FullMethodName          = "/judgment.v1.JudgmentService/GetJudgment"
 	JudgmentService_UpsertJudgmentAdvice_FullMethodName = "/judgment.v1.JudgmentService/UpsertJudgmentAdvice"
+	JudgmentService_UpsertPrescription_FullMethodName   = "/judgment.v1.JudgmentService/UpsertPrescription"
+	JudgmentService_DeletePrescription_FullMethodName   = "/judgment.v1.JudgmentService/DeletePrescription"
 )
 
 // JudgmentServiceClient is the client API for JudgmentService service.
@@ -29,6 +31,8 @@ const (
 type JudgmentServiceClient interface {
 	GetJudgment(ctx context.Context, in *GetJudgmentRequest, opts ...grpc.CallOption) (*GetJudgmentResponse, error)
 	UpsertJudgmentAdvice(ctx context.Context, in *UpsertJudgmentAdviceRequest, opts ...grpc.CallOption) (*UpsertJudgmentAdviceResponse, error)
+	UpsertPrescription(ctx context.Context, in *UpsertPrescriptionRequest, opts ...grpc.CallOption) (*UpsertPrescriptionResponse, error)
+	DeletePrescription(ctx context.Context, in *DeletePrescriptionRequest, opts ...grpc.CallOption) (*DeletePrescriptionResponse, error)
 }
 
 type judgmentServiceClient struct {
@@ -59,12 +63,34 @@ func (c *judgmentServiceClient) UpsertJudgmentAdvice(ctx context.Context, in *Up
 	return out, nil
 }
 
+func (c *judgmentServiceClient) UpsertPrescription(ctx context.Context, in *UpsertPrescriptionRequest, opts ...grpc.CallOption) (*UpsertPrescriptionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpsertPrescriptionResponse)
+	err := c.cc.Invoke(ctx, JudgmentService_UpsertPrescription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *judgmentServiceClient) DeletePrescription(ctx context.Context, in *DeletePrescriptionRequest, opts ...grpc.CallOption) (*DeletePrescriptionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeletePrescriptionResponse)
+	err := c.cc.Invoke(ctx, JudgmentService_DeletePrescription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // JudgmentServiceServer is the server API for JudgmentService service.
 // All implementations must embed UnimplementedJudgmentServiceServer
 // for forward compatibility.
 type JudgmentServiceServer interface {
 	GetJudgment(context.Context, *GetJudgmentRequest) (*GetJudgmentResponse, error)
 	UpsertJudgmentAdvice(context.Context, *UpsertJudgmentAdviceRequest) (*UpsertJudgmentAdviceResponse, error)
+	UpsertPrescription(context.Context, *UpsertPrescriptionRequest) (*UpsertPrescriptionResponse, error)
+	DeletePrescription(context.Context, *DeletePrescriptionRequest) (*DeletePrescriptionResponse, error)
 	mustEmbedUnimplementedJudgmentServiceServer()
 }
 
@@ -80,6 +106,12 @@ func (UnimplementedJudgmentServiceServer) GetJudgment(context.Context, *GetJudgm
 }
 func (UnimplementedJudgmentServiceServer) UpsertJudgmentAdvice(context.Context, *UpsertJudgmentAdviceRequest) (*UpsertJudgmentAdviceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpsertJudgmentAdvice not implemented")
+}
+func (UnimplementedJudgmentServiceServer) UpsertPrescription(context.Context, *UpsertPrescriptionRequest) (*UpsertPrescriptionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpsertPrescription not implemented")
+}
+func (UnimplementedJudgmentServiceServer) DeletePrescription(context.Context, *DeletePrescriptionRequest) (*DeletePrescriptionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeletePrescription not implemented")
 }
 func (UnimplementedJudgmentServiceServer) mustEmbedUnimplementedJudgmentServiceServer() {}
 func (UnimplementedJudgmentServiceServer) testEmbeddedByValue()                         {}
@@ -138,6 +170,42 @@ func _JudgmentService_UpsertJudgmentAdvice_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _JudgmentService_UpsertPrescription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpsertPrescriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JudgmentServiceServer).UpsertPrescription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: JudgmentService_UpsertPrescription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JudgmentServiceServer).UpsertPrescription(ctx, req.(*UpsertPrescriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JudgmentService_DeletePrescription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeletePrescriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JudgmentServiceServer).DeletePrescription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: JudgmentService_DeletePrescription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JudgmentServiceServer).DeletePrescription(ctx, req.(*DeletePrescriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // JudgmentService_ServiceDesc is the grpc.ServiceDesc for JudgmentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -152,6 +220,14 @@ var JudgmentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpsertJudgmentAdvice",
 			Handler:    _JudgmentService_UpsertJudgmentAdvice_Handler,
+		},
+		{
+			MethodName: "UpsertPrescription",
+			Handler:    _JudgmentService_UpsertPrescription_Handler,
+		},
+		{
+			MethodName: "DeletePrescription",
+			Handler:    _JudgmentService_DeletePrescription_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
