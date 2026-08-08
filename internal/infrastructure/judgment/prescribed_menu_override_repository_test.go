@@ -73,6 +73,39 @@ func TestListByMeasurementID(t *testing.T) {
 			},
 		},
 		{
+			name:    "failure invalid stored sort order",
+			success: false,
+			setup: func(mock sqlmock.Sqlmock, measurementID measurement.MeasurementID, trainingMenuID training.TrainingMenuID) {
+				rows := sqlmock.NewRows(columns).
+					AddRow(judgment.NewPrescribedMenuOverrideID(), measurementID, 0, nil, nil, trainingMenuID, 10, training.UnitReps, 3, testCreatedAt, testUpdatedAt)
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "prescribed_menu_overrides" WHERE measurement_id = $1 ORDER BY sort_order`)).
+					WithArgs(measurementID).
+					WillReturnRows(rows)
+			},
+		},
+		{
+			name:    "failure invalid stored amount",
+			success: false,
+			setup: func(mock sqlmock.Sqlmock, measurementID measurement.MeasurementID, trainingMenuID training.TrainingMenuID) {
+				rows := sqlmock.NewRows(columns).
+					AddRow(judgment.NewPrescribedMenuOverrideID(), measurementID, 1, nil, nil, trainingMenuID, 0, training.UnitReps, 3, testCreatedAt, testUpdatedAt)
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "prescribed_menu_overrides" WHERE measurement_id = $1 ORDER BY sort_order`)).
+					WithArgs(measurementID).
+					WillReturnRows(rows)
+			},
+		},
+		{
+			name:    "failure invalid stored sets",
+			success: false,
+			setup: func(mock sqlmock.Sqlmock, measurementID measurement.MeasurementID, trainingMenuID training.TrainingMenuID) {
+				rows := sqlmock.NewRows(columns).
+					AddRow(judgment.NewPrescribedMenuOverrideID(), measurementID, 1, nil, nil, trainingMenuID, 10, training.UnitReps, 0, testCreatedAt, testUpdatedAt)
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "prescribed_menu_overrides" WHERE measurement_id = $1 ORDER BY sort_order`)).
+					WithArgs(measurementID).
+					WillReturnRows(rows)
+			},
+		},
+		{
 			name:    "failure invalid stored element",
 			success: false,
 			setup: func(mock sqlmock.Sqlmock, measurementID measurement.MeasurementID, trainingMenuID training.TrainingMenuID) {
@@ -188,6 +221,18 @@ func TestReplaceByMeasurementID(t *testing.T) {
 					WithArgs(measurementID).
 					WillReturnResult(sqlmock.NewResult(0, 3))
 				mock.ExpectCommit()
+			},
+		},
+		{
+			name:      "failure lock measurement error",
+			success:   false,
+			sortOrder: []int{1},
+			setup: func(mock sqlmock.Sqlmock, measurementID measurement.MeasurementID) {
+				mock.ExpectBegin()
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT id FROM measurements WHERE id = $1 FOR UPDATE`)).
+					WithArgs(measurementID).
+					WillReturnError(errors.New("lock measurement error"))
+				mock.ExpectRollback()
 			},
 		},
 		{

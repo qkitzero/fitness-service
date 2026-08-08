@@ -120,6 +120,7 @@ func TestGetJudgment(t *testing.T) {
 		isDraft                bool
 		getErr                 error
 		prescription           func() domainjudgment.Prescription
+		unmappedSource         bool
 		wantPrescribedMenus    int
 		wantPrescribedLabels   bool
 		wantPrescribedUnit     judgmentv1.PrescribedUnit
@@ -201,6 +202,16 @@ func TestGetJudgment(t *testing.T) {
 			name:          "failure invalid measurement id",
 			measurementID: "",
 			wantCode:      codes.InvalidArgument,
+		},
+		{
+			name:          "failure unmapped prescription source",
+			measurementID: sampleMeasurementID,
+			callUsecase:   true,
+			evaluation: func() domainjudgment.Evaluation {
+				return evaluationOf(nil, rankStandards)
+			},
+			unmappedSource: true,
+			wantCode:       codes.Internal,
 		},
 		{
 			name:          "failure unmapped prescribed element",
@@ -322,6 +333,13 @@ func TestGetJudgment(t *testing.T) {
 					}
 					if tt.prescription != nil {
 						result.Prescription = tt.prescription()
+					}
+					if tt.unmappedSource {
+						mockPrescribedMenu := mocksjudgment.NewMockPrescribedMenu(ctrl)
+						mockPrescribedMenu.EXPECT().Source().Return(domainjudgment.PrescriptionSource("unknown")).AnyTimes()
+						mockPrescription := mocksjudgment.NewMockPrescription(ctrl)
+						mockPrescription.EXPECT().PrescribedMenus().Return([]domainjudgment.PrescribedMenu{mockPrescribedMenu}).AnyTimes()
+						result.Prescription = mockPrescription
 					}
 				}
 				mockUsecase.EXPECT().GetJudgment(gomock.Any(), gomock.Any()).Return(result, tt.getErr).Times(1)
@@ -875,6 +893,7 @@ func TestUpsertPrescription(t *testing.T) {
 		measurementID       string
 		menus               []*judgmentv1.PrescribedMenuInput
 		callUsecase         bool
+		unmappedSource      bool
 		upsertErr           error
 		wantCode            codes.Code
 		wantPrescribedMenus int
@@ -981,6 +1000,14 @@ func TestUpsertPrescription(t *testing.T) {
 			wantCode:      codes.NotFound,
 		},
 		{
+			name:           "failure unmapped prescription source",
+			measurementID:  sampleMeasurementID,
+			menus:          []*judgmentv1.PrescribedMenuInput{validMenu},
+			callUsecase:    true,
+			unmappedSource: true,
+			wantCode:       codes.Internal,
+		},
+		{
 			name:          "failure upsert prescription error",
 			measurementID: sampleMeasurementID,
 			menus:         []*judgmentv1.PrescribedMenuInput{validMenu},
@@ -1002,6 +1029,13 @@ func TestUpsertPrescription(t *testing.T) {
 				var upsertedPrescription domainjudgment.Prescription
 				if tt.upsertErr == nil {
 					upsertedPrescription = prescription()
+				}
+				if tt.unmappedSource {
+					mockPrescribedMenu := mocksjudgment.NewMockPrescribedMenu(ctrl)
+					mockPrescribedMenu.EXPECT().Source().Return(domainjudgment.PrescriptionSource("unknown")).AnyTimes()
+					mockPrescription := mocksjudgment.NewMockPrescription(ctrl)
+					mockPrescription.EXPECT().PrescribedMenus().Return([]domainjudgment.PrescribedMenu{mockPrescribedMenu}).AnyTimes()
+					upsertedPrescription = mockPrescription
 				}
 				mockUsecase.EXPECT().UpsertPrescription(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
 					func(_ context.Context, gotMeasurementID domainmeasurement.MeasurementID, gotMenus []appjudgment.PrescribedMenuInput) (domainjudgment.Prescription, error) {

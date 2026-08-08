@@ -114,6 +114,7 @@ func TestGetJudgment(t *testing.T) {
 		listElementMenusErr      error
 		listFixedMenusErr        error
 		listAgeDecadeMenusErr    error
+		age                      int
 		callFindByMeasurementID  bool
 		advice                   *judgment.Advice
 		findByMeasurementIDErr   error
@@ -218,6 +219,34 @@ func TestGetJudgment(t *testing.T) {
 			callFindByMeasurementID: true,
 			wantItemEvaluations:     1,
 			wantPrescribedMenus:     []judgment.PrescriptionSource{judgment.PrescriptionSourceManual},
+		},
+		{
+			name:                    "success get judgment of a centenarian without age decade menus",
+			success:                 true,
+			ctx:                     context.Background(),
+			userID:                  userID,
+			callFindMeasurement:     true,
+			callFindCustomer:        true,
+			myTenantIDs:             []string{tenantID.String()},
+			gender:                  customer.GenderMale,
+			callListStandards:       true,
+			callPrescribe:           true,
+			age:                     105,
+			callFindByMeasurementID: true,
+			wantPrescribedMenus:     []judgment.PrescriptionSource{judgment.PrescriptionSourceFixed},
+		},
+		{
+			name:                 "failure find training menus of an edited prescription error",
+			ctx:                  context.Background(),
+			userID:               userID,
+			callFindMeasurement:  true,
+			callFindCustomer:     true,
+			myTenantIDs:          []string{tenantID.String()},
+			gender:               customer.GenderMale,
+			callListStandards:    true,
+			callPrescribe:        true,
+			overridden:           true,
+			listTrainingMenusErr: errors.New("find training menus error"),
 		},
 		{
 			name:                "failure list prescribed menu overrides error",
@@ -394,7 +423,11 @@ func TestGetJudgment(t *testing.T) {
 			if tt.callFindMeasurement {
 				var foundMeasurement measurement.Measurement
 				if tt.findMeasurementErr == nil {
-					ageAtMeasurement, _ := measurement.NewAgeAtMeasurement(62)
+					age := tt.age
+					if age == 0 {
+						age = 62
+					}
+					ageAtMeasurement, _ := measurement.NewAgeAtMeasurement(age)
 					mockMeasurement := mocksmeasurement.NewMockMeasurement(ctrl)
 					mockMeasurement.EXPECT().ID().Return(measurementID).AnyTimes()
 					mockMeasurement.EXPECT().CustomerID().Return(customerID).AnyTimes()
@@ -835,6 +868,14 @@ func TestUpsertPrescription(t *testing.T) {
 	editedAmount, _ := training.NewAmount(15)
 	editedSets, _ := training.NewSets(5)
 
+	repeatInput := func(menu PrescribedMenuInput, n int) []PrescribedMenuInput {
+		menus := make([]PrescribedMenuInput, 0, n)
+		for i := 0; i < n; i++ {
+			menus = append(menus, menu)
+		}
+		return menus
+	}
+
 	wallPushInput := PrescribedMenuInput{Element: &muscleStrength, Part: &upperLimb, TrainingMenuID: wallPushMenu.ID(), Amount: editedAmount, Unit: training.UnitReps, Sets: editedSets}
 	walkingInput := PrescribedMenuInput{TrainingMenuID: walkingMenu.ID(), Amount: walkingAmount, Unit: training.UnitMinutes, Sets: walkingSets}
 	unknownInput := PrescribedMenuInput{TrainingMenuID: training.NewTrainingMenuID(), Amount: walkingAmount, Unit: training.UnitMinutes, Sets: walkingSets}
@@ -975,6 +1016,18 @@ func TestUpsertPrescription(t *testing.T) {
 			callReplace:         true,
 			replaceErr:          errors.New("replace prescribed menu overrides error"),
 			wantSortOrders:      []int{1},
+		},
+		{
+			name:                "failure too many prescribed menus",
+			wantErr:             training.ErrInvalidSortOrder,
+			ctx:                 context.Background(),
+			userID:              userID,
+			callFindMeasurement: true,
+			callFindCustomer:    true,
+			myTenantIDs:         []string{tenantID.String()},
+			menus:               repeatInput(walkingInput, 32768),
+			callFindByIDs:       true,
+			foundTrainingMenus:  []training.TrainingMenu{walkingMenu},
 		},
 	}
 	for _, tt := range tests {
