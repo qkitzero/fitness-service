@@ -43,6 +43,20 @@ func (m *MockJudgmentUsecase) EXPECT() *MockJudgmentUsecaseMockRecorder {
 	return m.recorder
 }
 
+// DeletePrescription mocks base method.
+func (m *MockJudgmentUsecase) DeletePrescription(ctx context.Context, measurementID measurement.MeasurementID) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePrescription", ctx, measurementID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeletePrescription indicates an expected call of DeletePrescription.
+func (mr *MockJudgmentUsecaseMockRecorder) DeletePrescription(ctx, measurementID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePrescription", reflect.TypeOf((*MockJudgmentUsecase)(nil).DeletePrescription), ctx, measurementID)
+}
+
 // GetJudgment mocks base method.
 func (m *MockJudgmentUsecase) GetJudgment(ctx context.Context, measurementID measurement.MeasurementID) (judgment.JudgmentResult, error) {
 	m.ctrl.T.Helper()
@@ -71,4 +85,19 @@ func (m *MockJudgmentUsecase) UpsertJudgmentAdvice(ctx context.Context, measurem
 func (mr *MockJudgmentUsecaseMockRecorder) UpsertJudgmentAdvice(ctx, measurementID, patch any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertJudgmentAdvice", reflect.TypeOf((*MockJudgmentUsecase)(nil).UpsertJudgmentAdvice), ctx, measurementID, patch)
+}
+
+// UpsertPrescription mocks base method.
+func (m *MockJudgmentUsecase) UpsertPrescription(ctx context.Context, measurementID measurement.MeasurementID, menus []judgment.PrescribedMenuInput) (judgment0.Prescription, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpsertPrescription", ctx, measurementID, menus)
+	ret0, _ := ret[0].(judgment0.Prescription)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpsertPrescription indicates an expected call of UpsertPrescription.
+func (mr *MockJudgmentUsecaseMockRecorder) UpsertPrescription(ctx, measurementID, menus any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertPrescription", reflect.TypeOf((*MockJudgmentUsecase)(nil).UpsertPrescription), ctx, measurementID, menus)
 }
