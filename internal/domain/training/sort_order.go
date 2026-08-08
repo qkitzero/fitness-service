@@ -1,8 +1,9 @@
 package training
 
-import "fmt"
-
-const sortOrderMin = 1
+const (
+	sortOrderMin = 1
+	sortOrderMax = 32767
+)
 
 type SortOrder int
 
@@ -11,8 +12,8 @@ func (s SortOrder) Int() int {
 }
 
 func NewSortOrder(n int) (SortOrder, error) {
-	if n < sortOrderMin {
-		return SortOrder(0), fmt.Errorf("invalid sort order")
+	if n < sortOrderMin || n > sortOrderMax {
+		return SortOrder(0), ErrInvalidSortOrder
 	}
 	return SortOrder(n), nil
 }

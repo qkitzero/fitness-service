@@ -83,6 +83,72 @@
           "JudgmentService"
         ]
       }
+    },
+    "/v1/measurement/{measurementId}/prescription": {
+      "delete": {
+        "operationId": "JudgmentService_DeletePrescription",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1DeletePrescriptionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "measurementId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "JudgmentService"
+        ]
+      },
+      "put": {
+        "operationId": "JudgmentService_UpsertPrescription",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1UpsertPrescriptionResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "measurementId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/JudgmentServiceUpsertPrescriptionBody"
+            }
+          }
+        ],
+        "tags": [
+          "JudgmentService"
+        ]
+      }
     }
   },
   "definitions": {
@@ -91,6 +157,18 @@
       "properties": {
         "advice": {
           "type": "string"
+        }
+      }
+    },
+    "JudgmentServiceUpsertPrescriptionBody": {
+      "type": "object",
+      "properties": {
+        "prescribedMenus": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PrescribedMenuInput"
+          }
         }
       }
     },
@@ -121,6 +199,9 @@
           }
         }
       }
+    },
+    "v1DeletePrescriptionResponse": {
+      "type": "object"
     },
     "v1Element": {
       "type": "string",
@@ -210,8 +291,102 @@
         },
         "isDraft": {
           "type": "boolean"
+        },
+        "prescribedMenus": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PrescribedMenu"
+          }
         }
       }
+    },
+    "v1PrescribedMenu": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "$ref": "#/definitions/v1PrescriptionSource"
+        },
+        "element": {
+          "$ref": "#/definitions/v1Element"
+        },
+        "part": {
+          "$ref": "#/definitions/v1PrescribedPart"
+        },
+        "trainingMenuId": {
+          "type": "string"
+        },
+        "trainingMenuName": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "unit": {
+          "$ref": "#/definitions/v1PrescribedUnit"
+        },
+        "sets": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "v1PrescribedMenuInput": {
+      "type": "object",
+      "properties": {
+        "element": {
+          "$ref": "#/definitions/v1Element"
+        },
+        "part": {
+          "$ref": "#/definitions/v1PrescribedPart"
+        },
+        "trainingMenuId": {
+          "type": "string"
+        },
+        "amount": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "unit": {
+          "$ref": "#/definitions/v1PrescribedUnit"
+        },
+        "sets": {
+          "type": "integer",
+          "format": "int64"
+        }
+      }
+    },
+    "v1PrescribedPart": {
+      "type": "string",
+      "enum": [
+        "PRESCRIBED_PART_UNSPECIFIED",
+        "PRESCRIBED_PART_UPPER_LIMB",
+        "PRESCRIBED_PART_LOWER_LIMB",
+        "PRESCRIBED_PART_WHOLE_BODY"
+      ],
+      "default": "PRESCRIBED_PART_UNSPECIFIED"
+    },
+    "v1PrescribedUnit": {
+      "type": "string",
+      "enum": [
+        "PRESCRIBED_UNIT_UNSPECIFIED",
+        "PRESCRIBED_UNIT_REPS",
+        "PRESCRIBED_UNIT_SECONDS",
+        "PRESCRIBED_UNIT_MINUTES"
+      ],
+      "default": "PRESCRIBED_UNIT_UNSPECIFIED"
+    },
+    "v1PrescriptionSource": {
+      "type": "string",
+      "enum": [
+        "PRESCRIPTION_SOURCE_UNSPECIFIED",
+        "PRESCRIPTION_SOURCE_ELEMENT",
+        "PRESCRIPTION_SOURCE_FIXED",
+        "PRESCRIPTION_SOURCE_AGE_DECADE",
+        "PRESCRIPTION_SOURCE_MANUAL"
+      ],
+      "default": "PRESCRIPTION_SOURCE_UNSPECIFIED"
     },
     "v1Rank": {
       "type": "string",
@@ -233,6 +408,21 @@
         },
         "advice": {
           "type": "string"
+        }
+      }
+    },
+    "v1UpsertPrescriptionResponse": {
+      "type": "object",
+      "properties": {
+        "measurementId": {
+          "type": "string"
+        },
+        "prescribedMenus": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1PrescribedMenu"
+          }
         }
       }
     }

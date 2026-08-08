@@ -32,6 +32,10 @@ mock-gen:
 	go tool mockgen -source=internal/domain/customer/repository.go -destination=mocks/domain/customer/mock_repository.go -package=mocks
 	go tool mockgen -source=internal/application/customer/usecase.go -destination=mocks/application/customer/mock_usecase.go -package=mocks
 	go tool mockgen -source=internal/domain/judgment/judgment.go -destination=mocks/domain/judgment/mock_judgment.go -package=mocks
+	go tool mockgen -source=internal/domain/judgment/prescribed_menu.go -destination=mocks/domain/judgment/mock_prescribed_menu.go -package=mocks
+	go tool mockgen -source=internal/domain/judgment/prescribed_menu_override.go -destination=mocks/domain/judgment/mock_prescribed_menu_override.go -package=mocks
+	go tool mockgen -source=internal/domain/judgment/prescribed_menu_override_repository.go -destination=mocks/domain/judgment/mock_prescribed_menu_override_repository.go -package=mocks
+	go tool mockgen -source=internal/domain/judgment/prescription.go -destination=mocks/domain/judgment/mock_prescription.go -package=mocks
 	go tool mockgen -source=internal/domain/judgment/repository.go -destination=mocks/domain/judgment/mock_repository.go -package=mocks
 	go tool mockgen -source=internal/application/judgment/usecase.go -destination=mocks/application/judgment/mock_usecase.go -package=mocks
 	go tool mockgen -source=internal/domain/measurement/measurement.go -destination=mocks/domain/measurement/mock_measurement.go -package=mocks
