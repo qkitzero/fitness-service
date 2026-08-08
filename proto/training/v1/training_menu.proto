@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package training.v1;
+
+import "google/api/annotations.proto";
+
+option go_package = "github.com/qkitzero/fitness-service/gen/go/training/v1";
+
+service TrainingMenuService {
+  rpc ListTrainingMenus(ListTrainingMenusRequest) returns (ListTrainingMenusResponse) {
+    option (google.api.http) = {get: "/v1/training-menus"};
+  }
+}
+
+enum TrainingElement {
+  TRAINING_ELEMENT_UNSPECIFIED = 0;
+  TRAINING_ELEMENT_MUSCLE_STRENGTH = 1;
+  TRAINING_ELEMENT_MUSCLE_ENDURANCE = 2;
+  TRAINING_ELEMENT_FLEXIBILITY = 3;
+  TRAINING_ELEMENT_AGILITY = 4;
+  TRAINING_ELEMENT_BALANCE = 5;
+  TRAINING_ELEMENT_MOBILITY = 6;
+}
+
+enum Part {
+  PART_UNSPECIFIED = 0;
+  PART_UPPER_LIMB = 1;
+  PART_LOWER_LIMB = 2;
+  PART_WHOLE_BODY = 3;
+}
+
+enum TrainingUnit {
+  TRAINING_UNIT_UNSPECIFIED = 0;
+  TRAINING_UNIT_REPS = 1;
+  TRAINING_UNIT_SECONDS = 2;
+  TRAINING_UNIT_MINUTES = 3;
+}
+
+message TrainingMenu {
+  string training_menu_id = 1;
+  string code = 2;
+  string name = 3;
+  TrainingElement element = 4;
+  Part part = 5;
+  uint32 amount = 6;
+  TrainingUnit unit = 7;
+  uint32 sets = 8;
+  string instruction = 9;
+}
+
+message ListTrainingMenusRequest {}
+
+message ListTrainingMenusResponse {
+  repeated TrainingMenu training_menus = 1;
+}

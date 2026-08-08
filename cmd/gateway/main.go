@@ -24,6 +24,7 @@ import (
 	measurementitemv1 "github.com/qkitzero/fitness-service/gen/go/measurementitem/v1"
 	organizationv1 "github.com/qkitzero/fitness-service/gen/go/organization/v1"
 	tenantv1 "github.com/qkitzero/fitness-service/gen/go/tenant/v1"
+	trainingv1 "github.com/qkitzero/fitness-service/gen/go/training/v1"
 )
 
 const (
@@ -129,6 +130,10 @@ func run() error {
 
 	if err := tenantv1.RegisterProfileServiceHandler(ctx, mux, conn); err != nil {
 		return fmt.Errorf("register tenant profile handler: %w", err)
+	}
+
+	if err := trainingv1.RegisterTrainingMenuServiceHandler(ctx, mux, conn); err != nil {
+		return fmt.Errorf("register training menu handler: %w", err)
 	}
 
 	srv := &http.Server{

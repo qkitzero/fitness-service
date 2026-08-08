@@ -32,6 +32,10 @@ mock-gen:
 	go tool mockgen -source=internal/domain/customer/repository.go -destination=mocks/domain/customer/mock_repository.go -package=mocks
 	go tool mockgen -source=internal/application/customer/usecase.go -destination=mocks/application/customer/mock_usecase.go -package=mocks
 	go tool mockgen -source=internal/domain/judgment/judgment.go -destination=mocks/domain/judgment/mock_judgment.go -package=mocks
+	go tool mockgen -source=internal/domain/judgment/prescribed_menu.go -destination=mocks/domain/judgment/mock_prescribed_menu.go -package=mocks
+	go tool mockgen -source=internal/domain/judgment/prescribed_menu_override.go -destination=mocks/domain/judgment/mock_prescribed_menu_override.go -package=mocks
+	go tool mockgen -source=internal/domain/judgment/prescribed_menu_override_repository.go -destination=mocks/domain/judgment/mock_prescribed_menu_override_repository.go -package=mocks
+	go tool mockgen -source=internal/domain/judgment/prescription.go -destination=mocks/domain/judgment/mock_prescription.go -package=mocks
 	go tool mockgen -source=internal/domain/judgment/repository.go -destination=mocks/domain/judgment/mock_repository.go -package=mocks
 	go tool mockgen -source=internal/application/judgment/usecase.go -destination=mocks/application/judgment/mock_usecase.go -package=mocks
 	go tool mockgen -source=internal/domain/measurement/measurement.go -destination=mocks/domain/measurement/mock_measurement.go -package=mocks
@@ -51,6 +55,13 @@ mock-gen:
 	go tool mockgen -source=internal/domain/tenant/profile.go -destination=mocks/domain/tenant/mock_profile.go -package=mocks
 	go tool mockgen -source=internal/domain/tenant/profile_repository.go -destination=mocks/domain/tenant/mock_profile_repository.go -package=mocks
 	go tool mockgen -source=internal/application/tenant/usecase.go -destination=mocks/application/tenant/mock_usecase.go -package=mocks
+	go tool mockgen -source=internal/domain/training/age_decade_menu.go -destination=mocks/domain/training/mock_age_decade_menu.go -package=mocks
+	go tool mockgen -source=internal/domain/training/element_menu.go -destination=mocks/domain/training/mock_element_menu.go -package=mocks
+	go tool mockgen -source=internal/domain/training/fixed_menu.go -destination=mocks/domain/training/mock_fixed_menu.go -package=mocks
+	go tool mockgen -source=internal/domain/training/prescription_rule_repository.go -destination=mocks/domain/training/mock_prescription_rule_repository.go -package=mocks
+	go tool mockgen -source=internal/domain/training/training_menu.go -destination=mocks/domain/training/mock_training_menu.go -package=mocks
+	go tool mockgen -source=internal/domain/training/training_menu_repository.go -destination=mocks/domain/training/mock_training_menu_repository.go -package=mocks
+	go tool mockgen -source=internal/application/training/usecase.go -destination=mocks/application/training/mock_usecase.go -package=mocks
 	go tool mockgen -source=internal/application/auth/service.go -destination=mocks/application/auth/mock_service.go -package=mocks
 	go tool mockgen -source=internal/application/user/service.go -destination=mocks/application/user/mock_service.go -package=mocks
 	go tool mockgen -destination=mocks/external/auth/v1/mock_client.go -package=mocks github.com/qkitzero/auth-service/gen/go/auth/v1 AuthServiceClient
