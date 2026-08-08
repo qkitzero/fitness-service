@@ -19,6 +19,7 @@ import (
 	domainmeasurementitem "github.com/qkitzero/fitness-service/internal/domain/measurementitem"
 	domainstaff "github.com/qkitzero/fitness-service/internal/domain/staff"
 	domainstandard "github.com/qkitzero/fitness-service/internal/domain/standard"
+	domaintraining "github.com/qkitzero/fitness-service/internal/domain/training"
 	mocksappjudgment "github.com/qkitzero/fitness-service/mocks/application/judgment"
 	mocksjudgment "github.com/qkitzero/fitness-service/mocks/domain/judgment"
 )
@@ -91,6 +92,25 @@ func TestGetJudgment(t *testing.T) {
 
 	advice, _ := domainjudgment.NewAdvice("週2回のスクワットを継続してください")
 
+	wallPushCode, _ := domaintraining.NewCode("wall_push")
+	wallPushName, _ := domaintraining.NewName("壁押し")
+	wallPushInstruction, _ := domaintraining.NewInstruction("肘をゆっくり曲げ伸ばしする")
+	wallPushAmount, _ := domaintraining.NewAmount(10)
+	wallPushSets, _ := domaintraining.NewSets(3)
+	wallPushMenu := domaintraining.NewTrainingMenu(domaintraining.NewTrainingMenuID(), wallPushCode, wallPushName, domainmeasurementitem.ElementMuscleStrength, domaintraining.PartUpperLimb, wallPushAmount, domaintraining.UnitReps, wallPushSets, wallPushInstruction, createdAt, updatedAt)
+	trainingMenus := []domaintraining.TrainingMenu{wallPushMenu}
+	firstSortOrder, _ := domaintraining.NewSortOrder(1)
+
+	prescriptionOf := func(element *domainmeasurementitem.Element, part *domaintraining.Part, unit domaintraining.Unit) domainjudgment.Prescription {
+		override := domainjudgment.NewPrescribedMenuOverride(domainjudgment.NewPrescribedMenuOverrideID(), domainmeasurement.NewMeasurementID(), firstSortOrder, element, part, wallPushMenu.ID(), wallPushAmount, unit, wallPushSets, createdAt, updatedAt)
+		return domainjudgment.NewPrescriptionFromOverrides([]domainjudgment.PrescribedMenuOverride{override}, trainingMenus)
+	}
+
+	muscleStrength := domainmeasurementitem.ElementMuscleStrength
+	upperLimb := domaintraining.PartUpperLimb
+	unknownElement := domainmeasurementitem.Element("unknown")
+	unknownPart := domaintraining.Part("unknown")
+
 	tests := []struct {
 		name                   string
 		measurementID          string
@@ -99,6 +119,10 @@ func TestGetJudgment(t *testing.T) {
 		advice                 *domainjudgment.Advice
 		isDraft                bool
 		getErr                 error
+		prescription           func() domainjudgment.Prescription
+		wantPrescribedMenus    int
+		wantPrescribedLabels   bool
+		wantPrescribedUnit     judgmentv1.PrescribedUnit
 		wantCode               codes.Code
 		wantItemEvaluations    int
 		wantElementEvaluations int
@@ -112,7 +136,13 @@ func TestGetJudgment(t *testing.T) {
 			evaluation: func() domainjudgment.Evaluation {
 				return evaluationOf(items, rankStandards)
 			},
-			advice:                 advice,
+			advice: advice,
+			prescription: func() domainjudgment.Prescription {
+				return prescriptionOf(&muscleStrength, &upperLimb, domaintraining.UnitReps)
+			},
+			wantPrescribedMenus:    1,
+			wantPrescribedLabels:   true,
+			wantPrescribedUnit:     judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_REPS,
 			wantCode:               codes.OK,
 			wantItemEvaluations:    2,
 			wantElementEvaluations: 1,
@@ -154,9 +184,59 @@ func TestGetJudgment(t *testing.T) {
 			wantCode: codes.OK,
 		},
 		{
+			name:          "success get judgment of a prescription without labels",
+			measurementID: sampleMeasurementID,
+			callUsecase:   true,
+			evaluation: func() domainjudgment.Evaluation {
+				return evaluationOf(nil, rankStandards)
+			},
+			prescription: func() domainjudgment.Prescription {
+				return prescriptionOf(nil, nil, domaintraining.UnitMinutes)
+			},
+			wantPrescribedMenus: 1,
+			wantPrescribedUnit:  judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_MINUTES,
+			wantCode:            codes.OK,
+		},
+		{
 			name:          "failure invalid measurement id",
 			measurementID: "",
 			wantCode:      codes.InvalidArgument,
+		},
+		{
+			name:          "failure unmapped prescribed element",
+			measurementID: sampleMeasurementID,
+			callUsecase:   true,
+			evaluation: func() domainjudgment.Evaluation {
+				return evaluationOf(nil, rankStandards)
+			},
+			prescription: func() domainjudgment.Prescription {
+				return prescriptionOf(&unknownElement, &upperLimb, domaintraining.UnitReps)
+			},
+			wantCode: codes.Internal,
+		},
+		{
+			name:          "failure unmapped prescribed part",
+			measurementID: sampleMeasurementID,
+			callUsecase:   true,
+			evaluation: func() domainjudgment.Evaluation {
+				return evaluationOf(nil, rankStandards)
+			},
+			prescription: func() domainjudgment.Prescription {
+				return prescriptionOf(&muscleStrength, &unknownPart, domaintraining.UnitReps)
+			},
+			wantCode: codes.Internal,
+		},
+		{
+			name:          "failure unmapped prescribed unit",
+			measurementID: sampleMeasurementID,
+			callUsecase:   true,
+			evaluation: func() domainjudgment.Evaluation {
+				return evaluationOf(nil, rankStandards)
+			},
+			prescription: func() domainjudgment.Prescription {
+				return prescriptionOf(&muscleStrength, &upperLimb, domaintraining.Unit("hours"))
+			},
+			wantCode: codes.Internal,
 		},
 		{
 			name:          "failure judgment not found",
@@ -240,6 +320,9 @@ func TestGetJudgment(t *testing.T) {
 						Evaluation:    tt.evaluation(),
 						Advice:        tt.advice,
 					}
+					if tt.prescription != nil {
+						result.Prescription = tt.prescription()
+					}
 				}
 				mockUsecase.EXPECT().GetJudgment(gomock.Any(), gomock.Any()).Return(result, tt.getErr).Times(1)
 			}
@@ -266,6 +349,46 @@ func TestGetJudgment(t *testing.T) {
 			}
 			if len(judgmentMessage.GetElementEvaluations()) != tt.wantElementEvaluations {
 				t.Errorf("len(ElementEvaluations) = %v, want %v", len(judgmentMessage.GetElementEvaluations()), tt.wantElementEvaluations)
+			}
+			if len(judgmentMessage.GetPrescribedMenus()) != tt.wantPrescribedMenus {
+				t.Errorf("len(PrescribedMenus) = %v, want %v", len(judgmentMessage.GetPrescribedMenus()), tt.wantPrescribedMenus)
+			}
+			if tt.wantPrescribedMenus > 0 {
+				prescribedMenu := judgmentMessage.GetPrescribedMenus()[0]
+				if prescribedMenu.GetSource() != judgmentv1.PrescriptionSource_PRESCRIPTION_SOURCE_MANUAL {
+					t.Errorf("Source = %v, want %v", prescribedMenu.GetSource(), judgmentv1.PrescriptionSource_PRESCRIPTION_SOURCE_MANUAL)
+				}
+				if tt.wantPrescribedLabels {
+					if prescribedMenu.GetElement() != judgmentv1.Element_ELEMENT_MUSCLE_STRENGTH {
+						t.Errorf("Element = %v, want %v", prescribedMenu.GetElement(), judgmentv1.Element_ELEMENT_MUSCLE_STRENGTH)
+					}
+					if prescribedMenu.GetPart() != judgmentv1.PrescribedPart_PRESCRIBED_PART_UPPER_LIMB {
+						t.Errorf("Part = %v, want %v", prescribedMenu.GetPart(), judgmentv1.PrescribedPart_PRESCRIBED_PART_UPPER_LIMB)
+					}
+				}
+				if !tt.wantPrescribedLabels {
+					if prescribedMenu.Element != nil {
+						t.Errorf("Element = %v, want nil", prescribedMenu.GetElement())
+					}
+					if prescribedMenu.Part != nil {
+						t.Errorf("Part = %v, want nil", prescribedMenu.GetPart())
+					}
+				}
+				if prescribedMenu.GetTrainingMenuId() != wallPushMenu.ID().String() {
+					t.Errorf("TrainingMenuId = %v, want %v", prescribedMenu.GetTrainingMenuId(), wallPushMenu.ID().String())
+				}
+				if prescribedMenu.GetTrainingMenuName() != wallPushName.String() {
+					t.Errorf("TrainingMenuName = %v, want %v", prescribedMenu.GetTrainingMenuName(), wallPushName.String())
+				}
+				if prescribedMenu.GetAmount() != uint32(wallPushAmount.Int()) {
+					t.Errorf("Amount = %v, want %v", prescribedMenu.GetAmount(), wallPushAmount.Int())
+				}
+				if prescribedMenu.GetUnit() != tt.wantPrescribedUnit {
+					t.Errorf("Unit = %v, want %v", prescribedMenu.GetUnit(), tt.wantPrescribedUnit)
+				}
+				if prescribedMenu.GetSets() != uint32(wallPushSets.Int()) {
+					t.Errorf("Sets = %v, want %v", prescribedMenu.GetSets(), wallPushSets.Int())
+				}
 			}
 			if tt.wantMotorAge == 0 && judgmentMessage.MotorAge != nil {
 				t.Errorf("MotorAge = %v, want nil", judgmentMessage.GetMotorAge())
@@ -517,6 +640,506 @@ func TestUpsertJudgmentAdvice(t *testing.T) {
 			}
 			if tt.wantAdvice != "" && res.GetAdvice() != tt.wantAdvice {
 				t.Errorf("Advice = %v, want %v", res.GetAdvice(), tt.wantAdvice)
+			}
+		})
+	}
+}
+
+func TestToProtoPart(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		success bool
+		part    domaintraining.Part
+		want    judgmentv1.PrescribedPart
+	}{
+		{"success upper limb", true, domaintraining.PartUpperLimb, judgmentv1.PrescribedPart_PRESCRIBED_PART_UPPER_LIMB},
+		{"success lower limb", true, domaintraining.PartLowerLimb, judgmentv1.PrescribedPart_PRESCRIBED_PART_LOWER_LIMB},
+		{"success whole body", true, domaintraining.PartWholeBody, judgmentv1.PrescribedPart_PRESCRIBED_PART_WHOLE_BODY},
+		{"failure unmapped part", false, domaintraining.Part("unknown"), judgmentv1.PrescribedPart_PRESCRIBED_PART_UNSPECIFIED},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			part, err := toProtoPart(tt.part)
+			if tt.success && err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+			if !tt.success && err == nil {
+				t.Errorf("expected error, but got nil")
+			}
+			if part != tt.want {
+				t.Errorf("toProtoPart() = %v, want %v", part, tt.want)
+			}
+		})
+	}
+}
+
+func TestToProtoUnit(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		success bool
+		unit    domaintraining.Unit
+		want    judgmentv1.PrescribedUnit
+	}{
+		{"success reps", true, domaintraining.UnitReps, judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_REPS},
+		{"success seconds", true, domaintraining.UnitSeconds, judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_SECONDS},
+		{"success minutes", true, domaintraining.UnitMinutes, judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_MINUTES},
+		{"failure unmapped unit", false, domaintraining.Unit("hours"), judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_UNSPECIFIED},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			unit, err := toProtoUnit(tt.unit)
+			if tt.success && err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+			if !tt.success && err == nil {
+				t.Errorf("expected error, but got nil")
+			}
+			if unit != tt.want {
+				t.Errorf("toProtoUnit() = %v, want %v", unit, tt.want)
+			}
+		})
+	}
+}
+
+func TestToProtoPrescriptionSource(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		success bool
+		source  domainjudgment.PrescriptionSource
+		want    judgmentv1.PrescriptionSource
+	}{
+		{"success element", true, domainjudgment.PrescriptionSourceElement, judgmentv1.PrescriptionSource_PRESCRIPTION_SOURCE_ELEMENT},
+		{"success fixed", true, domainjudgment.PrescriptionSourceFixed, judgmentv1.PrescriptionSource_PRESCRIPTION_SOURCE_FIXED},
+		{"success age decade", true, domainjudgment.PrescriptionSourceAgeDecade, judgmentv1.PrescriptionSource_PRESCRIPTION_SOURCE_AGE_DECADE},
+		{"success manual", true, domainjudgment.PrescriptionSourceManual, judgmentv1.PrescriptionSource_PRESCRIPTION_SOURCE_MANUAL},
+		{"failure unmapped prescription source", false, domainjudgment.PrescriptionSource("unknown"), judgmentv1.PrescriptionSource_PRESCRIPTION_SOURCE_UNSPECIFIED},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			source, err := toProtoPrescriptionSource(tt.source)
+			if tt.success && err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+			if !tt.success && err == nil {
+				t.Errorf("expected error, but got nil")
+			}
+			if source != tt.want {
+				t.Errorf("toProtoPrescriptionSource() = %v, want %v", source, tt.want)
+			}
+		})
+	}
+}
+
+func TestToDomainElement(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		success bool
+		element judgmentv1.Element
+		want    domainmeasurementitem.Element
+	}{
+		{"success muscle strength", true, judgmentv1.Element_ELEMENT_MUSCLE_STRENGTH, domainmeasurementitem.ElementMuscleStrength},
+		{"success muscle endurance", true, judgmentv1.Element_ELEMENT_MUSCLE_ENDURANCE, domainmeasurementitem.ElementMuscleEndurance},
+		{"success flexibility", true, judgmentv1.Element_ELEMENT_FLEXIBILITY, domainmeasurementitem.ElementFlexibility},
+		{"success agility", true, judgmentv1.Element_ELEMENT_AGILITY, domainmeasurementitem.ElementAgility},
+		{"success balance", true, judgmentv1.Element_ELEMENT_BALANCE, domainmeasurementitem.ElementBalance},
+		{"success mobility", true, judgmentv1.Element_ELEMENT_MOBILITY, domainmeasurementitem.ElementMobility},
+		{"failure unspecified element", false, judgmentv1.Element_ELEMENT_UNSPECIFIED, domainmeasurementitem.Element("")},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			element, err := toDomainElement(tt.element)
+			if tt.success && err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+			if !tt.success && err == nil {
+				t.Errorf("expected error, but got nil")
+			}
+			if element != tt.want {
+				t.Errorf("toDomainElement() = %v, want %v", element, tt.want)
+			}
+		})
+	}
+}
+
+func TestToDomainPart(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		success bool
+		part    judgmentv1.PrescribedPart
+		want    domaintraining.Part
+	}{
+		{"success upper limb", true, judgmentv1.PrescribedPart_PRESCRIBED_PART_UPPER_LIMB, domaintraining.PartUpperLimb},
+		{"success lower limb", true, judgmentv1.PrescribedPart_PRESCRIBED_PART_LOWER_LIMB, domaintraining.PartLowerLimb},
+		{"success whole body", true, judgmentv1.PrescribedPart_PRESCRIBED_PART_WHOLE_BODY, domaintraining.PartWholeBody},
+		{"failure unspecified part", false, judgmentv1.PrescribedPart_PRESCRIBED_PART_UNSPECIFIED, domaintraining.Part("")},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			part, err := toDomainPart(tt.part)
+			if tt.success && err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+			if !tt.success && err == nil {
+				t.Errorf("expected error, but got nil")
+			}
+			if part != tt.want {
+				t.Errorf("toDomainPart() = %v, want %v", part, tt.want)
+			}
+		})
+	}
+}
+
+func TestToDomainUnit(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		success bool
+		unit    judgmentv1.PrescribedUnit
+		want    domaintraining.Unit
+	}{
+		{"success reps", true, judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_REPS, domaintraining.UnitReps},
+		{"success seconds", true, judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_SECONDS, domaintraining.UnitSeconds},
+		{"success minutes", true, judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_MINUTES, domaintraining.UnitMinutes},
+		{"failure unspecified unit", false, judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_UNSPECIFIED, domaintraining.Unit("")},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			unit, err := toDomainUnit(tt.unit)
+			if tt.success && err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+			if !tt.success && err == nil {
+				t.Errorf("expected error, but got nil")
+			}
+			if unit != tt.want {
+				t.Errorf("toDomainUnit() = %v, want %v", unit, tt.want)
+			}
+		})
+	}
+}
+
+func TestUpsertPrescription(t *testing.T) {
+	t.Parallel()
+	createdAt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	updatedAt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
+
+	wallPushCode, _ := domaintraining.NewCode("wall_push")
+	wallPushName, _ := domaintraining.NewName("壁押し")
+	wallPushInstruction, _ := domaintraining.NewInstruction("肘をゆっくり曲げ伸ばしする")
+	wallPushAmount, _ := domaintraining.NewAmount(10)
+	wallPushSets, _ := domaintraining.NewSets(3)
+	wallPushMenu := domaintraining.NewTrainingMenu(domaintraining.NewTrainingMenuID(), wallPushCode, wallPushName, domainmeasurementitem.ElementMuscleStrength, domaintraining.PartUpperLimb, wallPushAmount, domaintraining.UnitReps, wallPushSets, wallPushInstruction, createdAt, updatedAt)
+	firstSortOrder, _ := domaintraining.NewSortOrder(1)
+	muscleStrength := domainmeasurementitem.ElementMuscleStrength
+	upperLimb := domaintraining.PartUpperLimb
+
+	prescription := func() domainjudgment.Prescription {
+		override := domainjudgment.NewPrescribedMenuOverride(domainjudgment.NewPrescribedMenuOverrideID(), domainmeasurement.NewMeasurementID(), firstSortOrder, &muscleStrength, &upperLimb, wallPushMenu.ID(), wallPushAmount, domaintraining.UnitReps, wallPushSets, createdAt, updatedAt)
+		return domainjudgment.NewPrescriptionFromOverrides([]domainjudgment.PrescribedMenuOverride{override}, []domaintraining.TrainingMenu{wallPushMenu})
+	}
+
+	validMenu := &judgmentv1.PrescribedMenuInput{
+		Element:        judgmentv1.Element_ELEMENT_MUSCLE_STRENGTH.Enum(),
+		Part:           judgmentv1.PrescribedPart_PRESCRIBED_PART_UPPER_LIMB.Enum(),
+		TrainingMenuId: wallPushMenu.ID().String(),
+		Amount:         10,
+		Unit:           judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_REPS,
+		Sets:           3,
+	}
+
+	tests := []struct {
+		name                string
+		measurementID       string
+		menus               []*judgmentv1.PrescribedMenuInput
+		callUsecase         bool
+		upsertErr           error
+		wantCode            codes.Code
+		wantPrescribedMenus int
+	}{
+		{
+			name:                "success upsert prescription",
+			measurementID:       sampleMeasurementID,
+			menus:               []*judgmentv1.PrescribedMenuInput{validMenu},
+			callUsecase:         true,
+			wantCode:            codes.OK,
+			wantPrescribedMenus: 1,
+		},
+		{
+			name:          "success upsert a prescription without labels",
+			measurementID: sampleMeasurementID,
+			menus: []*judgmentv1.PrescribedMenuInput{{
+				TrainingMenuId: wallPushMenu.ID().String(),
+				Amount:         20,
+				Unit:           judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_MINUTES,
+				Sets:           1,
+			}},
+			callUsecase:         true,
+			wantCode:            codes.OK,
+			wantPrescribedMenus: 1,
+		},
+		{
+			name:          "failure empty prescription",
+			measurementID: sampleMeasurementID,
+			callUsecase:   true,
+			upsertErr:     domainjudgment.ErrEmptyPrescription,
+			wantCode:      codes.InvalidArgument,
+		},
+		{
+			name:          "failure invalid prescribed menu labels",
+			measurementID: sampleMeasurementID,
+			menus:         []*judgmentv1.PrescribedMenuInput{validMenu},
+			callUsecase:   true,
+			upsertErr:     domainjudgment.ErrInvalidPrescribedMenuLabels,
+			wantCode:      codes.InvalidArgument,
+		},
+		{
+			name:          "failure too many prescribed menus",
+			measurementID: sampleMeasurementID,
+			menus:         []*judgmentv1.PrescribedMenuInput{validMenu},
+			callUsecase:   true,
+			upsertErr:     domaintraining.ErrInvalidSortOrder,
+			wantCode:      codes.InvalidArgument,
+		},
+		{
+			name:          "failure invalid measurement id",
+			measurementID: "",
+			wantCode:      codes.InvalidArgument,
+		},
+		{
+			name:          "failure invalid training menu id",
+			measurementID: sampleMeasurementID,
+			menus:         []*judgmentv1.PrescribedMenuInput{{TrainingMenuId: "", Amount: 10, Unit: judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_REPS, Sets: 3}},
+			wantCode:      codes.InvalidArgument,
+		},
+		{
+			name:          "failure unspecified element",
+			measurementID: sampleMeasurementID,
+			menus:         []*judgmentv1.PrescribedMenuInput{{Element: judgmentv1.Element_ELEMENT_UNSPECIFIED.Enum(), TrainingMenuId: wallPushMenu.ID().String(), Amount: 10, Unit: judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_REPS, Sets: 3}},
+			wantCode:      codes.InvalidArgument,
+		},
+		{
+			name:          "failure unspecified part",
+			measurementID: sampleMeasurementID,
+			menus:         []*judgmentv1.PrescribedMenuInput{{Part: judgmentv1.PrescribedPart_PRESCRIBED_PART_UNSPECIFIED.Enum(), TrainingMenuId: wallPushMenu.ID().String(), Amount: 10, Unit: judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_REPS, Sets: 3}},
+			wantCode:      codes.InvalidArgument,
+		},
+		{
+			name:          "failure invalid amount",
+			measurementID: sampleMeasurementID,
+			menus:         []*judgmentv1.PrescribedMenuInput{{TrainingMenuId: wallPushMenu.ID().String(), Amount: 0, Unit: judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_REPS, Sets: 3}},
+			wantCode:      codes.InvalidArgument,
+		},
+		{
+			name:          "failure unspecified unit",
+			measurementID: sampleMeasurementID,
+			menus:         []*judgmentv1.PrescribedMenuInput{{TrainingMenuId: wallPushMenu.ID().String(), Amount: 10, Unit: judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_UNSPECIFIED, Sets: 3}},
+			wantCode:      codes.InvalidArgument,
+		},
+		{
+			name:          "failure invalid sets",
+			measurementID: sampleMeasurementID,
+			menus:         []*judgmentv1.PrescribedMenuInput{{TrainingMenuId: wallPushMenu.ID().String(), Amount: 10, Unit: judgmentv1.PrescribedUnit_PRESCRIBED_UNIT_REPS, Sets: 0}},
+			wantCode:      codes.InvalidArgument,
+		},
+		{
+			name:          "failure training menu not found",
+			measurementID: sampleMeasurementID,
+			menus:         []*judgmentv1.PrescribedMenuInput{validMenu},
+			callUsecase:   true,
+			upsertErr:     domaintraining.ErrTrainingMenuNotFound,
+			wantCode:      codes.InvalidArgument,
+		},
+		{
+			name:          "failure judgment not found",
+			measurementID: sampleMeasurementID,
+			menus:         []*judgmentv1.PrescribedMenuInput{validMenu},
+			callUsecase:   true,
+			upsertErr:     domainjudgment.ErrJudgmentNotFound,
+			wantCode:      codes.NotFound,
+		},
+		{
+			name:          "failure upsert prescription error",
+			measurementID: sampleMeasurementID,
+			menus:         []*judgmentv1.PrescribedMenuInput{validMenu},
+			callUsecase:   true,
+			upsertErr:     errors.New("upsert prescription error"),
+			wantCode:      codes.Internal,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockUsecase := mocksappjudgment.NewMockJudgmentUsecase(ctrl)
+			if tt.callUsecase {
+				var upsertedPrescription domainjudgment.Prescription
+				if tt.upsertErr == nil {
+					upsertedPrescription = prescription()
+				}
+				mockUsecase.EXPECT().UpsertPrescription(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+					func(_ context.Context, gotMeasurementID domainmeasurement.MeasurementID, gotMenus []appjudgment.PrescribedMenuInput) (domainjudgment.Prescription, error) {
+						if gotMeasurementID.String() != tt.measurementID {
+							t.Errorf("MeasurementID = %v, want %v", gotMeasurementID.String(), tt.measurementID)
+						}
+						if len(gotMenus) != len(tt.menus) {
+							t.Fatalf("len(menus) = %v, want %v", len(gotMenus), len(tt.menus))
+						}
+						for i, want := range tt.menus {
+							got := gotMenus[i]
+							switch {
+							case want.Element == nil:
+								if got.Element != nil {
+									t.Errorf("menus[%d].Element = %v, want nil", i, *got.Element)
+								}
+							case got.Element == nil:
+								t.Errorf("menus[%d].Element = nil, want %v", i, want.GetElement())
+							case *got.Element != domainmeasurementitem.ElementMuscleStrength:
+								t.Errorf("menus[%d].Element = %v, want %v", i, *got.Element, domainmeasurementitem.ElementMuscleStrength)
+							}
+							switch {
+							case want.Part == nil:
+								if got.Part != nil {
+									t.Errorf("menus[%d].Part = %v, want nil", i, *got.Part)
+								}
+							case got.Part == nil:
+								t.Errorf("menus[%d].Part = nil, want %v", i, want.GetPart())
+							case *got.Part != domaintraining.PartUpperLimb:
+								t.Errorf("menus[%d].Part = %v, want %v", i, *got.Part, domaintraining.PartUpperLimb)
+							}
+							if got.TrainingMenuID.String() != want.GetTrainingMenuId() {
+								t.Errorf("menus[%d].TrainingMenuID = %v, want %v", i, got.TrainingMenuID, want.GetTrainingMenuId())
+							}
+							if got.Amount.Int() != int(want.GetAmount()) {
+								t.Errorf("menus[%d].Amount = %v, want %v", i, got.Amount.Int(), want.GetAmount())
+							}
+							if got.Sets.Int() != int(want.GetSets()) {
+								t.Errorf("menus[%d].Sets = %v, want %v", i, got.Sets.Int(), want.GetSets())
+							}
+							wantUnit, _ := toDomainUnit(want.GetUnit())
+							if got.Unit != wantUnit {
+								t.Errorf("menus[%d].Unit = %v, want %v", i, got.Unit, wantUnit)
+							}
+						}
+						return upsertedPrescription, tt.upsertErr
+					}).Times(1)
+			} else {
+				mockUsecase.EXPECT().UpsertPrescription(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+			}
+
+			handler := NewJudgmentHandler(mockUsecase)
+
+			res, err := handler.UpsertPrescription(context.Background(), &judgmentv1.UpsertPrescriptionRequest{MeasurementId: tt.measurementID, PrescribedMenus: tt.menus})
+			if got := status.Code(err); got != tt.wantCode {
+				t.Errorf("expected code %v, got %v (err=%v)", tt.wantCode, got, err)
+			}
+			if tt.wantCode != codes.OK {
+				return
+			}
+
+			if res.GetMeasurementId() != sampleMeasurementID {
+				t.Errorf("MeasurementId = %v, want %v", res.GetMeasurementId(), sampleMeasurementID)
+			}
+			if len(res.GetPrescribedMenus()) != tt.wantPrescribedMenus {
+				t.Fatalf("len(PrescribedMenus) = %v, want %v", len(res.GetPrescribedMenus()), tt.wantPrescribedMenus)
+			}
+			if tt.wantPrescribedMenus > 0 {
+				prescribedMenu := res.GetPrescribedMenus()[0]
+				if prescribedMenu.GetSource() != judgmentv1.PrescriptionSource_PRESCRIPTION_SOURCE_MANUAL {
+					t.Errorf("Source = %v, want %v", prescribedMenu.GetSource(), judgmentv1.PrescriptionSource_PRESCRIPTION_SOURCE_MANUAL)
+				}
+				if prescribedMenu.GetTrainingMenuId() != wallPushMenu.ID().String() {
+					t.Errorf("TrainingMenuId = %v, want %v", prescribedMenu.GetTrainingMenuId(), wallPushMenu.ID().String())
+				}
+				if prescribedMenu.GetTrainingMenuName() != wallPushName.String() {
+					t.Errorf("TrainingMenuName = %v, want %v", prescribedMenu.GetTrainingMenuName(), wallPushName.String())
+				}
+			}
+		})
+	}
+}
+
+func TestDeletePrescription(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name          string
+		measurementID string
+		callUsecase   bool
+		deleteErr     error
+		wantCode      codes.Code
+	}{
+		{
+			name:          "success delete prescription",
+			measurementID: sampleMeasurementID,
+			callUsecase:   true,
+			wantCode:      codes.OK,
+		},
+		{
+			name:          "failure invalid measurement id",
+			measurementID: "",
+			wantCode:      codes.InvalidArgument,
+		},
+		{
+			name:          "failure judgment not found",
+			measurementID: sampleMeasurementID,
+			callUsecase:   true,
+			deleteErr:     domainjudgment.ErrJudgmentNotFound,
+			wantCode:      codes.NotFound,
+		},
+		{
+			name:          "failure delete prescription error",
+			measurementID: sampleMeasurementID,
+			callUsecase:   true,
+			deleteErr:     errors.New("delete prescription error"),
+			wantCode:      codes.Internal,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockUsecase := mocksappjudgment.NewMockJudgmentUsecase(ctrl)
+			if tt.callUsecase {
+				mockUsecase.EXPECT().DeletePrescription(gomock.Any(), gomock.Any()).Return(tt.deleteErr).Times(1)
+			} else {
+				mockUsecase.EXPECT().DeletePrescription(gomock.Any(), gomock.Any()).Times(0)
+			}
+
+			handler := NewJudgmentHandler(mockUsecase)
+
+			_, err := handler.DeletePrescription(context.Background(), &judgmentv1.DeletePrescriptionRequest{MeasurementId: tt.measurementID})
+			if got := status.Code(err); got != tt.wantCode {
+				t.Errorf("expected code %v, got %v (err=%v)", tt.wantCode, got, err)
 			}
 		})
 	}
