@@ -10,7 +10,7 @@ import (
 
 const decadeWidth = 10
 
-var levelByDeficientRank = map[standard.Rank]int{
+var levelByDeficientRank = map[standard.Rank]training.Level{
 	standard.RankE: 1,
 	standard.RankD: 2,
 }
@@ -40,12 +40,8 @@ func deficientLevels(evaluation Evaluation) map[measurementitem.Element]training
 		return levels
 	}
 	for _, elementEvaluation := range evaluation.ElementEvaluations() {
-		n, ok := levelByDeficientRank[elementEvaluation.Rank()]
+		level, ok := levelByDeficientRank[elementEvaluation.Rank()]
 		if !ok {
-			continue
-		}
-		level, err := training.NewLevel(n)
-		if err != nil {
 			continue
 		}
 		levels[elementEvaluation.Element()] = level
