@@ -87,17 +87,17 @@ func TestNewEvaluation(t *testing.T) {
 	walk5mName, _ := measurementitem.NewName("5m歩行")
 	walk5m := measurementitem.NewMeasurementItem(walk5mID, walk5mCode, walk5mName, motorFunction, sec, oneTrial, false, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
 
-	sideStepID := measurementitem.NewMeasurementItemID()
-	sideStepCode, _ := measurementitem.NewCode("side_step")
-	sideStepName, _ := measurementitem.NewName("反復横跳び")
-	sideStep := measurementitem.NewMeasurementItem(sideStepID, sideStepCode, sideStepName, motorFunction, count, oneTrial, false, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementAgility}, createdAt, updatedAt)
+	seatedStepping20sID := measurementitem.NewMeasurementItemID()
+	seatedStepping20sCode, _ := measurementitem.NewCode("seated_stepping_20s")
+	seatedStepping20sName, _ := measurementitem.NewName("座位ステップ（20秒）")
+	seatedStepping20s := measurementitem.NewMeasurementItem(seatedStepping20sID, seatedStepping20sCode, seatedStepping20sName, motorFunction, count, oneTrial, false, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementAgility}, createdAt, updatedAt)
 
 	oneLegStandID := measurementitem.NewMeasurementItemID()
 	oneLegStandCode, _ := measurementitem.NewCode("eyes_open_one_leg_stand")
 	oneLegStandName, _ := measurementitem.NewName("開眼片足立ち")
 	oneLegStand := measurementitem.NewMeasurementItem(oneLegStandID, oneLegStandCode, oneLegStandName, motorFunction, sec, twoTrials, true, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationBest, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
 
-	items := []measurementitem.MeasurementItem{gripStrength, twoStep, timedUpAndGo, stickReaction, standUpTest, height, cs30, sitAndReach, walk5m, sideStep, oneLegStand}
+	items := []measurementitem.MeasurementItem{gripStrength, twoStep, timedUpAndGo, stickReaction, standUpTest, height, cs30, sitAndReach, walk5m, seatedStepping20s, oneLegStand}
 
 	ageRange4044, _ := standard.NewAgeRange(40, 44)
 	ageRange5054, _ := standard.NewAgeRange(50, 54)
@@ -121,9 +121,9 @@ func TestNewEvaluation(t *testing.T) {
 	walk5mMean4044, _ := standard.NewMean(5.2)
 	walk5mMean6064, _ := standard.NewMean(4)
 	walk5mDeviation, _ := standard.NewStandardDeviation(0.5)
-	sideStepMean4044, _ := standard.NewMean(40)
-	sideStepMean5054, _ := standard.NewMean(35)
-	sideStepDeviation, _ := standard.NewStandardDeviation(5)
+	seatedStepping20sMean4044, _ := standard.NewMean(40)
+	seatedStepping20sMean5054, _ := standard.NewMean(35)
+	seatedStepping20sDeviation, _ := standard.NewStandardDeviation(5)
 	oneLegStandMean, _ := standard.NewMean(30)
 	oneLegStandDeviation, _ := standard.NewStandardDeviation(10)
 
@@ -139,8 +139,8 @@ func TestNewEvaluation(t *testing.T) {
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), sitAndReachID, standard.GenderMale, ageRange6064, sitAndReachMean6064, sitAndReachDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), walk5mID, standard.GenderMale, ageRange4044, walk5mMean4044, walk5mDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), walk5mID, standard.GenderMale, ageRange6064, walk5mMean6064, walk5mDeviation, createdAt, updatedAt),
-		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), sideStepID, standard.GenderMale, ageRange4044, sideStepMean4044, sideStepDeviation, createdAt, updatedAt),
-		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), sideStepID, standard.GenderMale, ageRange5054, sideStepMean5054, sideStepDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), seatedStepping20sID, standard.GenderMale, ageRange4044, seatedStepping20sMean4044, seatedStepping20sDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), seatedStepping20sID, standard.GenderMale, ageRange5054, seatedStepping20sMean5054, seatedStepping20sDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), oneLegStandID, standard.GenderMale, ageRange4044, oneLegStandMean, oneLegStandDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), oneLegStandID, standard.GenderMale, ageRange4049, oneLegStandMean, oneLegStandDeviation, createdAt, updatedAt),
 	}
@@ -633,15 +633,15 @@ func TestNewEvaluation(t *testing.T) {
 				sitAndReachEntry, _ := measurement.NewMeasurementEntry(sitAndReach, false, nil, []measurement.MeasurementValue{
 					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &sitAndReachValue, nil, nil),
 				})
-				sideStepValue, _ := measurement.NewValue(40)
-				sideStepEntry, _ := measurement.NewMeasurementEntry(sideStep, false, nil, []measurement.MeasurementValue{
-					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &sideStepValue, nil, nil),
+				seatedStepping20sValue, _ := measurement.NewValue(40)
+				seatedStepping20sEntry, _ := measurement.NewMeasurementEntry(seatedStepping20s, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &seatedStepping20sValue, nil, nil),
 				})
-				return []measurement.MeasurementEntry{sitAndReachEntry, sideStepEntry}
+				return []measurement.MeasurementEntry{sitAndReachEntry, seatedStepping20sEntry}
 			},
 			wantItemEvaluations: []wantItemEvaluation{
 				{sitAndReachID, 40, 38, 0.4, standard.RankC},
-				{sideStepID, 40, 40, 0, standard.RankC},
+				{seatedStepping20sID, 40, 40, 0, standard.RankC},
 			},
 			wantElementEvaluations: []wantElementEvaluation{
 				{measurementitem.ElementFlexibility, 0.4, standard.RankC},
