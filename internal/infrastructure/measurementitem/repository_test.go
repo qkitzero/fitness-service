@@ -29,7 +29,7 @@ const (
 	muscleMassID        = "1d98b4c8-676e-4c1b-8d01-b092e571d6af"
 	cs30ID              = "2625e4d7-7608-45d1-a41b-304f40c6c721"
 	gripStrengthID      = "45c2f5cd-ae75-4b2e-8302-69051f0343d5"
-	sideStepID          = "32ea7f00-d3ee-4197-ac0e-9373a033b69e"
+	multiElementID      = "00000000-0000-4000-8000-000000000001"
 	unknownID           = "00000000-0000-0000-0000-000000000000"
 )
 
@@ -92,9 +92,9 @@ func TestList(t *testing.T) {
 		{
 			name:                "success list elements in business order",
 			success:             true,
-			wantIDs:             []string{sideStepID},
-			wantCodes:           []string{"side_step"},
-			wantNames:           []string{"反復横跳び"},
+			wantIDs:             []string{multiElementID},
+			wantCodes:           []string{"multi_element_item"},
+			wantNames:           []string{"複数要素の測定項目"},
 			wantCategories:      []string{"motor_function"},
 			wantUnits:           []string{"count"},
 			wantTrialCounts:     []int{1},
@@ -105,12 +105,12 @@ func TestList(t *testing.T) {
 			setup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
 					WillReturnRows(sqlmock.NewRows(measurementItemColumns).
-						AddRow(sideStepID, "side_step", "反復横跳び", "motor_function", "count", 1, false, "numeric", "higher_is_better", "mean", createdAt, updatedAt))
+						AddRow(multiElementID, "multi_element_item", "複数要素の測定項目", "motor_function", "count", 1, false, "numeric", "higher_is_better", "mean", createdAt, updatedAt))
 				mock.ExpectQuery(regexp.QuoteMeta(elementsByItemIDSQL)).
-					WithArgs(sideStepID).
+					WithArgs(multiElementID).
 					WillReturnRows(sqlmock.NewRows(elementColumns).
-						AddRow(sideStepID, "mobility", createdAt, updatedAt).
-						AddRow(sideStepID, "agility", createdAt, updatedAt))
+						AddRow(multiElementID, "mobility", createdAt, updatedAt).
+						AddRow(multiElementID, "agility", createdAt, updatedAt))
 			},
 		},
 		{
