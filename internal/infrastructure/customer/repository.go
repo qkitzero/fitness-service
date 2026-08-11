@@ -9,6 +9,7 @@ import (
 
 	"github.com/qkitzero/fitness-service/internal/domain/address"
 	"github.com/qkitzero/fitness-service/internal/domain/customer"
+	"github.com/qkitzero/fitness-service/internal/domain/organization"
 	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 )
 
@@ -97,6 +98,24 @@ func (r *customerRepository) FindByID(ctx context.Context, id customer.CustomerI
 func (r *customerRepository) ListByTenantID(ctx context.Context, tenantID tenant.TenantID, includeInactive bool) ([]customer.Customer, error) {
 	var customerModels []CustomerModel
 	query := r.db.WithContext(ctx).Where("tenant_id = ?", tenantID)
+	if !includeInactive {
+		query = query.Where("is_active = ?", true)
+	}
+	if err := query.Order("created_at, id").Find(&customerModels).Error; err != nil {
+		return nil, err
+	}
+
+	customers := make([]customer.Customer, 0, len(customerModels))
+	for _, customerModel := range customerModels {
+		customers = append(customers, toDomain(customerModel))
+	}
+
+	return customers, nil
+}
+
+func (r *customerRepository) ListByOrganizationID(ctx context.Context, organizationID organization.OrganizationID, includeInactive bool) ([]customer.Customer, error) {
+	var customerModels []CustomerModel
+	query := r.db.WithContext(ctx).Where("organization_id = ?", organizationID)
 	if !includeInactive {
 		query = query.Where("is_active = ?", true)
 	}
