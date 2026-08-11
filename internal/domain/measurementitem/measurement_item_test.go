@@ -27,7 +27,7 @@ func TestNewMeasurementItem(t *testing.T) {
 		{"success new measurement item of another category", "body_fat_percentage", "体脂肪率", "body_composition", "percent", 1, false, "numeric", nil, SideAggregationMean, []Element{}},
 		{"success new measurement item scored lower is better", "walk_5m", "5m歩行", "motor_function", "sec", 2, false, "numeric", &lowerIsBetter, SideAggregationMean, []Element{ElementMobility}},
 		{"success new measurement item aggregated by the best side", "eyes_open_one_leg_stand", "開眼片足立ち", "motor_function", "sec", 2, true, "numeric", &higherIsBetter, SideAggregationBest, []Element{ElementBalance}},
-		{"success new measurement item of multiple elements", "side_step", "反復横跳び", "motor_function", "count", 1, false, "numeric", &higherIsBetter, SideAggregationMean, []Element{ElementAgility, ElementMobility}},
+		{"success new measurement item of multiple elements", "multi_element_item", "複数要素の測定項目", "motor_function", "count", 1, false, "numeric", &higherIsBetter, SideAggregationMean, []Element{ElementAgility, ElementMobility}},
 	}
 	for _, tt := range tests {
 		tt := tt

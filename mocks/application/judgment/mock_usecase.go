@@ -16,6 +16,7 @@ import (
 	judgment "github.com/qkitzero/fitness-service/internal/application/judgment"
 	judgment0 "github.com/qkitzero/fitness-service/internal/domain/judgment"
 	measurement "github.com/qkitzero/fitness-service/internal/domain/measurement"
+	organization "github.com/qkitzero/fitness-service/internal/domain/organization"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -70,6 +71,21 @@ func (m *MockJudgmentUsecase) GetJudgment(ctx context.Context, measurementID mea
 func (mr *MockJudgmentUsecaseMockRecorder) GetJudgment(ctx, measurementID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJudgment", reflect.TypeOf((*MockJudgmentUsecase)(nil).GetJudgment), ctx, measurementID)
+}
+
+// ListOrganizationJudgments mocks base method.
+func (m *MockJudgmentUsecase) ListOrganizationJudgments(ctx context.Context, organizationID organization.OrganizationID, includeInactive bool) ([]judgment.OrganizationJudgmentResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListOrganizationJudgments", ctx, organizationID, includeInactive)
+	ret0, _ := ret[0].([]judgment.OrganizationJudgmentResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListOrganizationJudgments indicates an expected call of ListOrganizationJudgments.
+func (mr *MockJudgmentUsecaseMockRecorder) ListOrganizationJudgments(ctx, organizationID, includeInactive any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOrganizationJudgments", reflect.TypeOf((*MockJudgmentUsecase)(nil).ListOrganizationJudgments), ctx, organizationID, includeInactive)
 }
 
 // UpsertJudgmentAdvice mocks base method.

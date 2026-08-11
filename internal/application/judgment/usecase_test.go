@@ -12,6 +12,7 @@ import (
 	"github.com/qkitzero/fitness-service/internal/domain/judgment"
 	"github.com/qkitzero/fitness-service/internal/domain/measurement"
 	"github.com/qkitzero/fitness-service/internal/domain/measurementitem"
+	"github.com/qkitzero/fitness-service/internal/domain/organization"
 	"github.com/qkitzero/fitness-service/internal/domain/standard"
 	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 	"github.com/qkitzero/fitness-service/internal/domain/training"
@@ -21,6 +22,7 @@ import (
 	mocksjudgment "github.com/qkitzero/fitness-service/mocks/domain/judgment"
 	mocksmeasurement "github.com/qkitzero/fitness-service/mocks/domain/measurement"
 	mocksmeasurementitem "github.com/qkitzero/fitness-service/mocks/domain/measurementitem"
+	mocksorganization "github.com/qkitzero/fitness-service/mocks/domain/organization"
 	mocksstandard "github.com/qkitzero/fitness-service/mocks/domain/standard"
 	mockstraining "github.com/qkitzero/fitness-service/mocks/domain/training"
 )
@@ -410,6 +412,7 @@ func TestGetJudgment(t *testing.T) {
 			mockJudgmentRepository := mocksjudgment.NewMockJudgmentRepository(ctrl)
 			mockMeasurementRepository := mocksmeasurement.NewMockMeasurementRepository(ctrl)
 			mockCustomerRepository := mockscustomer.NewMockCustomerRepository(ctrl)
+			mockOrganizationRepository := mocksorganization.NewMockOrganizationRepository(ctrl)
 			mockMeasurementItemRepository := mocksmeasurementitem.NewMockMeasurementItemRepository(ctrl)
 			mockAgeGroupStandardRepository := mocksstandard.NewMockAgeGroupStandardRepository(ctrl)
 			mockRankStandardRepository := mocksstandard.NewMockRankStandardRepository(ctrl)
@@ -503,7 +506,7 @@ func TestGetJudgment(t *testing.T) {
 				mockJudgmentRepository.EXPECT().FindByMeasurementID(tt.ctx, measurementID).Return(foundJudgment, tt.findByMeasurementIDErr).Times(1)
 			}
 
-			u := NewJudgmentUsecase(mockAuthService, mockUserService, mockJudgmentRepository, mockPrescribedMenuOverrideRepository, mockMeasurementRepository, mockCustomerRepository, mockMeasurementItemRepository, mockAgeGroupStandardRepository, mockRankStandardRepository, mockTrainingMenuRepository, mockPrescriptionRuleRepository)
+			u := NewJudgmentUsecase(mockAuthService, mockUserService, mockJudgmentRepository, mockPrescribedMenuOverrideRepository, mockMeasurementRepository, mockCustomerRepository, mockOrganizationRepository, mockMeasurementItemRepository, mockAgeGroupStandardRepository, mockRankStandardRepository, mockTrainingMenuRepository, mockPrescriptionRuleRepository)
 
 			result, err := u.GetJudgment(tt.ctx, measurementID)
 			if tt.success && err != nil {
@@ -576,6 +579,420 @@ func TestGetJudgment(t *testing.T) {
 				t.Errorf("Advice = nil, want %v", *tt.wantAdvice)
 			case *result.Advice != *tt.wantAdvice:
 				t.Errorf("Advice = %v, want %v", *result.Advice, *tt.wantAdvice)
+			}
+		})
+	}
+}
+
+func TestListOrganizationJudgments(t *testing.T) {
+	t.Parallel()
+	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	otherTenantID := "9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"
+	userID := "google-oauth2|000000000000000000000"
+
+	createdAt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	updatedAt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
+	motorFunction, _ := measurementitem.NewCategory("motor_function")
+	kg, _ := measurementitem.NewUnit("kg")
+	twoTrials, _ := measurementitem.NewTrialCount(2)
+	higherIsBetter := measurementitem.ScoreDirectionHigherIsBetter
+	gripStrengthID := measurementitem.NewMeasurementItemID()
+	gripStrengthCode, _ := measurementitem.NewCode("grip_strength")
+	gripStrengthName, _ := measurementitem.NewName("握力")
+	gripStrength := measurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, true, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+
+	ageRange4044, _ := standard.NewAgeRange(40, 44)
+	ageRange5054, _ := standard.NewAgeRange(50, 54)
+	ageRange6064, _ := standard.NewAgeRange(60, 64)
+	maleMean4044, _ := standard.NewMean(46)
+	maleMean6064, _ := standard.NewMean(38)
+	femaleMean5054, _ := standard.NewMean(45.8)
+	femaleMean6064, _ := standard.NewMean(44)
+	standardDeviation, _ := standard.NewStandardDeviation(5)
+	ageGroupStandards := []standard.AgeGroupStandard{
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), gripStrengthID, standard.GenderMale, ageRange4044, maleMean4044, standardDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), gripStrengthID, standard.GenderMale, ageRange6064, maleMean6064, standardDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), gripStrengthID, standard.GenderFemale, ageRange5054, femaleMean5054, standardDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), gripStrengthID, standard.GenderFemale, ageRange6064, femaleMean6064, standardDeviation, createdAt, updatedAt),
+	}
+	zScoreA := standard.ZScore(1.5)
+	zScoreBMin := standard.ZScore(0.5)
+	zScoreBMax := standard.ZScore(1.5)
+	zScoreCMin := standard.ZScore(-0.5)
+	zScoreCMax := standard.ZScore(0.5)
+	rankStandardA, _ := standard.NewRankStandard(standard.RankA, &zScoreA, nil, createdAt, updatedAt)
+	rankStandardB, _ := standard.NewRankStandard(standard.RankB, &zScoreBMin, &zScoreBMax, createdAt, updatedAt)
+	rankStandardC, _ := standard.NewRankStandard(standard.RankC, &zScoreCMin, &zScoreCMax, createdAt, updatedAt)
+	rankStandards := []standard.RankStandard{rankStandardA, rankStandardB, rankStandardC}
+
+	measuredOn, _ := measurement.NewMeasuredOn(2026, 8, 1)
+	entries := func() []measurement.MeasurementEntry {
+		trialIndex, _ := measurement.NewTrialIndex(1)
+		value, _ := measurement.NewValue(46)
+		return []measurement.MeasurementEntry{
+			measurement.ReconstructMeasurementEntry(gripStrengthID, false, nil, []measurement.MeasurementValue{
+				measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &value, nil, nil),
+				measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &value, nil, nil),
+			}),
+		}
+	}
+
+	type measurementSpec struct {
+		customerIndex       int
+		isDraft             bool
+		wantItemEvaluations int
+		wantMean            float64
+		wantZScore          float64
+		wantRank            standard.Rank
+		wantMotorAge        int
+	}
+
+	tests := []struct {
+		name                     string
+		success                  bool
+		wantErr                  error
+		ctx                      context.Context
+		verifyTokenErr           error
+		callFindOrganization     bool
+		findOrganizationErr      error
+		myTenantIDs              []string
+		listMyGroupsErr          error
+		callListCustomers        bool
+		includeInactive          bool
+		genders                  []customer.Gender
+		listCustomersErr         error
+		callListMeasurements     bool
+		measurements             []measurementSpec
+		listMeasurementsErr      error
+		callListMasters          bool
+		registeredStandards      bool
+		listMeasurementItemsErr  error
+		listAgeGroupStandardsErr error
+		listRankStandardsErr     error
+	}{
+		{
+			name:                 "success list organization judgments",
+			success:              true,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			callListCustomers:    true,
+			genders:              []customer.Gender{customer.GenderMale, customer.GenderFemale},
+			callListMeasurements: true,
+			measurements: []measurementSpec{
+				{customerIndex: 0, isDraft: false, wantItemEvaluations: 1, wantMean: 38, wantZScore: 1.6, wantRank: standard.RankA, wantMotorAge: 42},
+				{customerIndex: 0, isDraft: true, wantItemEvaluations: 1, wantMean: 38, wantZScore: 1.6, wantRank: standard.RankA, wantMotorAge: 42},
+				{customerIndex: 1, isDraft: false, wantItemEvaluations: 1, wantMean: 44, wantZScore: 0.4, wantRank: standard.RankC, wantMotorAge: 52},
+			},
+			callListMasters:     true,
+			registeredStandards: true,
+		},
+		{
+			name:                 "success list organization judgments including inactive customers",
+			success:              true,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			callListCustomers:    true,
+			includeInactive:      true,
+			genders:              []customer.Gender{customer.GenderMale},
+			callListMeasurements: true,
+			measurements: []measurementSpec{
+				{customerIndex: 0, isDraft: false, wantItemEvaluations: 1, wantMean: 38, wantZScore: 1.6, wantRank: standard.RankA, wantMotorAge: 42},
+			},
+			callListMasters:     true,
+			registeredStandards: true,
+		},
+		{
+			name:                 "success list judgments of a customer whose gender has no standards",
+			success:              true,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			callListCustomers:    true,
+			genders:              []customer.Gender{customer.GenderOther},
+			callListMeasurements: true,
+			measurements:         []measurementSpec{{customerIndex: 0, isDraft: false}},
+			callListMasters:      true,
+			registeredStandards:  true,
+		},
+		{
+			name:                 "success list judgments without registered standards",
+			success:              true,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			callListCustomers:    true,
+			genders:              []customer.Gender{customer.GenderMale},
+			callListMeasurements: true,
+			measurements:         []measurementSpec{{customerIndex: 0, isDraft: false}},
+			callListMasters:      true,
+		},
+		{
+			name:                 "success list no judgments of an organization without customers",
+			success:              true,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			callListCustomers:    true,
+			callListMeasurements: true,
+		},
+		{
+			name:                 "success list no judgments of customers without measurements",
+			success:              true,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			callListCustomers:    true,
+			genders:              []customer.Gender{customer.GenderMale},
+			callListMeasurements: true,
+		},
+		{
+			name:           "failure verify token error",
+			ctx:            context.Background(),
+			verifyTokenErr: errors.New("verify token error"),
+		},
+		{
+			name:                 "failure organization not found",
+			wantErr:              organization.ErrOrganizationNotFound,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			findOrganizationErr:  organization.ErrOrganizationNotFound,
+		},
+		{
+			name:                 "failure other tenant is hidden as not found",
+			wantErr:              organization.ErrOrganizationNotFound,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{otherTenantID},
+		},
+		{
+			name:                 "failure list my groups error",
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			listMyGroupsErr:      errors.New("list my groups error"),
+		},
+		{
+			name:                 "failure list customers error",
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			callListCustomers:    true,
+			listCustomersErr:     errors.New("list customers error"),
+		},
+		{
+			name:                 "failure list measurements error",
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			callListCustomers:    true,
+			genders:              []customer.Gender{customer.GenderMale},
+			callListMeasurements: true,
+			listMeasurementsErr:  errors.New("list measurements error"),
+		},
+		{
+			name:                    "failure list measurement items error",
+			ctx:                     context.Background(),
+			callFindOrganization:    true,
+			myTenantIDs:             []string{tenantID.String()},
+			callListCustomers:       true,
+			genders:                 []customer.Gender{customer.GenderMale},
+			callListMeasurements:    true,
+			measurements:            []measurementSpec{{customerIndex: 0, isDraft: false}},
+			callListMasters:         true,
+			listMeasurementItemsErr: errors.New("list measurement items error"),
+		},
+		{
+			name:                     "failure list age group standards error",
+			ctx:                      context.Background(),
+			callFindOrganization:     true,
+			myTenantIDs:              []string{tenantID.String()},
+			callListCustomers:        true,
+			genders:                  []customer.Gender{customer.GenderMale},
+			callListMeasurements:     true,
+			measurements:             []measurementSpec{{customerIndex: 0, isDraft: false}},
+			callListMasters:          true,
+			listAgeGroupStandardsErr: errors.New("list age group standards error"),
+		},
+		{
+			name:                 "failure list rank standards error",
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			callListCustomers:    true,
+			genders:              []customer.Gender{customer.GenderMale},
+			callListMeasurements: true,
+			measurements:         []measurementSpec{{customerIndex: 0, isDraft: false}},
+			callListMasters:      true,
+			listRankStandardsErr: errors.New("list rank standards error"),
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			organizationID := organization.NewOrganizationID()
+			customerIDs := make([]customer.CustomerID, 0, len(tt.genders))
+			for range tt.genders {
+				customerIDs = append(customerIDs, customer.NewCustomerID())
+			}
+
+			mockAuthService := mocksappauth.NewMockAuthService(ctrl)
+			mockUserService := mocksappuser.NewMockUserService(ctrl)
+			mockJudgmentRepository := mocksjudgment.NewMockJudgmentRepository(ctrl)
+			mockMeasurementRepository := mocksmeasurement.NewMockMeasurementRepository(ctrl)
+			mockCustomerRepository := mockscustomer.NewMockCustomerRepository(ctrl)
+			mockOrganizationRepository := mocksorganization.NewMockOrganizationRepository(ctrl)
+			mockMeasurementItemRepository := mocksmeasurementitem.NewMockMeasurementItemRepository(ctrl)
+			mockAgeGroupStandardRepository := mocksstandard.NewMockAgeGroupStandardRepository(ctrl)
+			mockRankStandardRepository := mocksstandard.NewMockRankStandardRepository(ctrl)
+			mockPrescribedMenuOverrideRepository := mocksjudgment.NewMockPrescribedMenuOverrideRepository(ctrl)
+			mockTrainingMenuRepository := mockstraining.NewMockTrainingMenuRepository(ctrl)
+			mockPrescriptionRuleRepository := mockstraining.NewMockPrescriptionRuleRepository(ctrl)
+
+			mockAuthService.EXPECT().VerifyToken(tt.ctx).Return(userID, tt.verifyTokenErr).AnyTimes()
+
+			if tt.callFindOrganization {
+				var foundOrganization organization.Organization
+				if tt.findOrganizationErr == nil {
+					mockOrganization := mocksorganization.NewMockOrganization(ctrl)
+					mockOrganization.EXPECT().TenantID().Return(tenantID).AnyTimes()
+					foundOrganization = mockOrganization
+				}
+				mockOrganizationRepository.EXPECT().FindByID(tt.ctx, organizationID).Return(foundOrganization, tt.findOrganizationErr).Times(1)
+				if tt.findOrganizationErr == nil {
+					mockUserService.EXPECT().ListMyGroups(tt.ctx).Return(tt.myTenantIDs, tt.listMyGroupsErr).Times(1)
+				}
+			}
+
+			if tt.callListCustomers {
+				var customers []customer.Customer
+				if tt.listCustomersErr == nil {
+					customers = make([]customer.Customer, 0, len(tt.genders))
+					for i, gender := range tt.genders {
+						mockCustomer := mockscustomer.NewMockCustomer(ctrl)
+						mockCustomer.EXPECT().ID().Return(customerIDs[i]).AnyTimes()
+						mockCustomer.EXPECT().Gender().Return(gender).AnyTimes()
+						customers = append(customers, mockCustomer)
+					}
+				}
+				mockCustomerRepository.EXPECT().ListByOrganizationID(tt.ctx, organizationID, tt.includeInactive).Return(customers, tt.listCustomersErr).Times(1)
+			}
+
+			measurementIDs := make([]measurement.MeasurementID, 0, len(tt.measurements))
+			if tt.callListMeasurements {
+				var measurements []measurement.Measurement
+				if tt.listMeasurementsErr == nil {
+					measurements = make([]measurement.Measurement, 0, len(tt.measurements))
+					for _, spec := range tt.measurements {
+						measurementID := measurement.NewMeasurementID()
+						measurementIDs = append(measurementIDs, measurementID)
+						ageAtMeasurement, _ := measurement.NewAgeAtMeasurement(62)
+						mockMeasurement := mocksmeasurement.NewMockMeasurement(ctrl)
+						mockMeasurement.EXPECT().ID().Return(measurementID).AnyTimes()
+						mockMeasurement.EXPECT().CustomerID().Return(customerIDs[spec.customerIndex]).AnyTimes()
+						mockMeasurement.EXPECT().MeasuredOn().Return(measuredOn).AnyTimes()
+						mockMeasurement.EXPECT().AgeAtMeasurement().Return(ageAtMeasurement).AnyTimes()
+						mockMeasurement.EXPECT().IsDraft().Return(spec.isDraft).AnyTimes()
+						mockMeasurement.EXPECT().Entries().Return(entries()).AnyTimes()
+						measurements = append(measurements, mockMeasurement)
+					}
+				}
+				mockMeasurementRepository.EXPECT().ListByCustomerIDs(tt.ctx, customerIDs).Return(measurements, tt.listMeasurementsErr).Times(1)
+			}
+
+			if tt.callListMasters {
+				measurementItems := []measurementitem.MeasurementItem{}
+				targetAgeGroupStandards := []standard.AgeGroupStandard{}
+				targetRankStandards := []standard.RankStandard{}
+				if tt.registeredStandards {
+					measurementItems = []measurementitem.MeasurementItem{gripStrength}
+					targetAgeGroupStandards = ageGroupStandards
+					targetRankStandards = rankStandards
+				}
+				mockMeasurementItemRepository.EXPECT().List(tt.ctx).Return(measurementItems, tt.listMeasurementItemsErr).Times(1)
+				if tt.listMeasurementItemsErr == nil {
+					mockAgeGroupStandardRepository.EXPECT().List(tt.ctx).Return(targetAgeGroupStandards, tt.listAgeGroupStandardsErr).Times(1)
+				}
+				if tt.listMeasurementItemsErr == nil && tt.listAgeGroupStandardsErr == nil {
+					mockRankStandardRepository.EXPECT().List(tt.ctx).Return(targetRankStandards, tt.listRankStandardsErr).Times(1)
+				}
+			}
+
+			u := NewJudgmentUsecase(mockAuthService, mockUserService, mockJudgmentRepository, mockPrescribedMenuOverrideRepository, mockMeasurementRepository, mockCustomerRepository, mockOrganizationRepository, mockMeasurementItemRepository, mockAgeGroupStandardRepository, mockRankStandardRepository, mockTrainingMenuRepository, mockPrescriptionRuleRepository)
+
+			results, err := u.ListOrganizationJudgments(tt.ctx, organizationID, tt.includeInactive)
+			if tt.success && err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+			if !tt.success && err == nil {
+				t.Errorf("expected error, but got nil")
+			}
+			if tt.wantErr != nil && !errors.Is(err, tt.wantErr) {
+				t.Errorf("err = %v, want %v", err, tt.wantErr)
+			}
+			if !tt.success {
+				return
+			}
+
+			if len(results) != len(tt.measurements) {
+				t.Fatalf("len(results) = %v, want %v", len(results), len(tt.measurements))
+			}
+			for i, spec := range tt.measurements {
+				result := results[i]
+				if result.MeasurementID != measurementIDs[i] {
+					t.Errorf("results[%d].MeasurementID = %v, want %v", i, result.MeasurementID, measurementIDs[i])
+				}
+				if result.CustomerID != customerIDs[spec.customerIndex] {
+					t.Errorf("results[%d].CustomerID = %v, want %v", i, result.CustomerID, customerIDs[spec.customerIndex])
+				}
+				if !result.MeasuredOn.Equal(measuredOn.Time) {
+					t.Errorf("results[%d].MeasuredOn = %v, want %v", i, result.MeasuredOn, measuredOn)
+				}
+				if result.AgeAtMeasurement.Int() != 62 {
+					t.Errorf("results[%d].AgeAtMeasurement = %v, want %v", i, result.AgeAtMeasurement.Int(), 62)
+				}
+				if result.IsDraft != spec.isDraft {
+					t.Errorf("results[%d].IsDraft = %v, want %v", i, result.IsDraft, spec.isDraft)
+				}
+
+				itemEvaluations := result.Evaluation.ItemEvaluations()
+				elementEvaluations := result.Evaluation.ElementEvaluations()
+				motorAge := result.Evaluation.MotorAge()
+				if len(itemEvaluations) != spec.wantItemEvaluations {
+					t.Fatalf("len(results[%d].ItemEvaluations()) = %v, want %v", i, len(itemEvaluations), spec.wantItemEvaluations)
+				}
+				if spec.wantItemEvaluations == 0 {
+					if len(elementEvaluations) != 0 {
+						t.Errorf("len(results[%d].ElementEvaluations()) = %v, want %v", i, len(elementEvaluations), 0)
+					}
+					if motorAge != nil {
+						t.Errorf("results[%d].MotorAge() = %v, want nil", i, motorAge)
+					}
+					continue
+				}
+				if itemEvaluations[0].Mean().Float64() != spec.wantMean {
+					t.Errorf("results[%d].ItemEvaluations()[0].Mean() = %v, want %v", i, itemEvaluations[0].Mean().Float64(), spec.wantMean)
+				}
+				if itemEvaluations[0].ZScore().Float64() != spec.wantZScore {
+					t.Errorf("results[%d].ItemEvaluations()[0].ZScore() = %v, want %v", i, itemEvaluations[0].ZScore().Float64(), spec.wantZScore)
+				}
+				if itemEvaluations[0].Rank() != spec.wantRank {
+					t.Errorf("results[%d].ItemEvaluations()[0].Rank() = %v, want %v", i, itemEvaluations[0].Rank(), spec.wantRank)
+				}
+				if len(elementEvaluations) != 1 {
+					t.Fatalf("len(results[%d].ElementEvaluations()) = %v, want %v", i, len(elementEvaluations), 1)
+				}
+				if elementEvaluations[0].Rank() != spec.wantRank {
+					t.Errorf("results[%d].ElementEvaluations()[0].Rank() = %v, want %v", i, elementEvaluations[0].Rank(), spec.wantRank)
+				}
+				if motorAge == nil || motorAge.Int() != spec.wantMotorAge {
+					t.Errorf("results[%d].MotorAge() = %v, want %v", i, motorAge, spec.wantMotorAge)
+				}
 			}
 		})
 	}
@@ -765,6 +1182,7 @@ func TestUpsertJudgmentAdvice(t *testing.T) {
 			mockJudgmentRepository := mocksjudgment.NewMockJudgmentRepository(ctrl)
 			mockMeasurementRepository := mocksmeasurement.NewMockMeasurementRepository(ctrl)
 			mockCustomerRepository := mockscustomer.NewMockCustomerRepository(ctrl)
+			mockOrganizationRepository := mocksorganization.NewMockOrganizationRepository(ctrl)
 			mockMeasurementItemRepository := mocksmeasurementitem.NewMockMeasurementItemRepository(ctrl)
 			mockAgeGroupStandardRepository := mocksstandard.NewMockAgeGroupStandardRepository(ctrl)
 			mockRankStandardRepository := mocksstandard.NewMockRankStandardRepository(ctrl)
@@ -805,7 +1223,7 @@ func TestUpsertJudgmentAdvice(t *testing.T) {
 				mockJudgmentRepository.EXPECT().Upsert(gomock.Any(), gomock.Any()).Times(0)
 			}
 
-			u := NewJudgmentUsecase(mockAuthService, mockUserService, mockJudgmentRepository, mockPrescribedMenuOverrideRepository, mockMeasurementRepository, mockCustomerRepository, mockMeasurementItemRepository, mockAgeGroupStandardRepository, mockRankStandardRepository, mockTrainingMenuRepository, mockPrescriptionRuleRepository)
+			u := NewJudgmentUsecase(mockAuthService, mockUserService, mockJudgmentRepository, mockPrescribedMenuOverrideRepository, mockMeasurementRepository, mockCustomerRepository, mockOrganizationRepository, mockMeasurementItemRepository, mockAgeGroupStandardRepository, mockRankStandardRepository, mockTrainingMenuRepository, mockPrescriptionRuleRepository)
 
 			upsertedJudgment, err := u.UpsertJudgmentAdvice(tt.ctx, measurementID, tt.patch)
 			if tt.success && err != nil {
@@ -1046,6 +1464,7 @@ func TestUpsertPrescription(t *testing.T) {
 			mockJudgmentRepository := mocksjudgment.NewMockJudgmentRepository(ctrl)
 			mockMeasurementRepository := mocksmeasurement.NewMockMeasurementRepository(ctrl)
 			mockCustomerRepository := mockscustomer.NewMockCustomerRepository(ctrl)
+			mockOrganizationRepository := mocksorganization.NewMockOrganizationRepository(ctrl)
 			mockMeasurementItemRepository := mocksmeasurementitem.NewMockMeasurementItemRepository(ctrl)
 			mockAgeGroupStandardRepository := mocksstandard.NewMockAgeGroupStandardRepository(ctrl)
 			mockRankStandardRepository := mocksstandard.NewMockRankStandardRepository(ctrl)
@@ -1097,7 +1516,7 @@ func TestUpsertPrescription(t *testing.T) {
 				mockPrescribedMenuOverrideRepository.EXPECT().ReplaceByMeasurementID(gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
 			}
 
-			u := NewJudgmentUsecase(mockAuthService, mockUserService, mockJudgmentRepository, mockPrescribedMenuOverrideRepository, mockMeasurementRepository, mockCustomerRepository, mockMeasurementItemRepository, mockAgeGroupStandardRepository, mockRankStandardRepository, mockTrainingMenuRepository, mockPrescriptionRuleRepository)
+			u := NewJudgmentUsecase(mockAuthService, mockUserService, mockJudgmentRepository, mockPrescribedMenuOverrideRepository, mockMeasurementRepository, mockCustomerRepository, mockOrganizationRepository, mockMeasurementItemRepository, mockAgeGroupStandardRepository, mockRankStandardRepository, mockTrainingMenuRepository, mockPrescriptionRuleRepository)
 
 			upsertedPrescription, err := u.UpsertPrescription(tt.ctx, measurementID, tt.menus)
 			if tt.success && err != nil {
@@ -1224,6 +1643,7 @@ func TestDeletePrescription(t *testing.T) {
 			mockJudgmentRepository := mocksjudgment.NewMockJudgmentRepository(ctrl)
 			mockMeasurementRepository := mocksmeasurement.NewMockMeasurementRepository(ctrl)
 			mockCustomerRepository := mockscustomer.NewMockCustomerRepository(ctrl)
+			mockOrganizationRepository := mocksorganization.NewMockOrganizationRepository(ctrl)
 			mockMeasurementItemRepository := mocksmeasurementitem.NewMockMeasurementItemRepository(ctrl)
 			mockAgeGroupStandardRepository := mocksstandard.NewMockAgeGroupStandardRepository(ctrl)
 			mockRankStandardRepository := mocksstandard.NewMockRankStandardRepository(ctrl)
@@ -1256,7 +1676,7 @@ func TestDeletePrescription(t *testing.T) {
 				mockPrescribedMenuOverrideRepository.EXPECT().DeleteByMeasurementID(gomock.Any(), gomock.Any()).Times(0)
 			}
 
-			u := NewJudgmentUsecase(mockAuthService, mockUserService, mockJudgmentRepository, mockPrescribedMenuOverrideRepository, mockMeasurementRepository, mockCustomerRepository, mockMeasurementItemRepository, mockAgeGroupStandardRepository, mockRankStandardRepository, mockTrainingMenuRepository, mockPrescriptionRuleRepository)
+			u := NewJudgmentUsecase(mockAuthService, mockUserService, mockJudgmentRepository, mockPrescribedMenuOverrideRepository, mockMeasurementRepository, mockCustomerRepository, mockOrganizationRepository, mockMeasurementItemRepository, mockAgeGroupStandardRepository, mockRankStandardRepository, mockTrainingMenuRepository, mockPrescriptionRuleRepository)
 
 			err := u.DeletePrescription(tt.ctx, measurementID)
 			if tt.success && err != nil {

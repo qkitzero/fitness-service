@@ -3,12 +3,16 @@ syntax = "proto3";
 package judgment.v1;
 
 import "google/api/annotations.proto";
+import "google/type/date.proto";
 
 option go_package = "github.com/qkitzero/fitness-service/gen/go/judgment/v1";
 
 service JudgmentService {
   rpc GetJudgment(GetJudgmentRequest) returns (GetJudgmentResponse) {
     option (google.api.http) = {get: "/v1/measurement/{measurement_id}/judgment"};
+  }
+  rpc ListOrganizationJudgments(ListOrganizationJudgmentsRequest) returns (ListOrganizationJudgmentsResponse) {
+    option (google.api.http) = {get: "/v1/organization/{organization_id}/judgments"};
   }
   rpc UpsertJudgmentAdvice(UpsertJudgmentAdviceRequest) returns (UpsertJudgmentAdviceResponse) {
     option (google.api.http) = {
@@ -112,12 +116,32 @@ message Judgment {
   repeated PrescribedMenu prescribed_menus = 7;
 }
 
+message OrganizationJudgment {
+  string customer_id = 1;
+  string measurement_id = 2;
+  google.type.Date measured_on = 3;
+  uint32 age_at_measurement = 4;
+  bool is_draft = 5;
+  repeated ItemEvaluation item_evaluations = 6;
+  repeated ElementEvaluation element_evaluations = 7;
+  optional uint32 motor_age = 8;
+}
+
 message GetJudgmentRequest {
   string measurement_id = 1;
 }
 
 message GetJudgmentResponse {
   Judgment judgment = 1;
+}
+
+message ListOrganizationJudgmentsRequest {
+  string organization_id = 1;
+  bool include_inactive = 2;
+}
+
+message ListOrganizationJudgmentsResponse {
+  repeated OrganizationJudgment judgments = 1;
 }
 
 message UpsertJudgmentAdviceRequest {
