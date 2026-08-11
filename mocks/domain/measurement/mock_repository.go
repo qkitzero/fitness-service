@@ -100,6 +100,21 @@ func (mr *MockMeasurementRepositoryMockRecorder) ListByCustomerID(ctx, customerI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByCustomerID", reflect.TypeOf((*MockMeasurementRepository)(nil).ListByCustomerID), ctx, customerID)
 }
 
+// ListByCustomerIDs mocks base method.
+func (m *MockMeasurementRepository) ListByCustomerIDs(ctx context.Context, customerIDs []customer.CustomerID) ([]measurement.Measurement, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListByCustomerIDs", ctx, customerIDs)
+	ret0, _ := ret[0].([]measurement.Measurement)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListByCustomerIDs indicates an expected call of ListByCustomerIDs.
+func (mr *MockMeasurementRepositoryMockRecorder) ListByCustomerIDs(ctx, customerIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByCustomerIDs", reflect.TypeOf((*MockMeasurementRepository)(nil).ListByCustomerIDs), ctx, customerIDs)
+}
+
 // Update mocks base method.
 func (m *MockMeasurementRepository) Update(ctx context.Context, arg1 measurement.Measurement) error {
 	m.ctrl.T.Helper()
