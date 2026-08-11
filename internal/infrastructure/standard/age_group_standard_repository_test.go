@@ -22,11 +22,124 @@ const (
 	testAgeGroupID50s     = "b3a6a9cc-9bae-4d4c-af1f-1b2dc2f2c2e1"
 	testAgeGroupIDAnother = "c4b7badd-acbf-4e5d-bf20-2c3ed3f3d3f2"
 
+	listSQL                   = `SELECT * FROM "age_group_standards" ORDER BY measurement_item_id, gender, age_from`
 	listByItemIDSQL           = `SELECT * FROM "age_group_standards" WHERE measurement_item_id = $1 ORDER BY gender, age_from`
 	listByItemIDsAndGenderSQL = `SELECT * FROM "age_group_standards" WHERE measurement_item_id IN ($1,$2) AND gender = $3 ORDER BY measurement_item_id, age_from`
 )
 
 var ageGroupStandardColumns = []string{"id", "measurement_item_id", "gender", "age_from", "age_to", "mean", "standard_deviation", "created_at", "updated_at"}
+
+func TestListAgeGroupStandards(t *testing.T) {
+	t.Parallel()
+	createdAt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	updatedAt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
+	tests := []struct {
+		name        string
+		success     bool
+		wantIDs     []string
+		wantItemIDs []string
+		wantGenders []standard.Gender
+		setup       func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name:        "success list age group standards of every measurement item and gender",
+			success:     true,
+			wantIDs:     []string{testAgeGroupID40s, testAgeGroupID50s, testAgeGroupIDAnother},
+			wantItemIDs: []string{testGripStrengthID, testGripStrengthID, testSitAndReachID},
+			wantGenders: []standard.Gender{standard.GenderFemale, standard.GenderMale, standard.GenderMale},
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
+					WillReturnRows(sqlmock.NewRows(ageGroupStandardColumns).
+						AddRow(testAgeGroupID40s, testGripStrengthID, "female", 45, 49, 27.5, 4.8, createdAt, updatedAt).
+						AddRow(testAgeGroupID50s, testGripStrengthID, "male", 45, 49, 46.5, 6.8, createdAt, updatedAt).
+						AddRow(testAgeGroupIDAnother, testSitAndReachID, "male", 45, 49, 38.2, 9.1, createdAt, updatedAt))
+			},
+		},
+		{
+			name:        "success list no age group standards",
+			success:     true,
+			wantIDs:     []string{},
+			wantItemIDs: []string{},
+			wantGenders: []standard.Gender{},
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
+					WillReturnRows(sqlmock.NewRows(ageGroupStandardColumns))
+			},
+		},
+		{
+			name:    "failure list age group standards error",
+			success: false,
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
+					WillReturnError(errors.New("list age group standards error"))
+			},
+		},
+		{
+			name:    "failure unknown gender",
+			success: false,
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
+					WillReturnRows(sqlmock.NewRows(ageGroupStandardColumns).
+						AddRow(testAgeGroupID40s, testGripStrengthID, "other", 45, 49, 46.5, 6.8, createdAt, updatedAt))
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			sqlDB, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("failed to new sqlmock: %s", err)
+			}
+
+			gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
+			if err != nil {
+				t.Fatalf("failed to open gorm: %s", err)
+			}
+
+			tt.setup(mock)
+
+			repo := NewAgeGroupStandardRepository(gormDB)
+
+			ageGroupStandards, err := repo.List(context.Background())
+			if tt.success && err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+			if !tt.success && err == nil {
+				t.Errorf("expected error, but got nil")
+			}
+			if !tt.success && ageGroupStandards != nil {
+				t.Errorf("expected no age group standards on failure, but got %v", len(ageGroupStandards))
+			}
+			if tt.success {
+				if len(ageGroupStandards) != len(tt.wantIDs) {
+					t.Errorf("len(ageGroupStandards) = %v, want %v", len(ageGroupStandards), len(tt.wantIDs))
+				}
+				for i := range tt.wantIDs {
+					if i >= len(ageGroupStandards) {
+						break
+					}
+					a := ageGroupStandards[i]
+					if a.ID().String() != tt.wantIDs[i] {
+						t.Errorf("ageGroupStandards[%d].ID() = %v, want %v", i, a.ID().String(), tt.wantIDs[i])
+					}
+					if a.MeasurementItemID().String() != tt.wantItemIDs[i] {
+						t.Errorf("ageGroupStandards[%d].MeasurementItemID() = %v, want %v", i, a.MeasurementItemID(), tt.wantItemIDs[i])
+					}
+					if a.Gender() != tt.wantGenders[i] {
+						t.Errorf("ageGroupStandards[%d].Gender() = %v, want %v", i, a.Gender(), tt.wantGenders[i])
+					}
+				}
+			}
+
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
 
 func TestListByItemID(t *testing.T) {
 	t.Parallel()
