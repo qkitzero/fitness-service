@@ -61,6 +61,15 @@ func toAgeGroupStandards(models []AgeGroupStandardModel) ([]standard.AgeGroupSta
 	return ageGroupStandards, nil
 }
 
+func (r *ageGroupStandardRepository) List(ctx context.Context) ([]standard.AgeGroupStandard, error) {
+	var ageGroupStandardModels []AgeGroupStandardModel
+	if err := r.db.WithContext(ctx).Order("measurement_item_id, gender, age_from").Find(&ageGroupStandardModels).Error; err != nil {
+		return nil, err
+	}
+
+	return toAgeGroupStandards(ageGroupStandardModels)
+}
+
 func (r *ageGroupStandardRepository) ListByItemID(ctx context.Context, measurementItemID measurementitem.MeasurementItemID) ([]standard.AgeGroupStandard, error) {
 	var ageGroupStandardModels []AgeGroupStandardModel
 	if err := r.db.WithContext(ctx).Where("measurement_item_id = ?", measurementItemID).Order("gender, age_from").Find(&ageGroupStandardModels).Error; err != nil {

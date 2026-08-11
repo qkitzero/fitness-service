@@ -523,6 +523,125 @@ func TestListByTenantID(t *testing.T) {
 	}
 }
 
+func TestListByOrganizationID(t *testing.T) {
+	t.Parallel()
+	organizationID, _ := organization.NewOrganizationIDFromString(testOrganizationID)
+	tenantID := tenant.TenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
+	columns := []string{"id", "tenant_id", "name", "name_kana", "gender", "birth_date", "phone", "email", "postal_code", "prefecture", "city", "street", "building", "emergency_contact_name", "emergency_contact_relationship", "emergency_contact_phone", "organization_id", "is_active", "created_at", "updated_at"}
+	tests := []struct {
+		name            string
+		success         bool
+		wantNames       []string
+		wantActive      []bool
+		includeInactive bool
+		setup           func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name:            "success list active customers by organization id",
+			success:         true,
+			wantNames:       []string{"test customer 1", "test customer 2"},
+			wantActive:      []bool{true, true},
+			includeInactive: false,
+			setup: func(mock sqlmock.Sqlmock) {
+				customerRows := sqlmock.NewRows(columns).
+					AddRow(uuid.New().String(), tenantID, "test customer 1", "テストカナ", "male", testBirthDate, "0312345678", "test1@example.com", "1234567", "東京都", "千代田区", "1-1-1", "テストビル", "緊急 太郎", "父", "09012345678", testOrganizationID, true, testCreatedAt, testUpdatedAt).
+					AddRow(uuid.New().String(), tenantID, "test customer 2", "テストカナ", "female", testBirthDate, "0312345679", "test2@example.com", "1234568", "大阪府", "大阪市", "2-2-2", "更新ビル", "緊急 花子", "母", "08012345678", testOrganizationID, true, testCreatedAt, testUpdatedAt)
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE organization_id = $1 AND is_active = $2 ORDER BY created_at, id`)).
+					WithArgs(organizationID, true).
+					WillReturnRows(customerRows)
+			},
+		},
+		{
+			name:            "success list customers including inactive",
+			success:         true,
+			wantNames:       []string{"test customer 1", "test customer 2"},
+			wantActive:      []bool{true, false},
+			includeInactive: true,
+			setup: func(mock sqlmock.Sqlmock) {
+				customerRows := sqlmock.NewRows(columns).
+					AddRow(uuid.New().String(), tenantID, "test customer 1", "テストカナ", "male", testBirthDate, "0312345678", "test1@example.com", "1234567", "東京都", "千代田区", "1-1-1", "テストビル", "緊急 太郎", "父", "09012345678", testOrganizationID, true, testCreatedAt, testUpdatedAt).
+					AddRow(uuid.New().String(), tenantID, "test customer 2", "テストカナ", "female", testBirthDate, "0312345679", "test2@example.com", "1234568", "大阪府", "大阪市", "2-2-2", "更新ビル", "緊急 花子", "母", "08012345678", testOrganizationID, false, testCreatedAt, testUpdatedAt)
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE organization_id = $1 ORDER BY created_at, id`)).
+					WithArgs(organizationID).
+					WillReturnRows(customerRows)
+			},
+		},
+		{
+			name:            "success list no customers",
+			success:         true,
+			wantNames:       []string{},
+			wantActive:      []bool{},
+			includeInactive: false,
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE organization_id = $1 AND is_active = $2 ORDER BY created_at, id`)).
+					WithArgs(organizationID, true).
+					WillReturnRows(sqlmock.NewRows(columns))
+			},
+		},
+		{
+			name:            "failure list customers error",
+			success:         false,
+			includeInactive: false,
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE organization_id = $1 AND is_active = $2 ORDER BY created_at, id`)).
+					WithArgs(organizationID, true).
+					WillReturnError(errors.New("list customers error"))
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			sqlDB, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("failed to new sqlmock: %s", err)
+			}
+
+			gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
+			if err != nil {
+				t.Fatalf("failed to open gorm: %s", err)
+			}
+
+			tt.setup(mock)
+
+			repo := NewCustomerRepository(gormDB)
+
+			customers, err := repo.ListByOrganizationID(context.Background(), organizationID, tt.includeInactive)
+			if tt.success && err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+			if !tt.success && err == nil {
+				t.Errorf("expected error, but got nil")
+			}
+			if tt.success {
+				if len(customers) != len(tt.wantNames) {
+					t.Errorf("len(customers) = %v, want %v", len(customers), len(tt.wantNames))
+				}
+				for i, wantName := range tt.wantNames {
+					if i >= len(customers) {
+						break
+					}
+					if customers[i].Name().String() != wantName {
+						t.Errorf("customers[%d].Name() = %v, want %v", i, customers[i].Name().String(), wantName)
+					}
+					if customers[i].OrganizationID() == nil || *customers[i].OrganizationID() != organizationID {
+						t.Errorf("customers[%d].OrganizationID() = %v, want %v", i, customers[i].OrganizationID(), organizationID)
+					}
+					if customers[i].IsActive() != tt.wantActive[i] {
+						t.Errorf("customers[%d].IsActive() = %v, want %v", i, customers[i].IsActive(), tt.wantActive[i])
+					}
+				}
+			}
+
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
 func TestUpdate(t *testing.T) {
 	t.Parallel()
 	updatedBirthDate := time.Date(1999, 12, 31, 0, 0, 0, 0, time.UTC)

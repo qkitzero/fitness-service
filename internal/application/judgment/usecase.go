@@ -12,6 +12,7 @@ import (
 	"github.com/qkitzero/fitness-service/internal/domain/judgment"
 	"github.com/qkitzero/fitness-service/internal/domain/measurement"
 	"github.com/qkitzero/fitness-service/internal/domain/measurementitem"
+	"github.com/qkitzero/fitness-service/internal/domain/organization"
 	"github.com/qkitzero/fitness-service/internal/domain/standard"
 	"github.com/qkitzero/fitness-service/internal/domain/tenant"
 	"github.com/qkitzero/fitness-service/internal/domain/training"
@@ -23,6 +24,15 @@ type JudgmentResult struct {
 	Evaluation    judgment.Evaluation
 	Prescription  judgment.Prescription
 	Advice        *judgment.Advice
+}
+
+type OrganizationJudgmentResult struct {
+	CustomerID       customer.CustomerID
+	MeasurementID    measurement.MeasurementID
+	MeasuredOn       measurement.MeasuredOn
+	AgeAtMeasurement measurement.AgeAtMeasurement
+	IsDraft          bool
+	Evaluation       judgment.Evaluation
 }
 
 type AdvicePatch struct {
@@ -41,6 +51,7 @@ type PrescribedMenuInput struct {
 
 type JudgmentUsecase interface {
 	GetJudgment(ctx context.Context, measurementID measurement.MeasurementID) (JudgmentResult, error)
+	ListOrganizationJudgments(ctx context.Context, organizationID organization.OrganizationID, includeInactive bool) ([]OrganizationJudgmentResult, error)
 	UpsertJudgmentAdvice(ctx context.Context, measurementID measurement.MeasurementID, patch AdvicePatch) (judgment.Judgment, error)
 	UpsertPrescription(ctx context.Context, measurementID measurement.MeasurementID, menus []PrescribedMenuInput) (judgment.Prescription, error)
 	DeletePrescription(ctx context.Context, measurementID measurement.MeasurementID) error
@@ -53,6 +64,7 @@ type judgmentUsecase struct {
 	prescribedMenuOverrideRepo judgment.PrescribedMenuOverrideRepository
 	measurementRepo            measurement.MeasurementRepository
 	customerRepo               customer.CustomerRepository
+	organizationRepo           organization.OrganizationRepository
 	measurementItemRepo        measurementitem.MeasurementItemRepository
 	ageGroupStandardRepo       standard.AgeGroupStandardRepository
 	rankStandardRepo           standard.RankStandardRepository
@@ -67,6 +79,7 @@ func NewJudgmentUsecase(
 	prescribedMenuOverrideRepo judgment.PrescribedMenuOverrideRepository,
 	measurementRepo measurement.MeasurementRepository,
 	customerRepo customer.CustomerRepository,
+	organizationRepo organization.OrganizationRepository,
 	measurementItemRepo measurementitem.MeasurementItemRepository,
 	ageGroupStandardRepo standard.AgeGroupStandardRepository,
 	rankStandardRepo standard.RankStandardRepository,
@@ -80,6 +93,7 @@ func NewJudgmentUsecase(
 		prescribedMenuOverrideRepo: prescribedMenuOverrideRepo,
 		measurementRepo:            measurementRepo,
 		customerRepo:               customerRepo,
+		organizationRepo:           organizationRepo,
 		measurementItemRepo:        measurementItemRepo,
 		ageGroupStandardRepo:       ageGroupStandardRepo,
 		rankStandardRepo:           rankStandardRepo,
@@ -254,6 +268,94 @@ func (u *judgmentUsecase) GetJudgment(ctx context.Context, measurementID measure
 	}
 
 	return result, nil
+}
+
+func (u *judgmentUsecase) ListOrganizationJudgments(ctx context.Context, organizationID organization.OrganizationID, includeInactive bool) ([]OrganizationJudgmentResult, error) {
+	if _, err := u.authService.VerifyToken(ctx); err != nil {
+		return nil, err
+	}
+
+	foundOrganization, err := u.organizationRepo.FindByID(ctx, organizationID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := u.verifyTenantMembership(ctx, foundOrganization.TenantID()); err != nil {
+		if errors.Is(err, tenant.ErrNotMember) {
+			return nil, organization.ErrOrganizationNotFound
+		}
+		return nil, err
+	}
+
+	customers, err := u.customerRepo.ListByOrganizationID(ctx, organizationID, includeInactive)
+	if err != nil {
+		return nil, err
+	}
+
+	customerIDs := make([]customer.CustomerID, 0, len(customers))
+	customerGenderByID := make(map[customer.CustomerID]customer.Gender, len(customers))
+	for _, foundCustomer := range customers {
+		customerIDs = append(customerIDs, foundCustomer.ID())
+		customerGenderByID[foundCustomer.ID()] = foundCustomer.Gender()
+	}
+
+	measurements, err := u.measurementRepo.ListByCustomerIDs(ctx, customerIDs)
+	if err != nil {
+		return nil, err
+	}
+	if len(measurements) == 0 {
+		return []OrganizationJudgmentResult{}, nil
+	}
+
+	measurementItems, err := u.measurementItemRepo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ageGroupStandards, err := u.ageGroupStandardRepo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	rankStandards, err := u.rankStandardRepo.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	ageGroupStandardsByGender := make(map[standard.Gender][]standard.AgeGroupStandard, len(ageGroupStandards))
+	for _, ageGroupStandard := range ageGroupStandards {
+		gender := ageGroupStandard.Gender()
+		ageGroupStandardsByGender[gender] = append(ageGroupStandardsByGender[gender], ageGroupStandard)
+	}
+
+	results := make([]OrganizationJudgmentResult, 0, len(measurements))
+	for _, foundMeasurement := range measurements {
+		age := foundMeasurement.AgeAtMeasurement().Int()
+		customerGender := customerGenderByID[foundMeasurement.CustomerID()]
+
+		gender, err := standard.NewGender(customerGender.String())
+		if err != nil {
+			log.Printf("ListOrganizationJudgments: measurement %s: no standards exist for customer gender %q, returning an empty evaluation", foundMeasurement.ID(), customerGender)
+		}
+
+		genderStandards := ageGroupStandardsByGender[gender]
+		if err == nil && len(genderStandards) == 0 {
+			log.Printf("ListOrganizationJudgments: measurement %s: no age group standards are registered for gender %q, returning an empty evaluation", foundMeasurement.ID(), gender)
+		}
+
+		evaluation := judgment.NewEvaluation(foundMeasurement, measurementItems, gender, age, genderStandards, rankStandards)
+
+		results = append(results, OrganizationJudgmentResult{
+			CustomerID:       foundMeasurement.CustomerID(),
+			MeasurementID:    foundMeasurement.ID(),
+			MeasuredOn:       foundMeasurement.MeasuredOn(),
+			AgeAtMeasurement: foundMeasurement.AgeAtMeasurement(),
+			IsDraft:          foundMeasurement.IsDraft(),
+			Evaluation:       evaluation,
+		})
+	}
+
+	return results, nil
 }
 
 func (u *judgmentUsecase) UpsertJudgmentAdvice(ctx context.Context, measurementID measurement.MeasurementID, patch AdvicePatch) (judgment.Judgment, error) {

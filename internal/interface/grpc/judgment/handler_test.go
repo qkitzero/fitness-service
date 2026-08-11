@@ -17,6 +17,7 @@ import (
 	domainjudgment "github.com/qkitzero/fitness-service/internal/domain/judgment"
 	domainmeasurement "github.com/qkitzero/fitness-service/internal/domain/measurement"
 	domainmeasurementitem "github.com/qkitzero/fitness-service/internal/domain/measurementitem"
+	domainorganization "github.com/qkitzero/fitness-service/internal/domain/organization"
 	domainstaff "github.com/qkitzero/fitness-service/internal/domain/staff"
 	domainstandard "github.com/qkitzero/fitness-service/internal/domain/standard"
 	domaintraining "github.com/qkitzero/fitness-service/internal/domain/training"
@@ -24,7 +25,13 @@ import (
 	mocksjudgment "github.com/qkitzero/fitness-service/mocks/domain/judgment"
 )
 
-const sampleMeasurementID = "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"
+const (
+	sampleMeasurementID  = "0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b"
+	sampleCustomerID     = "9a1b2c3d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"
+	sampleOrganizationID = "3f2b6c1d-4e5f-6a7b-8c9d-0e1f2a3b4c5d"
+	otherMeasurementID   = "1b2c3d4e-5f6a-7b8c-9d0e-1f2a3b4c5d6e"
+	otherCustomerID      = "2c3d4e5f-6a7b-8c9d-0e1f-2a3b4c5d6e7f"
+)
 
 func TestGetJudgment(t *testing.T) {
 	t.Parallel()
@@ -448,6 +455,294 @@ func TestGetJudgment(t *testing.T) {
 				}
 				if elementEvaluation.GetRank() != judgmentv1.Rank_RANK_B {
 					t.Errorf("Rank = %v, want %v", elementEvaluation.GetRank(), judgmentv1.Rank_RANK_B)
+				}
+			}
+		})
+	}
+}
+
+func TestListOrganizationJudgments(t *testing.T) {
+	t.Parallel()
+	createdAt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	updatedAt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
+
+	motorFunction, _ := domainmeasurementitem.NewCategory("motor_function")
+	kg, _ := domainmeasurementitem.NewUnit("kg")
+	twoTrials, _ := domainmeasurementitem.NewTrialCount(2)
+	higherIsBetter := domainmeasurementitem.ScoreDirectionHigherIsBetter
+	gripStrengthID := domainmeasurementitem.NewMeasurementItemID()
+	gripStrengthCode, _ := domainmeasurementitem.NewCode("grip_strength")
+	gripStrengthName, _ := domainmeasurementitem.NewName("握力")
+	gripStrength := domainmeasurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, true, domainmeasurementitem.ValueTypeNumeric, &higherIsBetter, domainmeasurementitem.SideAggregationMean, []domainmeasurementitem.Element{domainmeasurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+	unmappedElementItem := domainmeasurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, true, domainmeasurementitem.ValueTypeNumeric, &higherIsBetter, domainmeasurementitem.SideAggregationMean, []domainmeasurementitem.Element{domainmeasurementitem.Element("unknown")}, createdAt, updatedAt)
+
+	ageRange6064, _ := domainstandard.NewAgeRange(60, 64)
+	gripStrengthMean, _ := domainstandard.NewMean(38)
+	standardDeviation, _ := domainstandard.NewStandardDeviation(5)
+	ageGroupStandards := []domainstandard.AgeGroupStandard{
+		domainstandard.NewAgeGroupStandard(domainstandard.NewAgeGroupStandardID(), gripStrengthID, domainstandard.GenderMale, ageRange6064, gripStrengthMean, standardDeviation, createdAt, updatedAt),
+	}
+
+	zScoreA := domainstandard.ZScore(1.5)
+	zScoreCMin := domainstandard.ZScore(-0.5)
+	zScoreCMax := domainstandard.ZScore(0.5)
+	rankStandardA, _ := domainstandard.NewRankStandard(domainstandard.RankA, &zScoreA, nil, createdAt, updatedAt)
+	rankStandardC, _ := domainstandard.NewRankStandard(domainstandard.RankC, &zScoreCMin, &zScoreCMax, createdAt, updatedAt)
+	rankStandards := []domainstandard.RankStandard{rankStandardA, rankStandardC}
+	unmappedRankStandard, _ := domainstandard.NewRankStandard(domainstandard.Rank("F"), &zScoreA, nil, createdAt, updatedAt)
+	unmappedRankStandards := []domainstandard.RankStandard{unmappedRankStandard, rankStandardC}
+
+	measuredOn, _ := domainmeasurement.NewMeasuredOn(2026, 8, 1)
+	ageAtMeasurement, _ := domainmeasurement.NewAgeAtMeasurement(62)
+
+	evaluationOf := func(evaluatedItems []domainmeasurementitem.MeasurementItem, rs []domainstandard.RankStandard) domainjudgment.Evaluation {
+		trialIndex, _ := domainmeasurement.NewTrialIndex(1)
+		gripStrengthValue, _ := domainmeasurement.NewValue(46)
+		gripStrengthEntry := domainmeasurement.ReconstructMeasurementEntry(gripStrengthID, false, nil, []domainmeasurement.MeasurementValue{
+			domainmeasurement.NewMeasurementValue(trialIndex, domainmeasurement.SideLeft, &gripStrengthValue, nil, nil),
+			domainmeasurement.NewMeasurementValue(trialIndex, domainmeasurement.SideRight, &gripStrengthValue, nil, nil),
+		})
+		measuredBy, _ := domainstaff.NewStaffID("google-oauth2|000000000000000000000")
+		m := domainmeasurement.ReconstructMeasurement(domainmeasurement.NewMeasurementID(), domaincustomer.NewCustomerID(), measuredOn, measuredBy, ageAtMeasurement, measuredBy, false, []domainmeasurement.MeasurementEntry{gripStrengthEntry}, createdAt, updatedAt)
+		return domainjudgment.NewEvaluation(m, evaluatedItems, domainstandard.GenderMale, 62, ageGroupStandards, rs)
+	}
+
+	motorAge62 := uint32(62)
+
+	type judgmentSpec struct {
+		customerID             string
+		measurementID          string
+		year                   int32
+		month                  int32
+		day                    int32
+		age                    int
+		isDraft                bool
+		evaluation             func() domainjudgment.Evaluation
+		wantItemEvaluations    int
+		wantElementEvaluations int
+		wantMotorAge           *uint32
+	}
+
+	tests := []struct {
+		name            string
+		organizationID  string
+		includeInactive bool
+		callUsecase     bool
+		judgments       []judgmentSpec
+		listErr         error
+		wantCode        codes.Code
+	}{
+		{
+			name:           "success list organization judgments",
+			organizationID: sampleOrganizationID,
+			callUsecase:    true,
+			judgments: []judgmentSpec{
+				{
+					customerID: sampleCustomerID, measurementID: sampleMeasurementID, year: 2026, month: 8, day: 1, age: 62,
+					evaluation: func() domainjudgment.Evaluation {
+						return evaluationOf([]domainmeasurementitem.MeasurementItem{gripStrength}, rankStandards)
+					},
+					wantItemEvaluations: 1, wantElementEvaluations: 1, wantMotorAge: &motorAge62,
+				},
+				{
+					customerID: otherCustomerID, measurementID: otherMeasurementID, year: 2025, month: 12, day: 24, age: 48, isDraft: true,
+					evaluation: func() domainjudgment.Evaluation {
+						return evaluationOf([]domainmeasurementitem.MeasurementItem{gripStrength}, rankStandards)
+					},
+					wantItemEvaluations: 1, wantElementEvaluations: 1, wantMotorAge: &motorAge62,
+				},
+			},
+			wantCode: codes.OK,
+		},
+		{
+			name:            "success list organization judgments including inactive customers",
+			organizationID:  sampleOrganizationID,
+			includeInactive: true,
+			callUsecase:     true,
+			judgments: []judgmentSpec{
+				{
+					customerID: sampleCustomerID, measurementID: sampleMeasurementID, year: 2026, month: 8, day: 1, age: 62,
+					evaluation: func() domainjudgment.Evaluation {
+						return evaluationOf([]domainmeasurementitem.MeasurementItem{gripStrength}, rankStandards)
+					},
+					wantItemEvaluations: 1, wantElementEvaluations: 1, wantMotorAge: &motorAge62,
+				},
+			},
+			wantCode: codes.OK,
+		},
+		{
+			name:           "success list an empty judgment",
+			organizationID: sampleOrganizationID,
+			callUsecase:    true,
+			judgments: []judgmentSpec{
+				{
+					customerID: sampleCustomerID, measurementID: sampleMeasurementID, year: 2026, month: 8, day: 1, age: 62,
+					evaluation: func() domainjudgment.Evaluation {
+						return evaluationOf(nil, rankStandards)
+					},
+				},
+			},
+			wantCode: codes.OK,
+		},
+		{
+			name:           "success list no judgments",
+			organizationID: sampleOrganizationID,
+			callUsecase:    true,
+			wantCode:       codes.OK,
+		},
+		{
+			name:           "failure invalid organization id",
+			organizationID: "",
+			wantCode:       codes.InvalidArgument,
+		},
+		{
+			name:           "failure organization not found",
+			organizationID: sampleOrganizationID,
+			callUsecase:    true,
+			listErr:        domainorganization.ErrOrganizationNotFound,
+			wantCode:       codes.NotFound,
+		},
+		{
+			name:           "failure unauthenticated",
+			organizationID: sampleOrganizationID,
+			callUsecase:    true,
+			listErr:        status.Error(codes.Unauthenticated, "unauthenticated"),
+			wantCode:       codes.Unauthenticated,
+		},
+		{
+			name:           "failure internal error",
+			organizationID: sampleOrganizationID,
+			callUsecase:    true,
+			listErr:        errors.New("list organization judgments error"),
+			wantCode:       codes.Internal,
+		},
+		{
+			name:           "failure unmapped rank of an item evaluation",
+			organizationID: sampleOrganizationID,
+			callUsecase:    true,
+			judgments: []judgmentSpec{
+				{
+					customerID: sampleCustomerID, measurementID: sampleMeasurementID, year: 2026, month: 8, day: 1, age: 62,
+					evaluation: func() domainjudgment.Evaluation {
+						return evaluationOf([]domainmeasurementitem.MeasurementItem{gripStrength}, unmappedRankStandards)
+					},
+				},
+			},
+			wantCode: codes.Internal,
+		},
+		{
+			name:           "failure unmapped element of an element evaluation",
+			organizationID: sampleOrganizationID,
+			callUsecase:    true,
+			judgments: []judgmentSpec{
+				{
+					customerID: sampleCustomerID, measurementID: sampleMeasurementID, year: 2026, month: 8, day: 1, age: 62,
+					evaluation: func() domainjudgment.Evaluation {
+						return evaluationOf([]domainmeasurementitem.MeasurementItem{unmappedElementItem}, rankStandards)
+					},
+				},
+			},
+			wantCode: codes.Internal,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockUsecase := mocksappjudgment.NewMockJudgmentUsecase(ctrl)
+			if tt.callUsecase {
+				var results []appjudgment.OrganizationJudgmentResult
+				if tt.listErr == nil {
+					results = make([]appjudgment.OrganizationJudgmentResult, 0, len(tt.judgments))
+					for _, spec := range tt.judgments {
+						customerID, _ := domaincustomer.NewCustomerIDFromString(spec.customerID)
+						measurementID, _ := domainmeasurement.NewMeasurementIDFromString(spec.measurementID)
+						specMeasuredOn, _ := domainmeasurement.NewMeasuredOn(spec.year, spec.month, spec.day)
+						specAgeAtMeasurement, _ := domainmeasurement.NewAgeAtMeasurement(spec.age)
+						results = append(results, appjudgment.OrganizationJudgmentResult{
+							CustomerID:       customerID,
+							MeasurementID:    measurementID,
+							MeasuredOn:       specMeasuredOn,
+							AgeAtMeasurement: specAgeAtMeasurement,
+							IsDraft:          spec.isDraft,
+							Evaluation:       spec.evaluation(),
+						})
+					}
+				}
+				organizationID, _ := domainorganization.NewOrganizationIDFromString(tt.organizationID)
+				mockUsecase.EXPECT().ListOrganizationJudgments(gomock.Any(), organizationID, tt.includeInactive).Return(results, tt.listErr).Times(1)
+			}
+
+			handler := NewJudgmentHandler(mockUsecase)
+
+			res, err := handler.ListOrganizationJudgments(context.Background(), &judgmentv1.ListOrganizationJudgmentsRequest{OrganizationId: tt.organizationID, IncludeInactive: tt.includeInactive})
+			if got := status.Code(err); got != tt.wantCode {
+				t.Errorf("expected code %v, got %v (err=%v)", tt.wantCode, got, err)
+			}
+			if tt.wantCode != codes.OK {
+				return
+			}
+
+			judgmentMessages := res.GetJudgments()
+			if len(judgmentMessages) != len(tt.judgments) {
+				t.Fatalf("len(Judgments) = %v, want %v", len(judgmentMessages), len(tt.judgments))
+			}
+			for i, spec := range tt.judgments {
+				judgmentMessage := judgmentMessages[i]
+				if judgmentMessage.GetCustomerId() != spec.customerID {
+					t.Errorf("Judgments[%d].CustomerId = %v, want %v", i, judgmentMessage.GetCustomerId(), spec.customerID)
+				}
+				if judgmentMessage.GetMeasurementId() != spec.measurementID {
+					t.Errorf("Judgments[%d].MeasurementId = %v, want %v", i, judgmentMessage.GetMeasurementId(), spec.measurementID)
+				}
+				measuredOnMessage := judgmentMessage.GetMeasuredOn()
+				if measuredOnMessage.GetYear() != spec.year || measuredOnMessage.GetMonth() != spec.month || measuredOnMessage.GetDay() != spec.day {
+					t.Errorf("Judgments[%d].MeasuredOn = %v, want %04d-%02d-%02d", i, measuredOnMessage, spec.year, spec.month, spec.day)
+				}
+				if judgmentMessage.GetAgeAtMeasurement() != uint32(spec.age) {
+					t.Errorf("Judgments[%d].AgeAtMeasurement = %v, want %v", i, judgmentMessage.GetAgeAtMeasurement(), spec.age)
+				}
+				if judgmentMessage.GetIsDraft() != spec.isDraft {
+					t.Errorf("Judgments[%d].IsDraft = %v, want %v", i, judgmentMessage.GetIsDraft(), spec.isDraft)
+				}
+				if len(judgmentMessage.GetItemEvaluations()) != spec.wantItemEvaluations {
+					t.Fatalf("len(Judgments[%d].ItemEvaluations) = %v, want %v", i, len(judgmentMessage.GetItemEvaluations()), spec.wantItemEvaluations)
+				}
+				if len(judgmentMessage.GetElementEvaluations()) != spec.wantElementEvaluations {
+					t.Fatalf("len(Judgments[%d].ElementEvaluations) = %v, want %v", i, len(judgmentMessage.GetElementEvaluations()), spec.wantElementEvaluations)
+				}
+				switch {
+				case spec.wantMotorAge == nil && judgmentMessage.MotorAge != nil:
+					t.Errorf("Judgments[%d].MotorAge = %v, want nil", i, judgmentMessage.GetMotorAge())
+				case spec.wantMotorAge != nil && judgmentMessage.MotorAge == nil:
+					t.Errorf("Judgments[%d].MotorAge = nil, want %v", i, *spec.wantMotorAge)
+				case spec.wantMotorAge != nil && *judgmentMessage.MotorAge != *spec.wantMotorAge:
+					t.Errorf("Judgments[%d].MotorAge = %v, want %v", i, *judgmentMessage.MotorAge, *spec.wantMotorAge)
+				}
+				if spec.wantItemEvaluations > 0 {
+					itemEvaluation := judgmentMessage.GetItemEvaluations()[0]
+					if itemEvaluation.GetMeasurementItemId() != gripStrengthID.String() {
+						t.Errorf("Judgments[%d].ItemEvaluations[0].MeasurementItemId = %v, want %v", i, itemEvaluation.GetMeasurementItemId(), gripStrengthID.String())
+					}
+					if itemEvaluation.GetZScore() != 1.6 {
+						t.Errorf("Judgments[%d].ItemEvaluations[0].ZScore = %v, want %v", i, itemEvaluation.GetZScore(), 1.6)
+					}
+					if itemEvaluation.GetRank() != judgmentv1.Rank_RANK_A {
+						t.Errorf("Judgments[%d].ItemEvaluations[0].Rank = %v, want %v", i, itemEvaluation.GetRank(), judgmentv1.Rank_RANK_A)
+					}
+				}
+				if spec.wantElementEvaluations > 0 {
+					elementEvaluation := judgmentMessage.GetElementEvaluations()[0]
+					if elementEvaluation.GetElement() != judgmentv1.Element_ELEMENT_MUSCLE_STRENGTH {
+						t.Errorf("Judgments[%d].ElementEvaluations[0].Element = %v, want %v", i, elementEvaluation.GetElement(), judgmentv1.Element_ELEMENT_MUSCLE_STRENGTH)
+					}
+					if elementEvaluation.GetRank() != judgmentv1.Rank_RANK_A {
+						t.Errorf("Judgments[%d].ElementEvaluations[0].Rank = %v, want %v", i, elementEvaluation.GetRank(), judgmentv1.Rank_RANK_A)
+					}
 				}
 			}
 		})

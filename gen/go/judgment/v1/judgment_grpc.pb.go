@@ -19,10 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	JudgmentService_GetJudgment_FullMethodName          = "/judgment.v1.JudgmentService/GetJudgment"
-	JudgmentService_UpsertJudgmentAdvice_FullMethodName = "/judgment.v1.JudgmentService/UpsertJudgmentAdvice"
-	JudgmentService_UpsertPrescription_FullMethodName   = "/judgment.v1.JudgmentService/UpsertPrescription"
-	JudgmentService_DeletePrescription_FullMethodName   = "/judgment.v1.JudgmentService/DeletePrescription"
+	JudgmentService_GetJudgment_FullMethodName               = "/judgment.v1.JudgmentService/GetJudgment"
+	JudgmentService_ListOrganizationJudgments_FullMethodName = "/judgment.v1.JudgmentService/ListOrganizationJudgments"
+	JudgmentService_UpsertJudgmentAdvice_FullMethodName      = "/judgment.v1.JudgmentService/UpsertJudgmentAdvice"
+	JudgmentService_UpsertPrescription_FullMethodName        = "/judgment.v1.JudgmentService/UpsertPrescription"
+	JudgmentService_DeletePrescription_FullMethodName        = "/judgment.v1.JudgmentService/DeletePrescription"
 )
 
 // JudgmentServiceClient is the client API for JudgmentService service.
@@ -30,6 +31,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type JudgmentServiceClient interface {
 	GetJudgment(ctx context.Context, in *GetJudgmentRequest, opts ...grpc.CallOption) (*GetJudgmentResponse, error)
+	ListOrganizationJudgments(ctx context.Context, in *ListOrganizationJudgmentsRequest, opts ...grpc.CallOption) (*ListOrganizationJudgmentsResponse, error)
 	UpsertJudgmentAdvice(ctx context.Context, in *UpsertJudgmentAdviceRequest, opts ...grpc.CallOption) (*UpsertJudgmentAdviceResponse, error)
 	UpsertPrescription(ctx context.Context, in *UpsertPrescriptionRequest, opts ...grpc.CallOption) (*UpsertPrescriptionResponse, error)
 	DeletePrescription(ctx context.Context, in *DeletePrescriptionRequest, opts ...grpc.CallOption) (*DeletePrescriptionResponse, error)
@@ -47,6 +49,16 @@ func (c *judgmentServiceClient) GetJudgment(ctx context.Context, in *GetJudgment
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetJudgmentResponse)
 	err := c.cc.Invoke(ctx, JudgmentService_GetJudgment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *judgmentServiceClient) ListOrganizationJudgments(ctx context.Context, in *ListOrganizationJudgmentsRequest, opts ...grpc.CallOption) (*ListOrganizationJudgmentsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListOrganizationJudgmentsResponse)
+	err := c.cc.Invoke(ctx, JudgmentService_ListOrganizationJudgments_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -88,6 +100,7 @@ func (c *judgmentServiceClient) DeletePrescription(ctx context.Context, in *Dele
 // for forward compatibility.
 type JudgmentServiceServer interface {
 	GetJudgment(context.Context, *GetJudgmentRequest) (*GetJudgmentResponse, error)
+	ListOrganizationJudgments(context.Context, *ListOrganizationJudgmentsRequest) (*ListOrganizationJudgmentsResponse, error)
 	UpsertJudgmentAdvice(context.Context, *UpsertJudgmentAdviceRequest) (*UpsertJudgmentAdviceResponse, error)
 	UpsertPrescription(context.Context, *UpsertPrescriptionRequest) (*UpsertPrescriptionResponse, error)
 	DeletePrescription(context.Context, *DeletePrescriptionRequest) (*DeletePrescriptionResponse, error)
@@ -103,6 +116,9 @@ type UnimplementedJudgmentServiceServer struct{}
 
 func (UnimplementedJudgmentServiceServer) GetJudgment(context.Context, *GetJudgmentRequest) (*GetJudgmentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetJudgment not implemented")
+}
+func (UnimplementedJudgmentServiceServer) ListOrganizationJudgments(context.Context, *ListOrganizationJudgmentsRequest) (*ListOrganizationJudgmentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListOrganizationJudgments not implemented")
 }
 func (UnimplementedJudgmentServiceServer) UpsertJudgmentAdvice(context.Context, *UpsertJudgmentAdviceRequest) (*UpsertJudgmentAdviceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpsertJudgmentAdvice not implemented")
@@ -148,6 +164,24 @@ func _JudgmentService_GetJudgment_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(JudgmentServiceServer).GetJudgment(ctx, req.(*GetJudgmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _JudgmentService_ListOrganizationJudgments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListOrganizationJudgmentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JudgmentServiceServer).ListOrganizationJudgments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: JudgmentService_ListOrganizationJudgments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JudgmentServiceServer).ListOrganizationJudgments(ctx, req.(*ListOrganizationJudgmentsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -216,6 +250,10 @@ var JudgmentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetJudgment",
 			Handler:    _JudgmentService_GetJudgment_Handler,
+		},
+		{
+			MethodName: "ListOrganizationJudgments",
+			Handler:    _JudgmentService_ListOrganizationJudgments_Handler,
 		},
 		{
 			MethodName: "UpsertJudgmentAdvice",

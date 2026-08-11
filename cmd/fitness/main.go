@@ -174,7 +174,7 @@ func run() error {
 	authService := apiauth.NewAuthService(authServiceClient)
 	userService := apiuser.NewUserService(groupServiceClient)
 	customerUsecase := appcustomer.NewCustomerUsecase(authService, userService, customerRepository, organizationRepository)
-	judgmentUsecase := appjudgment.NewJudgmentUsecase(authService, userService, judgmentRepository, prescribedMenuOverrideRepository, measurementRepository, customerRepository, measurementItemRepository, ageGroupStandardRepository, rankStandardRepository, trainingMenuRepository, prescriptionRuleRepository)
+	judgmentUsecase := appjudgment.NewJudgmentUsecase(authService, userService, judgmentRepository, prescribedMenuOverrideRepository, measurementRepository, customerRepository, organizationRepository, measurementItemRepository, ageGroupStandardRepository, rankStandardRepository, trainingMenuRepository, prescriptionRuleRepository)
 	measurementUsecase := appmeasurement.NewMeasurementUsecase(authService, userService, measurementRepository, customerRepository, measurementItemRepository)
 	measurementItemUsecase := appmeasurementitem.NewMeasurementItemUsecase(authService, measurementItemRepository)
 	organizationUsecase := apporganization.NewOrganizationUsecase(authService, userService, organizationRepository)

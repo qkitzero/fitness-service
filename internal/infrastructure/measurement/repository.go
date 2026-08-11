@@ -168,6 +168,24 @@ func (r *measurementRepository) ListByCustomerID(ctx context.Context, customerID
 	return measurements, nil
 }
 
+func (r *measurementRepository) ListByCustomerIDs(ctx context.Context, customerIDs []customer.CustomerID) ([]measurement.Measurement, error) {
+	if len(customerIDs) == 0 {
+		return []measurement.Measurement{}, nil
+	}
+
+	var measurementModels []MeasurementModel
+	if err := withChildren(r.db.WithContext(ctx)).Where("customer_id IN ?", customerIDs).Order("customer_id, measured_on DESC, id").Find(&measurementModels).Error; err != nil {
+		return nil, err
+	}
+
+	measurements := make([]measurement.Measurement, 0, len(measurementModels))
+	for _, measurementModel := range measurementModels {
+		measurements = append(measurements, toDomain(measurementModel))
+	}
+
+	return measurements, nil
+}
+
 func (r *measurementRepository) Update(ctx context.Context, m measurement.Measurement) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		measurementModel := toModel(m)

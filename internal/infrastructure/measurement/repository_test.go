@@ -460,6 +460,148 @@ func TestListByCustomerID(t *testing.T) {
 	}
 }
 
+func TestListByCustomerIDs(t *testing.T) {
+	t.Parallel()
+	otherCustomerID := "88888888-8888-8888-8888-888888888888"
+	otherMeasurementID := "99999999-9999-9999-9999-999999999999"
+	selectByCustomerIDsSQL := `SELECT * FROM "measurements" WHERE customer_id IN ($1,$2) ORDER BY customer_id, measured_on DESC, id`
+	selectEntriesInSQL := `SELECT * FROM "measurement_entries" WHERE "measurement_entries"."measurement_id" IN ($1,$2) ORDER BY measurement_entries.measurement_item_id`
+
+	type measurementRow struct {
+		measurementID string
+		customerID    string
+		age           int
+		isDraft       bool
+		entries       int
+	}
+
+	tests := []struct {
+		name             string
+		success          bool
+		customerIDs      []string
+		wantMeasurements []measurementRow
+		setup            func(mock sqlmock.Sqlmock)
+	}{
+		{
+			name:        "success list measurements of multiple customers",
+			success:     true,
+			customerIDs: []string{testCustomerID, otherCustomerID},
+			wantMeasurements: []measurementRow{
+				{measurementID: testMeasurementID, customerID: testCustomerID, age: 65, isDraft: false, entries: 1},
+				{measurementID: otherMeasurementID, customerID: otherCustomerID, age: 48, isDraft: true, entries: 0},
+			},
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(selectByCustomerIDsSQL)).
+					WithArgs(testCustomerID, otherCustomerID).
+					WillReturnRows(sqlmock.NewRows(measurementCols).
+						AddRow(testMeasurementID, testCustomerID, testMeasuredOn, testStaffID, 65, testStaffID, false, testCreatedAt, testUpdatedAt).
+						AddRow(otherMeasurementID, otherCustomerID, testMeasuredOn, testStaffID, 48, testStaffID, true, testCreatedAt, testUpdatedAt))
+				mock.ExpectQuery(regexp.QuoteMeta(selectEntriesInSQL)).
+					WithArgs(testMeasurementID, otherMeasurementID).
+					WillReturnRows(sqlmock.NewRows(entryCols).
+						AddRow(testMeasurementEntryID, testMeasurementID, testMeasurementItemID, false, nil, testCreatedAt, testUpdatedAt))
+				mock.ExpectQuery(regexp.QuoteMeta(selectValuesSQL)).
+					WithArgs(testMeasurementEntryID).
+					WillReturnRows(sqlmock.NewRows(valueCols).
+						AddRow("55555555-5555-5555-5555-555555555555", testMeasurementEntryID, 1, "none", 72.0, nil, nil, testCreatedAt, testUpdatedAt))
+			},
+		},
+		{
+			name:        "success list no measurements of customers without any measurement",
+			success:     true,
+			customerIDs: []string{testCustomerID, otherCustomerID},
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(selectByCustomerIDsSQL)).
+					WithArgs(testCustomerID, otherCustomerID).
+					WillReturnRows(sqlmock.NewRows(measurementCols))
+			},
+		},
+		{
+			name:        "success list no measurements without customer ids",
+			success:     true,
+			customerIDs: []string{},
+			setup:       func(mock sqlmock.Sqlmock) {},
+		},
+		{
+			name:        "failure list measurements error",
+			success:     false,
+			customerIDs: []string{testCustomerID, otherCustomerID},
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(selectByCustomerIDsSQL)).
+					WithArgs(testCustomerID, otherCustomerID).
+					WillReturnError(errors.New("list measurements error"))
+			},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			sqlDB, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatalf("failed to new sqlmock: %s", err)
+			}
+
+			gormDB, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{})
+			if err != nil {
+				t.Fatalf("failed to open gorm: %s", err)
+			}
+
+			tt.setup(mock)
+
+			repo := NewMeasurementRepository(gormDB)
+
+			customerIDs := make([]customer.CustomerID, 0, len(tt.customerIDs))
+			for _, id := range tt.customerIDs {
+				customerID, err := customer.NewCustomerIDFromString(id)
+				if err != nil {
+					t.Fatalf("failed to new customer id: %v", err)
+				}
+				customerIDs = append(customerIDs, customerID)
+			}
+
+			measurements, err := repo.ListByCustomerIDs(context.Background(), customerIDs)
+			if tt.success && err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+			if !tt.success && err == nil {
+				t.Errorf("expected error, but got nil")
+			}
+			if !tt.success && measurements != nil {
+				t.Errorf("expected no measurements on failure, but got %v", len(measurements))
+			}
+			if tt.success {
+				if len(measurements) != len(tt.wantMeasurements) {
+					t.Fatalf("len(measurements) = %v, want %v", len(measurements), len(tt.wantMeasurements))
+				}
+				for i, want := range tt.wantMeasurements {
+					m := measurements[i]
+					if m.ID().String() != want.measurementID {
+						t.Errorf("measurements[%d].ID() = %v, want %v", i, m.ID(), want.measurementID)
+					}
+					if m.CustomerID().String() != want.customerID {
+						t.Errorf("measurements[%d].CustomerID() = %v, want %v", i, m.CustomerID(), want.customerID)
+					}
+					if m.AgeAtMeasurement().Int() != want.age {
+						t.Errorf("measurements[%d].AgeAtMeasurement() = %v, want %v", i, m.AgeAtMeasurement().Int(), want.age)
+					}
+					if m.IsDraft() != want.isDraft {
+						t.Errorf("measurements[%d].IsDraft() = %v, want %v", i, m.IsDraft(), want.isDraft)
+					}
+					if len(m.Entries()) != want.entries {
+						t.Errorf("len(measurements[%d].Entries()) = %v, want %v", i, len(m.Entries()), want.entries)
+					}
+				}
+			}
+
+			if err := mock.ExpectationsWereMet(); err != nil {
+				t.Errorf("there were unfulfilled expectations: %s", err)
+			}
+		})
+	}
+}
+
 func TestUpdate(t *testing.T) {
 	t.Parallel()
 	updateMeasurementSQL := `UPDATE "measurements" SET "measured_on"=$1,"measured_by"=$2,"age_at_measurement"=$3,"updated_by"=$4,"is_draft"=$5,"updated_at"=$6 WHERE id = $7`
