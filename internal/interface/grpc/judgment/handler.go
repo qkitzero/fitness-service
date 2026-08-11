@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 
+	"google.golang.org/genproto/googleapis/type/date"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -15,6 +16,7 @@ import (
 	domainjudgment "github.com/qkitzero/fitness-service/internal/domain/judgment"
 	domainmeasurement "github.com/qkitzero/fitness-service/internal/domain/measurement"
 	domainmeasurementitem "github.com/qkitzero/fitness-service/internal/domain/measurementitem"
+	domainorganization "github.com/qkitzero/fitness-service/internal/domain/organization"
 	domainstandard "github.com/qkitzero/fitness-service/internal/domain/standard"
 	domaintraining "github.com/qkitzero/fitness-service/internal/domain/training"
 )
@@ -186,6 +188,40 @@ func toProtoElementEvaluation(e domainjudgment.ElementEvaluation) (*judgmentv1.E
 	}, nil
 }
 
+func toProtoItemEvaluations(itemEvaluations []domainjudgment.ItemEvaluation) ([]*judgmentv1.ItemEvaluation, error) {
+	itemEvaluationMessages := make([]*judgmentv1.ItemEvaluation, 0, len(itemEvaluations))
+	for _, i := range itemEvaluations {
+		itemEvaluationMessage, err := toProtoItemEvaluation(i)
+		if err != nil {
+			return nil, err
+		}
+		itemEvaluationMessages = append(itemEvaluationMessages, itemEvaluationMessage)
+	}
+
+	return itemEvaluationMessages, nil
+}
+
+func toProtoElementEvaluations(elementEvaluations []domainjudgment.ElementEvaluation) ([]*judgmentv1.ElementEvaluation, error) {
+	elementEvaluationMessages := make([]*judgmentv1.ElementEvaluation, 0, len(elementEvaluations))
+	for _, e := range elementEvaluations {
+		elementEvaluationMessage, err := toProtoElementEvaluation(e)
+		if err != nil {
+			return nil, err
+		}
+		elementEvaluationMessages = append(elementEvaluationMessages, elementEvaluationMessage)
+	}
+
+	return elementEvaluationMessages, nil
+}
+
+func toProtoMeasuredOn(m domainmeasurement.MeasuredOn) *date.Date {
+	return &date.Date{
+		Year:  int32(m.Year()),
+		Month: int32(m.Month()),
+		Day:   int32(m.Day()),
+	}
+}
+
 func toProtoPrescribedMenu(p domainjudgment.PrescribedMenu) (*judgmentv1.PrescribedMenu, error) {
 	source, err := toProtoPrescriptionSource(p.Source())
 	if err != nil {
@@ -241,24 +277,14 @@ func toProtoPrescribedMenus(prescription domainjudgment.Prescription) ([]*judgme
 }
 
 func toProtoJudgment(result appjudgment.JudgmentResult) (*judgmentv1.Judgment, error) {
-	itemEvaluations := result.Evaluation.ItemEvaluations()
-	itemEvaluationMessages := make([]*judgmentv1.ItemEvaluation, 0, len(itemEvaluations))
-	for _, i := range itemEvaluations {
-		itemEvaluationMessage, err := toProtoItemEvaluation(i)
-		if err != nil {
-			return nil, err
-		}
-		itemEvaluationMessages = append(itemEvaluationMessages, itemEvaluationMessage)
+	itemEvaluationMessages, err := toProtoItemEvaluations(result.Evaluation.ItemEvaluations())
+	if err != nil {
+		return nil, err
 	}
 
-	elementEvaluations := result.Evaluation.ElementEvaluations()
-	elementEvaluationMessages := make([]*judgmentv1.ElementEvaluation, 0, len(elementEvaluations))
-	for _, e := range elementEvaluations {
-		elementEvaluationMessage, err := toProtoElementEvaluation(e)
-		if err != nil {
-			return nil, err
-		}
-		elementEvaluationMessages = append(elementEvaluationMessages, elementEvaluationMessage)
+	elementEvaluationMessages, err := toProtoElementEvaluations(result.Evaluation.ElementEvaluations())
+	if err != nil {
+		return nil, err
 	}
 
 	prescribedMenuMessages, err := toProtoPrescribedMenus(result.Prescription)
@@ -285,10 +311,39 @@ func toProtoJudgment(result appjudgment.JudgmentResult) (*judgmentv1.Judgment, e
 	return msg, nil
 }
 
+func toProtoOrganizationJudgment(result appjudgment.OrganizationJudgmentResult) (*judgmentv1.OrganizationJudgment, error) {
+	itemEvaluationMessages, err := toProtoItemEvaluations(result.Evaluation.ItemEvaluations())
+	if err != nil {
+		return nil, err
+	}
+
+	elementEvaluationMessages, err := toProtoElementEvaluations(result.Evaluation.ElementEvaluations())
+	if err != nil {
+		return nil, err
+	}
+
+	msg := &judgmentv1.OrganizationJudgment{
+		CustomerId:         result.CustomerID.String(),
+		MeasurementId:      result.MeasurementID.String(),
+		MeasuredOn:         toProtoMeasuredOn(result.MeasuredOn),
+		AgeAtMeasurement:   uint32(result.AgeAtMeasurement.Int()),
+		IsDraft:            result.IsDraft,
+		ItemEvaluations:    itemEvaluationMessages,
+		ElementEvaluations: elementEvaluationMessages,
+	}
+	if motorAge := result.Evaluation.MotorAge(); motorAge != nil {
+		n := uint32(motorAge.Int())
+		msg.MotorAge = &n
+	}
+
+	return msg, nil
+}
+
 func mapJudgmentError(err error, op string) error {
 	if errors.Is(err, domainjudgment.ErrJudgmentNotFound) ||
 		errors.Is(err, domainmeasurement.ErrMeasurementNotFound) ||
-		errors.Is(err, domaincustomer.ErrCustomerNotFound) {
+		errors.Is(err, domaincustomer.ErrCustomerNotFound) ||
+		errors.Is(err, domainorganization.ErrOrganizationNotFound) {
 		return status.Error(codes.NotFound, err.Error())
 	}
 	if errors.Is(err, domaintraining.ErrTrainingMenuNotFound) ||
@@ -325,6 +380,31 @@ func (h *JudgmentHandler) GetJudgment(ctx context.Context, req *judgmentv1.GetJu
 
 	return &judgmentv1.GetJudgmentResponse{
 		Judgment: judgmentMessage,
+	}, nil
+}
+
+func (h *JudgmentHandler) ListOrganizationJudgments(ctx context.Context, req *judgmentv1.ListOrganizationJudgmentsRequest) (*judgmentv1.ListOrganizationJudgmentsResponse, error) {
+	organizationID, err := domainorganization.NewOrganizationIDFromString(req.GetOrganizationId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	results, err := h.judgmentUsecase.ListOrganizationJudgments(ctx, organizationID, req.GetIncludeInactive())
+	if err != nil {
+		return nil, mapJudgmentError(err, "ListOrganizationJudgments")
+	}
+
+	judgmentMessages := make([]*judgmentv1.OrganizationJudgment, 0, len(results))
+	for _, result := range results {
+		judgmentMessage, err := toProtoOrganizationJudgment(result)
+		if err != nil {
+			return nil, mapJudgmentError(err, "ListOrganizationJudgments")
+		}
+		judgmentMessages = append(judgmentMessages, judgmentMessage)
+	}
+
+	return &judgmentv1.ListOrganizationJudgmentsResponse{
+		Judgments: judgmentMessages,
 	}, nil
 }
 
