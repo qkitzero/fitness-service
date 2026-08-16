@@ -21,7 +21,17 @@ func (a AgeRange) To() int {
 }
 
 func (a AgeRange) Contains(age int) bool {
-	return age >= a.from && age <= a.to
+	return a.Distance(age) == 0
+}
+
+func (a AgeRange) Distance(age int) int {
+	if age < a.from {
+		return a.from - age
+	}
+	if age > a.to {
+		return age - a.to
+	}
+	return 0
 }
 
 func (a AgeRange) Median() int {
