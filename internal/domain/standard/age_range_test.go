@@ -109,3 +109,39 @@ func TestAgeRangeContains(t *testing.T) {
 		})
 	}
 }
+
+func TestAgeRangeDistance(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		from int
+		to   int
+		age  int
+		want int
+	}{
+		{"an age inside the range is zero", 45, 49, 47, 0},
+		{"the lower bound is zero", 45, 49, 45, 0},
+		{"the upper bound is zero", 45, 49, 49, 0},
+		{"an age below the lower bound", 45, 49, 40, 5},
+		{"an age just below the lower bound", 45, 49, 44, 1},
+		{"an age above the upper bound", 45, 49, 60, 11},
+		{"an age just above the upper bound", 45, 49, 50, 1},
+		{"an age below an open ended range", 65, 150, 40, 25},
+		{"every age of the whole range is zero", 0, 150, 150, 0},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ageRange, err := NewAgeRange(tt.from, tt.to)
+			if err != nil {
+				t.Fatalf("failed to new age range: %v", err)
+			}
+
+			if got := ageRange.Distance(tt.age); got != tt.want {
+				t.Errorf("Distance(%v) = %v, want %v", tt.age, got, tt.want)
+			}
+		})
+	}
+}

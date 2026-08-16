@@ -97,7 +97,12 @@ func TestNewEvaluation(t *testing.T) {
 	oneLegStandName, _ := measurementitem.NewName("開眼片足立ち")
 	oneLegStand := measurementitem.NewMeasurementItem(oneLegStandID, oneLegStandCode, oneLegStandName, motorFunction, sec, twoTrials, true, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationBest, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
 
-	items := []measurementitem.MeasurementItem{gripStrength, twoStep, timedUpAndGo, stickReaction, standUpTest, height, cs30, sitAndReach, walk5m, seatedStepping20s, oneLegStand}
+	functionalReachID := measurementitem.NewMeasurementItemID()
+	functionalReachCode, _ := measurementitem.NewCode("functional_reach")
+	functionalReachName, _ := measurementitem.NewName("ファンクショナルリーチ")
+	functionalReach := measurementitem.NewMeasurementItem(functionalReachID, functionalReachCode, functionalReachName, motorFunction, cm, oneTrial, false, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
+
+	items := []measurementitem.MeasurementItem{gripStrength, twoStep, timedUpAndGo, stickReaction, standUpTest, height, cs30, sitAndReach, walk5m, seatedStepping20s, oneLegStand, functionalReach}
 
 	ageRange4044, _ := standard.NewAgeRange(40, 44)
 	ageRange5054, _ := standard.NewAgeRange(50, 54)
@@ -108,6 +113,7 @@ func TestNewEvaluation(t *testing.T) {
 	gripMean6064, _ := standard.NewMean(38)
 	gripDeviation, _ := standard.NewStandardDeviation(5)
 	twoStepMean, _ := standard.NewMean(160)
+	twoStepMean6064, _ := standard.NewMean(140)
 	twoStepDeviation, _ := standard.NewStandardDeviation(15)
 	timedUpAndGoMean, _ := standard.NewMean(6.5)
 	timedUpAndGoDeviation, _ := standard.NewStandardDeviation(1)
@@ -126,6 +132,11 @@ func TestNewEvaluation(t *testing.T) {
 	seatedStepping20sDeviation, _ := standard.NewStandardDeviation(5)
 	oneLegStandMean, _ := standard.NewMean(30)
 	oneLegStandDeviation, _ := standard.NewStandardDeviation(10)
+	ageRange4549, _ := standard.NewAgeRange(45, 49)
+	functionalReachMean4044, _ := standard.NewMean(10)
+	functionalReachMean4049, _ := standard.NewMean(30)
+	functionalReachMean4549, _ := standard.NewMean(20)
+	functionalReachDeviation, _ := standard.NewStandardDeviation(5)
 
 	ageGroupStandards := []standard.AgeGroupStandard{
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), gripStrengthID, standard.GenderMale, ageRange4044, gripMean4044, gripDeviation, createdAt, updatedAt),
@@ -143,6 +154,11 @@ func TestNewEvaluation(t *testing.T) {
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), seatedStepping20sID, standard.GenderMale, ageRange5054, seatedStepping20sMean5054, seatedStepping20sDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), oneLegStandID, standard.GenderMale, ageRange4044, oneLegStandMean, oneLegStandDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), oneLegStandID, standard.GenderMale, ageRange4049, oneLegStandMean, oneLegStandDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), functionalReachID, standard.GenderMale, ageRange4049, functionalReachMean4049, functionalReachDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), functionalReachID, standard.GenderMale, ageRange4044, functionalReachMean4044, functionalReachDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), functionalReachID, standard.GenderMale, ageRange4549, functionalReachMean4549, functionalReachDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), twoStepID, standard.GenderFemale, ageRange4044, twoStepMean, twoStepDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), twoStepID, standard.GenderFemale, ageRange6064, twoStepMean6064, twoStepDeviation, createdAt, updatedAt),
 	}
 
 	zScoreA := standard.ZScore(1.5)
@@ -162,6 +178,8 @@ func TestNewEvaluation(t *testing.T) {
 	extremeRankStandards := []standard.RankStandard{rankStandardA, rankStandardE}
 
 	motorAge42 := 42
+	motorAge45 := 45
+	motorAge52 := 52
 	motorAge62 := 62
 
 	tests := []struct {
@@ -386,9 +404,9 @@ func TestNewEvaluation(t *testing.T) {
 			},
 		},
 		{
-			name:   "success an item without an age group standard for the age is excluded",
+			name:   "success an age just below every age group is judged by the youngest age group",
 			gender: standard.GenderMale,
-			age:    70,
+			age:    38,
 			entries: func() []measurement.MeasurementEntry {
 				trialIndex, _ := measurement.NewTrialIndex(1)
 				value, _ := measurement.NewValue(46)
@@ -398,6 +416,149 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
+			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 46, 46, 0, standard.RankC}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, 0, standard.RankC}},
+			wantMotorAge:           &motorAge42,
+		},
+		{
+			name:   "success an age too far below every age group is excluded",
+			gender: standard.GenderMale,
+			age:    37,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				value, _ := measurement.NewValue(46)
+				entry, _ := measurement.NewMeasurementEntry(gripStrength, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &value, nil, nil),
+					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &value, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+		},
+		{
+			name:   "success an age just above every age group is judged by the oldest age group",
+			gender: standard.GenderMale,
+			age:    84,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				value, _ := measurement.NewValue(30)
+				entry, _ := measurement.NewMeasurementEntry(gripStrength, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &value, nil, nil),
+					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &value, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 30, 38, -1.6, standard.RankE}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, -1.6, standard.RankE}},
+			wantMotorAge:           &motorAge62,
+		},
+		{
+			name:   "success an age too far above every age group is excluded",
+			gender: standard.GenderMale,
+			age:    85,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				value, _ := measurement.NewValue(30)
+				entry, _ := measurement.NewMeasurementEntry(gripStrength, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &value, nil, nil),
+					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &value, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+		},
+		{
+			name:   "success an age between two age groups is excluded",
+			gender: standard.GenderMale,
+			age:    47,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				value, _ := measurement.NewValue(46)
+				entry, _ := measurement.NewMeasurementEntry(gripStrength, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &value, nil, nil),
+					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &value, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+		},
+		{
+			name:   "success the narrower age group is used when two age groups start at the same age",
+			gender: standard.GenderMale,
+			age:    38,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				value, _ := measurement.NewValue(30)
+				entry, _ := measurement.NewMeasurementEntry(functionalReach, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &value, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+			wantItemEvaluations:    []wantItemEvaluation{{functionalReachID, 30, 10, 4, standard.RankA}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementBalance, 4, standard.RankA}},
+			wantMotorAge:           &motorAge45,
+		},
+		{
+			name:   "success the narrower age group is used when two age groups end at the same age",
+			gender: standard.GenderMale,
+			age:    52,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				value, _ := measurement.NewValue(30)
+				entry, _ := measurement.NewMeasurementEntry(functionalReach, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &value, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+			wantItemEvaluations:    []wantItemEvaluation{{functionalReachID, 30, 20, 2, standard.RankA}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementBalance, 2, standard.RankA}},
+			wantMotorAge:           &motorAge45,
+		},
+		{
+			name:   "success an item judged by the nearest age group does not drop the motor age",
+			gender: standard.GenderMale,
+			age:    62,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				gripStrengthValue, _ := measurement.NewValue(38)
+				gripStrengthEntry, _ := measurement.NewMeasurementEntry(gripStrength, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &gripStrengthValue, nil, nil),
+					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &gripStrengthValue, nil, nil),
+				})
+				oneLegStandValue, _ := measurement.NewValue(60)
+				oneLegStandEntry, _ := measurement.NewMeasurementEntry(oneLegStand, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &oneLegStandValue, nil, nil),
+					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &oneLegStandValue, nil, nil),
+				})
+				return []measurement.MeasurementEntry{gripStrengthEntry, oneLegStandEntry}
+			},
+			wantItemEvaluations: []wantItemEvaluation{
+				{gripStrengthID, 38, 38, 0, standard.RankC},
+				{oneLegStandID, 60, 30, 3, standard.RankA},
+			},
+			wantElementEvaluations: []wantElementEvaluation{
+				{measurementitem.ElementMuscleStrength, 0, standard.RankC},
+				{measurementitem.ElementBalance, 3, standard.RankA},
+			},
+			wantMotorAge: &motorAge62,
+		},
+		{
+			name:   "success an item without any age group standard is excluded",
+			gender: standard.GenderFemale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				gripStrengthValue, _ := measurement.NewValue(46)
+				gripStrengthEntry, _ := measurement.NewMeasurementEntry(gripStrength, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &gripStrengthValue, nil, nil),
+					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &gripStrengthValue, nil, nil),
+				})
+				twoStepValue, _ := measurement.NewValue(190)
+				twoStepEntry, _ := measurement.NewMeasurementEntry(twoStep, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &twoStepValue, nil, nil),
+				})
+				return []measurement.MeasurementEntry{gripStrengthEntry, twoStepEntry}
+			},
+			wantItemEvaluations:    []wantItemEvaluation{{twoStepID, 190, 160, 2, standard.RankA}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, 2, standard.RankA}},
+			wantMotorAge:           &motorAge42,
 		},
 		{
 			name:   "success every item is excluded when the gender has no age group standards",
@@ -624,7 +785,7 @@ func TestNewEvaluation(t *testing.T) {
 			wantMotorAge: &motorAge62,
 		},
 		{
-			name:   "success the motor age is dropped when no item covers every age group",
+			name:   "success the motor age is computed on the age groups of a single item when no item covers all of them",
 			gender: standard.GenderMale,
 			age:    42,
 			entries: func() []measurement.MeasurementEntry {
@@ -633,7 +794,7 @@ func TestNewEvaluation(t *testing.T) {
 				sitAndReachEntry, _ := measurement.NewMeasurementEntry(sitAndReach, false, nil, []measurement.MeasurementValue{
 					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &sitAndReachValue, nil, nil),
 				})
-				seatedStepping20sValue, _ := measurement.NewValue(40)
+				seatedStepping20sValue, _ := measurement.NewValue(35)
 				seatedStepping20sEntry, _ := measurement.NewMeasurementEntry(seatedStepping20s, false, nil, []measurement.MeasurementValue{
 					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &seatedStepping20sValue, nil, nil),
 				})
@@ -641,12 +802,13 @@ func TestNewEvaluation(t *testing.T) {
 			},
 			wantItemEvaluations: []wantItemEvaluation{
 				{sitAndReachID, 40, 38, 0.4, standard.RankC},
-				{seatedStepping20sID, 40, 40, 0, standard.RankC},
+				{seatedStepping20sID, 35, 40, -1, standard.RankD},
 			},
 			wantElementEvaluations: []wantElementEvaluation{
 				{measurementitem.ElementFlexibility, 0.4, standard.RankC},
-				{measurementitem.ElementAgility, 0, standard.RankC},
+				{measurementitem.ElementAgility, -1, standard.RankD},
 			},
+			wantMotorAge: &motorAge52,
 		},
 		{
 			name:   "success elements are ordered by the element order",
