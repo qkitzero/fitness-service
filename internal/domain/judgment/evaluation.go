@@ -223,12 +223,23 @@ func newElementEvaluations(
 	return elementEvaluations
 }
 
+func isPreferredAgeRanges(candidate, current []standard.AgeRange) bool {
+	if len(candidate) != len(current) {
+		return len(candidate) > len(current)
+	}
+	for i := range candidate {
+		if candidate[i] != current[i] {
+			return isYoungerAgeRange(candidate[i], current[i])
+		}
+	}
+	return false
+}
+
 func newMotorAge(
 	judgedItems []judgedItem,
 	ageGroupStandardsByItemID map[measurementitem.MeasurementItemID][]standard.AgeGroupStandard,
 ) *MotorAge {
 	standardsByItemAndAgeRange := make(map[measurementitem.MeasurementItemID]map[standard.AgeRange]standard.AgeGroupStandard, len(judgedItems))
-	ageRanges := make([]standard.AgeRange, 0)
 	for _, judged := range judgedItems {
 		standardsByAgeRange := make(map[standard.AgeRange]standard.AgeGroupStandard)
 		for _, ageGroupStandard := range ageGroupStandardsByItemID[judged.item.ID()] {
@@ -237,14 +248,17 @@ func newMotorAge(
 		standardsByItemAndAgeRange[judged.item.ID()] = standardsByAgeRange
 	}
 
-	seen := make(map[standard.AgeRange]struct{})
-	for _, standardsByAgeRange := range standardsByItemAndAgeRange {
-		for ageRange := range standardsByAgeRange {
-			if _, ok := seen[ageRange]; ok {
-				continue
-			}
-			seen[ageRange] = struct{}{}
-			ageRanges = append(ageRanges, ageRange)
+	ageRanges := make([]standard.AgeRange, 0)
+	for _, judged := range judgedItems {
+		candidate := make([]standard.AgeRange, 0, len(standardsByItemAndAgeRange[judged.item.ID()]))
+		for ageRange := range standardsByItemAndAgeRange[judged.item.ID()] {
+			candidate = append(candidate, ageRange)
+		}
+		sort.Slice(candidate, func(i, j int) bool {
+			return isYoungerAgeRange(candidate[i], candidate[j])
+		})
+		if isPreferredAgeRanges(candidate, ageRanges) {
+			ageRanges = candidate
 		}
 	}
 	if len(ageRanges) == 0 {
@@ -253,20 +267,17 @@ func newMotorAge(
 
 	coveringItems := make([]judgedItem, 0, len(judgedItems))
 	for _, judged := range judgedItems {
-		if len(standardsByItemAndAgeRange[judged.item.ID()]) == len(ageRanges) {
+		covers := true
+		for _, ageRange := range ageRanges {
+			if _, ok := standardsByItemAndAgeRange[judged.item.ID()][ageRange]; !ok {
+				covers = false
+				break
+			}
+		}
+		if covers {
 			coveringItems = append(coveringItems, judged)
 		}
 	}
-	if len(coveringItems) == 0 {
-		return nil
-	}
-
-	sort.Slice(ageRanges, func(i, j int) bool {
-		if ageRanges[i].From() != ageRanges[j].From() {
-			return ageRanges[i].From() < ageRanges[j].From()
-		}
-		return ageRanges[i].To() < ageRanges[j].To()
-	})
 
 	best := ageRanges[0]
 	bestDistance := int64(-1)
