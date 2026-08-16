@@ -223,6 +223,23 @@ func TestGetJudgment(t *testing.T) {
 			wantPrescribedMenus:     []judgment.PrescriptionSource{judgment.PrescriptionSourceManual},
 		},
 		{
+			name:                    "success get judgment of a measurement above every age group",
+			success:                 true,
+			ctx:                     context.Background(),
+			userID:                  userID,
+			callFindMeasurement:     true,
+			callFindCustomer:        true,
+			myTenantIDs:             []string{tenantID.String()},
+			gender:                  customer.GenderMale,
+			callListStandards:       true,
+			evaluated:               true,
+			callPrescribe:           true,
+			age:                     70,
+			callFindByMeasurementID: true,
+			wantItemEvaluations:     1,
+			wantPrescribedMenus:     []judgment.PrescriptionSource{judgment.PrescriptionSourceFixed},
+		},
+		{
 			name:                    "success get judgment of a centenarian without age decade menus",
 			success:                 true,
 			ctx:                     context.Background(),
@@ -640,6 +657,7 @@ func TestListOrganizationJudgments(t *testing.T) {
 	type measurementSpec struct {
 		customerIndex       int
 		isDraft             bool
+		age                 int
 		wantItemEvaluations int
 		wantMean            float64
 		wantZScore          float64
@@ -699,6 +717,21 @@ func TestListOrganizationJudgments(t *testing.T) {
 			callListMeasurements: true,
 			measurements: []measurementSpec{
 				{customerIndex: 0, isDraft: false, wantItemEvaluations: 1, wantMean: 38, wantZScore: 1.6, wantRank: standard.RankA, wantMotorAge: 42},
+			},
+			callListMasters:     true,
+			registeredStandards: true,
+		},
+		{
+			name:                 "success list judgments of a customer above every age group",
+			success:              true,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			callListCustomers:    true,
+			genders:              []customer.Gender{customer.GenderMale},
+			callListMeasurements: true,
+			measurements: []measurementSpec{
+				{customerIndex: 0, isDraft: false, age: 70, wantItemEvaluations: 1, wantMean: 38, wantZScore: 1.6, wantRank: standard.RankA, wantMotorAge: 42},
 			},
 			callListMasters:     true,
 			registeredStandards: true,
@@ -884,6 +917,7 @@ func TestListOrganizationJudgments(t *testing.T) {
 			}
 
 			measurementIDs := make([]measurement.MeasurementID, 0, len(tt.measurements))
+			ages := make([]int, 0, len(tt.measurements))
 			if tt.callListMeasurements {
 				var measurements []measurement.Measurement
 				if tt.listMeasurementsErr == nil {
@@ -891,7 +925,12 @@ func TestListOrganizationJudgments(t *testing.T) {
 					for _, spec := range tt.measurements {
 						measurementID := measurement.NewMeasurementID()
 						measurementIDs = append(measurementIDs, measurementID)
-						ageAtMeasurement, _ := measurement.NewAgeAtMeasurement(62)
+						age := spec.age
+						if age == 0 {
+							age = 62
+						}
+						ages = append(ages, age)
+						ageAtMeasurement, _ := measurement.NewAgeAtMeasurement(age)
 						mockMeasurement := mocksmeasurement.NewMockMeasurement(ctrl)
 						mockMeasurement.EXPECT().ID().Return(measurementID).AnyTimes()
 						mockMeasurement.EXPECT().CustomerID().Return(customerIDs[spec.customerIndex]).AnyTimes()
@@ -953,8 +992,8 @@ func TestListOrganizationJudgments(t *testing.T) {
 				if !result.MeasuredOn.Equal(measuredOn.Time) {
 					t.Errorf("results[%d].MeasuredOn = %v, want %v", i, result.MeasuredOn, measuredOn)
 				}
-				if result.AgeAtMeasurement.Int() != 62 {
-					t.Errorf("results[%d].AgeAtMeasurement = %v, want %v", i, result.AgeAtMeasurement.Int(), 62)
+				if result.AgeAtMeasurement.Int() != ages[i] {
+					t.Errorf("results[%d].AgeAtMeasurement = %v, want %v", i, result.AgeAtMeasurement.Int(), ages[i])
 				}
 				if result.IsDraft != spec.isDraft {
 					t.Errorf("results[%d].IsDraft = %v, want %v", i, result.IsDraft, spec.isDraft)

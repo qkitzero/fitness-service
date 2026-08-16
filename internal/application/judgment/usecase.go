@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/qkitzero/fitness-service/internal/application/auth"
@@ -151,6 +152,31 @@ func (u *judgmentUsecase) findJudgment(ctx context.Context, measurementID measur
 	return foundJudgment, nil
 }
 
+func itemCodesOutsideAgeGroups(items []measurementitem.MeasurementItem, ageGroupStandards []standard.AgeGroupStandard, age int) []string {
+	outsideByItemID := make(map[measurementitem.MeasurementItemID]bool, len(items))
+	for _, ageGroupStandard := range ageGroupStandards {
+		measurementItemID := ageGroupStandard.MeasurementItemID()
+		if ageGroupStandard.AgeRange().Contains(age) {
+			outsideByItemID[measurementItemID] = false
+			continue
+		}
+		if _, ok := outsideByItemID[measurementItemID]; !ok {
+			outsideByItemID[measurementItemID] = true
+		}
+	}
+
+	codes := make([]string, 0, len(items))
+	for _, item := range items {
+		if !outsideByItemID[item.ID()] {
+			continue
+		}
+		codes = append(codes, item.Code().String())
+	}
+	sort.Strings(codes)
+
+	return codes
+}
+
 func (u *judgmentUsecase) evaluate(ctx context.Context, foundMeasurement measurement.Measurement, foundCustomer customer.Customer) (judgment.Evaluation, error) {
 	age := foundMeasurement.AgeAtMeasurement().Int()
 
@@ -183,6 +209,10 @@ func (u *judgmentUsecase) evaluate(ctx context.Context, foundMeasurement measure
 
 	if len(entries) > 0 && len(ageGroupStandards) == 0 {
 		log.Printf("GetJudgment: measurement %s: no age group standards are registered for gender %q, returning an empty evaluation", foundMeasurement.ID(), gender)
+	}
+
+	if outsideCodes := itemCodesOutsideAgeGroups(measurementItems, ageGroupStandards, age); len(outsideCodes) > 0 {
+		log.Printf("GetJudgment: measurement %s: age %d is outside the registered age groups of gender %q for items %v", foundMeasurement.ID(), age, gender, outsideCodes)
 	}
 
 	return judgment.NewEvaluation(foundMeasurement, measurementItems, gender, age, ageGroupStandards, rankStandards), nil
@@ -328,6 +358,11 @@ func (u *judgmentUsecase) ListOrganizationJudgments(ctx context.Context, organiz
 		ageGroupStandardsByGender[gender] = append(ageGroupStandardsByGender[gender], ageGroupStandard)
 	}
 
+	measurementItemByID := make(map[measurementitem.MeasurementItemID]measurementitem.MeasurementItem, len(measurementItems))
+	for _, measurementItem := range measurementItems {
+		measurementItemByID[measurementItem.ID()] = measurementItem
+	}
+
 	results := make([]OrganizationJudgmentResult, 0, len(measurements))
 	for _, foundMeasurement := range measurements {
 		age := foundMeasurement.AgeAtMeasurement().Int()
@@ -341,6 +376,17 @@ func (u *judgmentUsecase) ListOrganizationJudgments(ctx context.Context, organiz
 		genderStandards := ageGroupStandardsByGender[gender]
 		if err == nil && len(genderStandards) == 0 {
 			log.Printf("ListOrganizationJudgments: measurement %s: no age group standards are registered for gender %q, returning an empty evaluation", foundMeasurement.ID(), gender)
+		}
+
+		measuredItems := make([]measurementitem.MeasurementItem, 0, len(foundMeasurement.Entries()))
+		for _, entry := range foundMeasurement.Entries() {
+			if measurementItem, ok := measurementItemByID[entry.MeasurementItemID()]; ok {
+				measuredItems = append(measuredItems, measurementItem)
+			}
+		}
+
+		if outsideCodes := itemCodesOutsideAgeGroups(measuredItems, genderStandards, age); len(outsideCodes) > 0 {
+			log.Printf("ListOrganizationJudgments: measurement %s: age %d is outside the registered age groups of gender %q for items %v", foundMeasurement.ID(), age, gender, outsideCodes)
 		}
 
 		evaluation := judgment.NewEvaluation(foundMeasurement, measurementItems, gender, age, genderStandards, rankStandards)
