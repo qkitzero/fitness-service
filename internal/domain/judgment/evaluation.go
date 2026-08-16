@@ -9,7 +9,11 @@ import (
 	"github.com/qkitzero/fitness-service/internal/domain/standard"
 )
 
-const evaluationScale = 100
+const (
+	evaluationScale                 = 100
+	maxYoungerAgeGroupFallbackYears = 2
+	maxOlderAgeGroupFallbackYears   = 20
+)
 
 type Evaluation interface {
 	ItemEvaluations() []ItemEvaluation
@@ -117,11 +121,48 @@ func representativeValue(entry measurement.MeasurementEntry, item measurementite
 	return value, true
 }
 
+func isYoungerAgeRange(a, b standard.AgeRange) bool {
+	if a.From() != b.From() {
+		return a.From() < b.From()
+	}
+	return a.To() < b.To()
+}
+
+func isOlderAgeRange(a, b standard.AgeRange) bool {
+	if a.To() != b.To() {
+		return a.To() > b.To()
+	}
+	return a.From() > b.From()
+}
+
 func findAgeGroupStandard(ageGroupStandards []standard.AgeGroupStandard, age int) (standard.AgeGroupStandard, bool) {
+	var youngest, oldest standard.AgeGroupStandard
 	for _, ageGroupStandard := range ageGroupStandards {
-		if ageGroupStandard.AgeRange().Contains(age) {
+		ageRange := ageGroupStandard.AgeRange()
+		if ageRange.Contains(age) {
 			return ageGroupStandard, true
 		}
+		if youngest == nil || isYoungerAgeRange(ageRange, youngest.AgeRange()) {
+			youngest = ageGroupStandard
+		}
+		if oldest == nil || isOlderAgeRange(ageRange, oldest.AgeRange()) {
+			oldest = ageGroupStandard
+		}
+	}
+	if youngest == nil {
+		return nil, false
+	}
+	if age < youngest.AgeRange().From() {
+		if youngest.AgeRange().Distance(age) > maxYoungerAgeGroupFallbackYears {
+			return nil, false
+		}
+		return youngest, true
+	}
+	if age > oldest.AgeRange().To() {
+		if oldest.AgeRange().Distance(age) > maxOlderAgeGroupFallbackYears {
+			return nil, false
+		}
+		return oldest, true
 	}
 	return nil, false
 }
