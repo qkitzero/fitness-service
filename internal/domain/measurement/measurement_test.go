@@ -86,13 +86,23 @@ func TestNewMeasurement(t *testing.T) {
 			},
 		},
 		{
-			name: "failure partial entries on a confirmed measurement",
+			name: "success confirmed measurement with fewer values than the trial capacity",
 			entries: func() []MeasurementEntry {
 				trialIndex, _ := NewTrialIndex(1)
-				value, _ := NewValue(32.4)
+				left, _ := NewValue(32.4)
+				right, _ := NewValue(33.1)
 				entry, _ := NewMeasurementEntry(gripStrength, false, nil, []MeasurementValue{
-					NewMeasurementValue(trialIndex, SideLeft, &value, nil, nil),
+					NewMeasurementValue(trialIndex, SideLeft, &left, nil, nil),
+					NewMeasurementValue(trialIndex, SideRight, &right, nil, nil),
 				})
+				return []MeasurementEntry{entry}
+			},
+			wantValues: 2,
+		},
+		{
+			name: "failure no values on a confirmed measurable entry",
+			entries: func() []MeasurementEntry {
+				entry, _ := NewMeasurementEntry(gripStrength, false, nil, nil)
 				return []MeasurementEntry{entry}
 			},
 			wantErr: ErrInvalidValueCount,

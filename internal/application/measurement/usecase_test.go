@@ -238,8 +238,8 @@ func TestCreateMeasurement(t *testing.T) {
 			measurementItems: []measurementitem.MeasurementItem{gripStrength},
 		},
 		{
-			name:             "failure partial entries on a confirmed measurement",
-			wantErr:          measurement.ErrInvalidValueCount,
+			name:             "success create confirmed measurement with fewer values than the trial capacity",
+			success:          true,
 			ctx:              context.Background(),
 			userID:           userID,
 			callFindCustomer: true,
@@ -248,13 +248,31 @@ func TestCreateMeasurement(t *testing.T) {
 			measuredOn:       measuredOn,
 			entryInputs: func() []MeasurementEntryInput {
 				trialIndex, _ := measurement.NewTrialIndex(1)
-				value, _ := measurement.NewValue(32.4)
+				left, _ := measurement.NewValue(32.4)
+				right, _ := measurement.NewValue(33.1)
 				return []MeasurementEntryInput{{
 					MeasurementItemID: gripStrength.ID(),
 					Values: []measurement.MeasurementValue{
-						measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &value, nil, nil),
+						measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &left, nil, nil),
+						measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &right, nil, nil),
 					},
 				}}
+			},
+			callFindByIDs:    true,
+			measurementItems: []measurementitem.MeasurementItem{gripStrength},
+			callCreate:       true,
+		},
+		{
+			name:             "failure no values on a confirmed measurable entry",
+			wantErr:          measurement.ErrInvalidValueCount,
+			ctx:              context.Background(),
+			userID:           userID,
+			callFindCustomer: true,
+			birthDate:        birthDate,
+			myTenantIDs:      []string{tenantID.String()},
+			measuredOn:       measuredOn,
+			entryInputs: func() []MeasurementEntryInput {
+				return []MeasurementEntryInput{{MeasurementItemID: gripStrength.ID()}}
 			},
 			callFindByIDs:    true,
 			measurementItems: []measurementitem.MeasurementItem{gripStrength},
