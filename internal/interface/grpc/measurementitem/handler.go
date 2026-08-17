@@ -58,6 +58,8 @@ func toProtoUnit(u domainmeasurementitem.Unit) (measurementitemv1.Unit, error) {
 		return measurementitemv1.Unit_UNIT_PERCENT, nil
 	case domainmeasurementitem.UnitBpm:
 		return measurementitemv1.Unit_UNIT_BPM, nil
+	case domainmeasurementitem.UnitLevel:
+		return measurementitemv1.Unit_UNIT_LEVEL, nil
 	default:
 		return measurementitemv1.Unit_UNIT_UNSPECIFIED, fmt.Errorf("unmapped unit %q", u)
 	}
