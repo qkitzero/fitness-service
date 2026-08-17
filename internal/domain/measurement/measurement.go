@@ -110,7 +110,8 @@ func verifyEntries(isDraft bool, entries []MeasurementEntry) error {
 			continue
 		}
 		expectedValueCount, ok := entry.ExpectedValueCount()
-		if !ok || len(entry.Values()) != expectedValueCount {
+		valueCount := len(entry.Values())
+		if !ok || valueCount == 0 || valueCount > expectedValueCount {
 			return ErrInvalidValueCount
 		}
 	}
