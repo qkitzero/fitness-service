@@ -36,6 +36,7 @@ func TestNewEvaluation(t *testing.T) {
 	cm, _ := measurementitem.NewUnit("cm")
 	sec, _ := measurementitem.NewUnit("sec")
 	count, _ := measurementitem.NewUnit("count")
+	level, _ := measurementitem.NewUnit("level")
 	oneTrial, _ := measurementitem.NewTrialCount(1)
 	twoTrials, _ := measurementitem.NewTrialCount(2)
 	fiveTrials, _ := measurementitem.NewTrialCount(5)
@@ -65,7 +66,7 @@ func TestNewEvaluation(t *testing.T) {
 	standUpTestID := measurementitem.NewMeasurementItemID()
 	standUpTestCode, _ := measurementitem.NewCode("stand_up_test")
 	standUpTestName, _ := measurementitem.NewName("立ち上がり")
-	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, cm, oneTrial, true, measurementitem.ValueTypeChoice, nil, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, true, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
 
 	heightID := measurementitem.NewMeasurementItemID()
 	heightCode, _ := measurementitem.NewCode("height")
@@ -395,12 +396,7 @@ func TestNewEvaluation(t *testing.T) {
 				heightEntry, _ := measurement.NewMeasurementEntry(height, false, nil, []measurement.MeasurementValue{
 					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &value, nil, nil),
 				})
-				choice, _ := measurement.NewChoice("片足20cm")
-				standUpTestEntry, _ := measurement.NewMeasurementEntry(standUpTest, false, nil, []measurement.MeasurementValue{
-					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, nil, nil, &choice),
-					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, nil, nil, &choice),
-				})
-				return []measurement.MeasurementEntry{heightEntry, standUpTestEntry}
+				return []measurement.MeasurementEntry{heightEntry}
 			},
 		},
 		{
@@ -554,7 +550,12 @@ func TestNewEvaluation(t *testing.T) {
 				twoStepEntry, _ := measurement.NewMeasurementEntry(twoStep, false, nil, []measurement.MeasurementValue{
 					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &twoStepValue, nil, nil),
 				})
-				return []measurement.MeasurementEntry{gripStrengthEntry, twoStepEntry}
+				standUpTestValue, _ := measurement.NewValue(6)
+				standUpTestEntry, _ := measurement.NewMeasurementEntry(standUpTest, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &standUpTestValue, nil, nil),
+					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &standUpTestValue, nil, nil),
+				})
+				return []measurement.MeasurementEntry{gripStrengthEntry, twoStepEntry, standUpTestEntry}
 			},
 			wantItemEvaluations:    []wantItemEvaluation{{twoStepID, 190, 160, 2, standard.RankA}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, 2, standard.RankA}},
@@ -599,7 +600,7 @@ func TestNewEvaluation(t *testing.T) {
 			age:    42,
 			entries: func() []measurement.MeasurementEntry {
 				trialIndex, _ := measurement.NewTrialIndex(1)
-				choice, _ := measurement.NewChoice("片足20cm")
+				choice, _ := measurement.NewChoice("選択肢A")
 				entry := measurement.ReconstructMeasurementEntry(gripStrengthID, false, nil, []measurement.MeasurementValue{
 					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, nil, nil, &choice),
 				})
