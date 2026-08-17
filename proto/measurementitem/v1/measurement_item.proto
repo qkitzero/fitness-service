@@ -29,6 +29,7 @@ enum Unit {
   UNIT_MMHG = 5;
   UNIT_PERCENT = 6;
   UNIT_BPM = 7;
+  UNIT_LEVEL = 8;
 }
 
 enum ValueType {
