@@ -26,13 +26,13 @@ func TestNewMeasurementEntry(t *testing.T) {
 	bloodPressureName, _ := measurementitem.NewName("血圧")
 	gripStrengthCode, _ := measurementitem.NewCode("grip_strength")
 	gripStrengthName, _ := measurementitem.NewName("握力")
-	standUpTestCode, _ := measurementitem.NewCode("stand_up_test")
-	standUpTestName, _ := measurementitem.NewName("立ち上がり")
+	choiceItemCode, _ := measurementitem.NewCode("choice_item")
+	choiceItemName, _ := measurementitem.NewName("選択式項目")
 
 	pulseRate := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), pulseRateCode, pulseRateName, vital, bpm, singleTrial, false, measurementitem.ValueTypeNumeric, nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
 	bloodPressure := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), bloodPressureCode, bloodPressureName, vital, mmHg, singleTrial, false, measurementitem.ValueTypePaired, nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
 	gripStrength := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, true, measurementitem.ValueTypeNumeric, nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
-	standUpTest := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), standUpTestCode, standUpTestName, motorFunction, cm, singleTrial, true, measurementitem.ValueTypeChoice, nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
+	choiceItem := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), choiceItemCode, choiceItemName, motorFunction, cm, singleTrial, true, measurementitem.ValueTypeChoice, nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
 	unknownValueType := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), pulseRateCode, pulseRateName, vital, bpm, singleTrial, false, measurementitem.ValueType("range"), nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
 	note, _ := NewNote("ふらつきあり")
 
@@ -88,11 +88,11 @@ func TestNewMeasurementEntry(t *testing.T) {
 		},
 		{
 			name: "success choice on both sides",
-			item: standUpTest,
+			item: choiceItem,
 			values: func() []MeasurementValue {
 				trialIndex, _ := NewTrialIndex(1)
-				left, _ := NewChoice("片足20cm")
-				right, _ := NewChoice("両足30cm")
+				left, _ := NewChoice("選択肢A")
+				right, _ := NewChoice("選択肢B")
 				return []MeasurementValue{
 					NewMeasurementValue(trialIndex, SideLeft, nil, nil, &left),
 					NewMeasurementValue(trialIndex, SideRight, nil, nil, &right),
@@ -185,14 +185,14 @@ func TestNewMeasurementEntry(t *testing.T) {
 				trialIndex, _ := NewTrialIndex(1)
 				value, _ := NewValue(128)
 				valueSecondary, _ := NewValue(82)
-				valueChoice, _ := NewChoice("片足20cm")
+				valueChoice, _ := NewChoice("選択肢A")
 				return []MeasurementValue{NewMeasurementValue(trialIndex, SideNone, &value, &valueSecondary, &valueChoice)}
 			},
 			wantErr: ErrInvalidValueForType,
 		},
 		{
 			name: "failure choice without choice value",
-			item: standUpTest,
+			item: choiceItem,
 			values: func() []MeasurementValue {
 				trialIndex, _ := NewTrialIndex(1)
 				return []MeasurementValue{NewMeasurementValue(trialIndex, SideLeft, nil, nil, nil)}
@@ -201,11 +201,11 @@ func TestNewMeasurementEntry(t *testing.T) {
 		},
 		{
 			name: "failure choice with numeric value",
-			item: standUpTest,
+			item: choiceItem,
 			values: func() []MeasurementValue {
 				trialIndex, _ := NewTrialIndex(1)
 				value, _ := NewValue(20)
-				valueChoice, _ := NewChoice("片足20cm")
+				valueChoice, _ := NewChoice("選択肢A")
 				return []MeasurementValue{NewMeasurementValue(trialIndex, SideLeft, &value, nil, &valueChoice)}
 			},
 			wantErr: ErrInvalidValueForType,
