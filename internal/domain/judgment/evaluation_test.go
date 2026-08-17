@@ -66,7 +66,7 @@ func TestNewEvaluation(t *testing.T) {
 	standUpTestID := measurementitem.NewMeasurementItemID()
 	standUpTestCode, _ := measurementitem.NewCode("stand_up_test")
 	standUpTestName, _ := measurementitem.NewName("立ち上がり")
-	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, true, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, false, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
 
 	heightID := measurementitem.NewMeasurementItemID()
 	heightCode, _ := measurementitem.NewCode("height")
@@ -552,8 +552,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				standUpTestValue, _ := measurement.NewValue(6)
 				standUpTestEntry, _ := measurement.NewMeasurementEntry(standUpTest, false, nil, []measurement.MeasurementValue{
-					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &standUpTestValue, nil, nil),
-					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &standUpTestValue, nil, nil),
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &standUpTestValue, nil, nil),
 				})
 				return []measurement.MeasurementEntry{gripStrengthEntry, twoStepEntry, standUpTestEntry}
 			},
