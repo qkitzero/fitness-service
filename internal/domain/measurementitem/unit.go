@@ -12,6 +12,7 @@ const (
 	UnitMmHg    Unit = "mmHg"
 	UnitPercent Unit = "percent"
 	UnitBpm     Unit = "bpm"
+	UnitLevel   Unit = "level"
 )
 
 func (u Unit) String() string {
@@ -20,7 +21,7 @@ func (u Unit) String() string {
 
 func NewUnit(s string) (Unit, error) {
 	switch Unit(s) {
-	case UnitKg, UnitCm, UnitSec, UnitCount, UnitMmHg, UnitPercent, UnitBpm:
+	case UnitKg, UnitCm, UnitSec, UnitCount, UnitMmHg, UnitPercent, UnitBpm, UnitLevel:
 		return Unit(s), nil
 	default:
 		return Unit(""), fmt.Errorf("invalid unit")

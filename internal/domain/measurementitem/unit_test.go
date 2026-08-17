@@ -17,6 +17,7 @@ func TestNewUnit(t *testing.T) {
 		{"success mmHg", true, "mmHg", UnitMmHg},
 		{"success percent", true, "percent", UnitPercent},
 		{"success bpm", true, "bpm", UnitBpm},
+		{"success level", true, "level", UnitLevel},
 		{"failure empty unit", false, "", ""},
 		{"failure invalid unit", false, "m", ""},
 		{"failure lowercase mmhg", false, "mmhg", ""},
