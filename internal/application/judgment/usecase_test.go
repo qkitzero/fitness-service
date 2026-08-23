@@ -27,6 +27,94 @@ import (
 	mockstraining "github.com/qkitzero/fitness-service/mocks/domain/training"
 )
 
+func TestItemCodesWithoutAgeGroupStandards(t *testing.T) {
+	t.Parallel()
+	createdAt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	updatedAt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
+	motorFunction, _ := measurementitem.NewCategory("motor_function")
+	physique, _ := measurementitem.NewCategory("physique")
+	kg, _ := measurementitem.NewUnit("kg")
+	cm, _ := measurementitem.NewUnit("cm")
+	level, _ := measurementitem.NewUnit("level")
+	oneTrial, _ := measurementitem.NewTrialCount(1)
+	twoTrials, _ := measurementitem.NewTrialCount(2)
+	higherIsBetter := measurementitem.ScoreDirectionHigherIsBetter
+
+	gripStrengthID := measurementitem.NewMeasurementItemID()
+	gripStrengthCode, _ := measurementitem.NewCode("grip_strength")
+	gripStrengthName, _ := measurementitem.NewName("握力")
+	gripStrength := measurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, true, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+
+	standUpTestID := measurementitem.NewMeasurementItemID()
+	standUpTestCode, _ := measurementitem.NewCode("stand_up_test")
+	standUpTestName, _ := measurementitem.NewName("立ち上がり")
+	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, false, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+
+	heightID := measurementitem.NewMeasurementItemID()
+	heightCode, _ := measurementitem.NewCode("height")
+	heightName, _ := measurementitem.NewName("身長")
+	height := measurementitem.NewMeasurementItem(heightID, heightCode, heightName, physique, cm, oneTrial, false, measurementitem.ValueTypeNumeric, nil, measurementitem.SideAggregationMean, nil, createdAt, updatedAt)
+
+	ageRange6064, _ := standard.NewAgeRange(60, 64)
+	mean, _ := standard.NewMean(38)
+	standardDeviation, _ := standard.NewStandardDeviation(5)
+	gripStrengthStandard := standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), gripStrengthID, standard.GenderMale, ageRange6064, mean, standardDeviation, createdAt, updatedAt)
+
+	tests := []struct {
+		name              string
+		items             []measurementitem.MeasurementItem
+		ageGroupStandards []standard.AgeGroupStandard
+		want              []string
+	}{
+		{
+			name:              "an item without any age group standard is listed",
+			items:             []measurementitem.MeasurementItem{gripStrength, standUpTest},
+			ageGroupStandards: []standard.AgeGroupStandard{gripStrengthStandard},
+			want:              []string{"stand_up_test"},
+		},
+		{
+			name:              "an item without a score direction is not listed",
+			items:             []measurementitem.MeasurementItem{height},
+			ageGroupStandards: []standard.AgeGroupStandard{},
+			want:              []string{},
+		},
+		{
+			name:              "an item with an age group standard is not listed",
+			items:             []measurementitem.MeasurementItem{gripStrength},
+			ageGroupStandards: []standard.AgeGroupStandard{gripStrengthStandard},
+			want:              []string{},
+		},
+		{
+			name:              "listed codes are sorted",
+			items:             []measurementitem.MeasurementItem{standUpTest, gripStrength, height},
+			ageGroupStandards: []standard.AgeGroupStandard{},
+			want:              []string{"grip_strength", "stand_up_test"},
+		},
+		{
+			name:              "nothing is listed without any item",
+			items:             []measurementitem.MeasurementItem{},
+			ageGroupStandards: []standard.AgeGroupStandard{gripStrengthStandard},
+			want:              []string{},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := itemCodesWithoutAgeGroupStandards(tt.items, tt.ageGroupStandards)
+			if len(got) != len(tt.want) {
+				t.Fatalf("len(itemCodesWithoutAgeGroupStandards()) = %v, want %v", len(got), len(tt.want))
+			}
+			for i, want := range tt.want {
+				if got[i] != want {
+					t.Errorf("itemCodesWithoutAgeGroupStandards()[%d] = %v, want %v", i, got[i], want)
+				}
+			}
+		})
+	}
+}
+
 func TestGetJudgment(t *testing.T) {
 	t.Parallel()
 	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
@@ -44,6 +132,13 @@ func TestGetJudgment(t *testing.T) {
 	gripStrengthCode, _ := measurementitem.NewCode("grip_strength")
 	gripStrengthName, _ := measurementitem.NewName("握力")
 	gripStrength := measurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, true, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+
+	level, _ := measurementitem.NewUnit("level")
+	oneTrial, _ := measurementitem.NewTrialCount(1)
+	standUpTestID := measurementitem.NewMeasurementItemID()
+	standUpTestCode, _ := measurementitem.NewCode("stand_up_test")
+	standUpTestName, _ := measurementitem.NewName("立ち上がり")
+	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, false, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
 
 	ageRange6064, _ := standard.NewAgeRange(60, 64)
 	ageRange4044, _ := standard.NewAgeRange(40, 44)
@@ -67,6 +162,14 @@ func TestGetJudgment(t *testing.T) {
 				measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &value, nil, nil),
 			}),
 		}
+	}
+
+	standUpTestEntry := func() measurement.MeasurementEntry {
+		trialIndex, _ := measurement.NewTrialIndex(1)
+		value, _ := measurement.NewValue(6)
+		return measurement.ReconstructMeasurementEntry(standUpTestID, false, nil, []measurement.MeasurementValue{
+			measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &value, nil, nil),
+		})
 	}
 
 	stretchCode, _ := training.NewCode("whole_body_stretch")
@@ -106,6 +209,7 @@ func TestGetJudgment(t *testing.T) {
 		gender                   customer.Gender
 		callListStandards        bool
 		evaluated                bool
+		withUnregisteredItem     bool
 		findByIDsErr             error
 		listAgeGroupStandardsErr error
 		listRankStandardsErr     error
@@ -173,6 +277,25 @@ func TestGetJudgment(t *testing.T) {
 			callFindByMeasurementID: true,
 			advice:                  advice,
 			wantAdvice:              advice,
+			wantPrescribedMenus:     []judgment.PrescriptionSource{judgment.PrescriptionSourceFixed, judgment.PrescriptionSourceAgeDecade},
+		},
+		{
+			name:                    "success get judgment of a measurement including an item without any age group standard",
+			success:                 true,
+			ctx:                     context.Background(),
+			userID:                  userID,
+			callFindMeasurement:     true,
+			callFindCustomer:        true,
+			myTenantIDs:             []string{tenantID.String()},
+			gender:                  customer.GenderMale,
+			callListStandards:       true,
+			evaluated:               true,
+			withUnregisteredItem:    true,
+			callPrescribe:           true,
+			callFindByMeasurementID: true,
+			advice:                  advice,
+			wantAdvice:              advice,
+			wantItemEvaluations:     1,
 			wantPrescribedMenus:     []judgment.PrescriptionSource{judgment.PrescriptionSourceFixed, judgment.PrescriptionSourceAgeDecade},
 		},
 		{
@@ -453,7 +576,11 @@ func TestGetJudgment(t *testing.T) {
 					mockMeasurement.EXPECT().CustomerID().Return(customerID).AnyTimes()
 					mockMeasurement.EXPECT().AgeAtMeasurement().Return(ageAtMeasurement).AnyTimes()
 					mockMeasurement.EXPECT().IsDraft().Return(tt.isDraft).AnyTimes()
-					mockMeasurement.EXPECT().Entries().Return(entries()).AnyTimes()
+					measurementEntries := entries()
+					if tt.withUnregisteredItem {
+						measurementEntries = append(measurementEntries, standUpTestEntry())
+					}
+					mockMeasurement.EXPECT().Entries().Return(measurementEntries).AnyTimes()
 					foundMeasurement = mockMeasurement
 				}
 				mockMeasurementRepository.EXPECT().FindByID(tt.ctx, measurementID).Return(foundMeasurement, tt.findMeasurementErr).Times(1)
@@ -474,12 +601,18 @@ func TestGetJudgment(t *testing.T) {
 				measurementItems := []measurementitem.MeasurementItem{}
 				targetAgeGroupStandards := []standard.AgeGroupStandard{}
 				targetRankStandards := []standard.RankStandard{}
+				measurementItemIDs := []measurementitem.MeasurementItemID{gripStrengthID}
+				if tt.withUnregisteredItem {
+					measurementItemIDs = append(measurementItemIDs, standUpTestID)
+				}
 				if tt.evaluated {
 					measurementItems = []measurementitem.MeasurementItem{gripStrength}
+					if tt.withUnregisteredItem {
+						measurementItems = append(measurementItems, standUpTest)
+					}
 					targetAgeGroupStandards = ageGroupStandards
 					targetRankStandards = rankStandards
 				}
-				measurementItemIDs := []measurementitem.MeasurementItemID{gripStrengthID}
 				mockMeasurementItemRepository.EXPECT().FindByIDs(tt.ctx, measurementItemIDs).Return(measurementItems, tt.findByIDsErr).Times(1)
 				if tt.findByIDsErr == nil {
 					mockAgeGroupStandardRepository.EXPECT().ListByItemIDsAndGender(tt.ctx, measurementItemIDs, standard.GenderMale).Return(targetAgeGroupStandards, tt.listAgeGroupStandardsErr).Times(1)
@@ -618,6 +751,13 @@ func TestListOrganizationJudgments(t *testing.T) {
 	gripStrengthName, _ := measurementitem.NewName("握力")
 	gripStrength := measurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, true, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
 
+	level, _ := measurementitem.NewUnit("level")
+	oneTrial, _ := measurementitem.NewTrialCount(1)
+	standUpTestID := measurementitem.NewMeasurementItemID()
+	standUpTestCode, _ := measurementitem.NewCode("stand_up_test")
+	standUpTestName, _ := measurementitem.NewName("立ち上がり")
+	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, false, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+
 	ageRange4044, _ := standard.NewAgeRange(40, 44)
 	ageRange5054, _ := standard.NewAgeRange(50, 54)
 	ageRange6064, _ := standard.NewAgeRange(60, 64)
@@ -654,6 +794,14 @@ func TestListOrganizationJudgments(t *testing.T) {
 		}
 	}
 
+	standUpTestEntry := func() measurement.MeasurementEntry {
+		trialIndex, _ := measurement.NewTrialIndex(1)
+		value, _ := measurement.NewValue(6)
+		return measurement.ReconstructMeasurementEntry(standUpTestID, false, nil, []measurement.MeasurementValue{
+			measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &value, nil, nil),
+		})
+	}
+
 	type measurementSpec struct {
 		customerIndex       int
 		isDraft             bool
@@ -684,6 +832,7 @@ func TestListOrganizationJudgments(t *testing.T) {
 		listMeasurementsErr      error
 		callListMasters          bool
 		registeredStandards      bool
+		unregisteredItem         bool
 		listMeasurementItemsErr  error
 		listAgeGroupStandardsErr error
 		listRankStandardsErr     error
@@ -760,6 +909,22 @@ func TestListOrganizationJudgments(t *testing.T) {
 			callListMeasurements: true,
 			measurements:         []measurementSpec{{customerIndex: 0, isDraft: false}},
 			callListMasters:      true,
+		},
+		{
+			name:                 "success list judgments including an item without any age group standard",
+			success:              true,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			callListCustomers:    true,
+			genders:              []customer.Gender{customer.GenderMale},
+			callListMeasurements: true,
+			measurements: []measurementSpec{
+				{customerIndex: 0, isDraft: false, wantItemEvaluations: 1, wantMean: 38, wantZScore: 1.6, wantRank: standard.RankA, wantMotorAge: 42},
+			},
+			callListMasters:     true,
+			registeredStandards: true,
+			unregisteredItem:    true,
 		},
 		{
 			name:                 "success list no judgments of an organization without customers",
@@ -937,7 +1102,11 @@ func TestListOrganizationJudgments(t *testing.T) {
 						mockMeasurement.EXPECT().MeasuredOn().Return(measuredOn).AnyTimes()
 						mockMeasurement.EXPECT().AgeAtMeasurement().Return(ageAtMeasurement).AnyTimes()
 						mockMeasurement.EXPECT().IsDraft().Return(spec.isDraft).AnyTimes()
-						mockMeasurement.EXPECT().Entries().Return(entries()).AnyTimes()
+						measurementEntries := entries()
+						if tt.unregisteredItem {
+							measurementEntries = append(measurementEntries, standUpTestEntry())
+						}
+						mockMeasurement.EXPECT().Entries().Return(measurementEntries).AnyTimes()
 						measurements = append(measurements, mockMeasurement)
 					}
 				}
@@ -950,6 +1119,9 @@ func TestListOrganizationJudgments(t *testing.T) {
 				targetRankStandards := []standard.RankStandard{}
 				if tt.registeredStandards {
 					measurementItems = []measurementitem.MeasurementItem{gripStrength}
+					if tt.unregisteredItem {
+						measurementItems = append(measurementItems, standUpTest)
+					}
 					targetAgeGroupStandards = ageGroupStandards
 					targetRankStandards = rankStandards
 				}

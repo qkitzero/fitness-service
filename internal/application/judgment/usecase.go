@@ -152,6 +152,27 @@ func (u *judgmentUsecase) findJudgment(ctx context.Context, measurementID measur
 	return foundJudgment, nil
 }
 
+func itemCodesWithoutAgeGroupStandards(items []measurementitem.MeasurementItem, ageGroupStandards []standard.AgeGroupStandard) []string {
+	registeredItemIDs := make(map[measurementitem.MeasurementItemID]struct{}, len(ageGroupStandards))
+	for _, ageGroupStandard := range ageGroupStandards {
+		registeredItemIDs[ageGroupStandard.MeasurementItemID()] = struct{}{}
+	}
+
+	codes := make([]string, 0, len(items))
+	for _, item := range items {
+		if item.ScoreDirection() == nil {
+			continue
+		}
+		if _, ok := registeredItemIDs[item.ID()]; ok {
+			continue
+		}
+		codes = append(codes, item.Code().String())
+	}
+	sort.Strings(codes)
+
+	return codes
+}
+
 func itemCodesOutsideAgeGroups(items []measurementitem.MeasurementItem, ageGroupStandards []standard.AgeGroupStandard, age int) []string {
 	outsideByItemID := make(map[measurementitem.MeasurementItemID]bool, len(items))
 	for _, ageGroupStandard := range ageGroupStandards {
@@ -209,6 +230,8 @@ func (u *judgmentUsecase) evaluate(ctx context.Context, foundMeasurement measure
 
 	if len(entries) > 0 && len(ageGroupStandards) == 0 {
 		log.Printf("GetJudgment: measurement %s: no age group standards are registered for gender %q, returning an empty evaluation", foundMeasurement.ID(), gender)
+	} else if unregisteredCodes := itemCodesWithoutAgeGroupStandards(measurementItems, ageGroupStandards); len(unregisteredCodes) > 0 {
+		log.Printf("GetJudgment: measurement %s: the age group standards of gender %q are missing for items %v", foundMeasurement.ID(), gender, unregisteredCodes)
 	}
 
 	if outsideCodes := itemCodesOutsideAgeGroups(measurementItems, ageGroupStandards, age); len(outsideCodes) > 0 {
@@ -382,6 +405,12 @@ func (u *judgmentUsecase) ListOrganizationJudgments(ctx context.Context, organiz
 		for _, entry := range foundMeasurement.Entries() {
 			if measurementItem, ok := measurementItemByID[entry.MeasurementItemID()]; ok {
 				measuredItems = append(measuredItems, measurementItem)
+			}
+		}
+
+		if err == nil && len(genderStandards) > 0 {
+			if unregisteredCodes := itemCodesWithoutAgeGroupStandards(measuredItems, genderStandards); len(unregisteredCodes) > 0 {
+				log.Printf("ListOrganizationJudgments: measurement %s: the age group standards of gender %q are missing for items %v", foundMeasurement.ID(), gender, unregisteredCodes)
 			}
 		}
 
