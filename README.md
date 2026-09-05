@@ -93,7 +93,7 @@ classDiagram
             Category category
             Unit unit
             TrialCount trialCount
-            bool bilateral
+            SideMode sideMode
             ValueType valueType
             ScoreDirection? scoreDirection
             SideAggregation sideAggregation

@@ -5,8 +5,9 @@ import "fmt"
 type SideAggregation string
 
 const (
-	SideAggregationMean SideAggregation = "mean"
-	SideAggregationBest SideAggregation = "best"
+	SideAggregationMean  SideAggregation = "mean"
+	SideAggregationBest  SideAggregation = "best"
+	SideAggregationWorst SideAggregation = "worst"
 )
 
 func (s SideAggregation) String() string {
@@ -15,7 +16,7 @@ func (s SideAggregation) String() string {
 
 func NewSideAggregation(s string) (SideAggregation, error) {
 	switch SideAggregation(s) {
-	case SideAggregationMean, SideAggregationBest:
+	case SideAggregationMean, SideAggregationBest, SideAggregationWorst:
 		return SideAggregation(s), nil
 	default:
 		return SideAggregation(""), fmt.Errorf("invalid side aggregation")

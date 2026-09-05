@@ -12,6 +12,7 @@ func TestNewSideAggregation(t *testing.T) {
 	}{
 		{"success mean", true, "mean", SideAggregationMean},
 		{"success best", true, "best", SideAggregationBest},
+		{"success worst", true, "worst", SideAggregationWorst},
 		{"failure empty side aggregation", false, "", ""},
 		{"failure invalid side aggregation", false, "median", ""},
 		{"failure uppercase side aggregation", false, "MEAN", ""},
