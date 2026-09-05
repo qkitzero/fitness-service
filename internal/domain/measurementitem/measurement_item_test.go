@@ -16,18 +16,19 @@ func TestNewMeasurementItem(t *testing.T) {
 		category        string
 		unit            string
 		trialCount      int
-		bilateral       bool
+		sideMode        SideMode
 		valueType       string
 		scoreDirection  *ScoreDirection
 		sideAggregation SideAggregation
 		elements        []Element
 	}{
-		{"success new measurement item", "grip_strength", "握力", "motor_function", "kg", 2, true, "numeric", &higherIsBetter, SideAggregationMean, []Element{ElementMuscleStrength}},
-		{"success new measurement item without bilateral", "blood_pressure", "血圧", "vital", "mmHg", 1, false, "paired", nil, SideAggregationMean, nil},
-		{"success new measurement item of another category", "body_fat_percentage", "体脂肪率", "body_composition", "percent", 1, false, "numeric", nil, SideAggregationMean, []Element{}},
-		{"success new measurement item scored lower is better", "walk_5m", "5m歩行", "motor_function", "sec", 2, false, "numeric", &lowerIsBetter, SideAggregationMean, []Element{ElementMobility}},
-		{"success new measurement item aggregated by the best side", "eyes_open_one_leg_stand", "開眼片足立ち", "motor_function", "sec", 2, true, "numeric", &higherIsBetter, SideAggregationBest, []Element{ElementBalance}},
-		{"success new measurement item of multiple elements", "multi_element_item", "複数要素の測定項目", "motor_function", "count", 1, false, "numeric", &higherIsBetter, SideAggregationMean, []Element{ElementAgility, ElementMobility}},
+		{"success new measurement item", "grip_strength", "握力", "motor_function", "kg", 2, SideModeBilateral, "numeric", &higherIsBetter, SideAggregationMean, []Element{ElementMuscleStrength}},
+		{"success new measurement item without sides", "blood_pressure", "血圧", "vital", "mmHg", 1, SideModeNone, "paired", nil, SideAggregationMean, nil},
+		{"success new measurement item of another category", "body_fat_percentage", "体脂肪率", "body_composition", "percent", 1, SideModeNone, "numeric", nil, SideAggregationMean, []Element{}},
+		{"success new measurement item scored lower is better", "walk_5m", "5m歩行", "motor_function", "sec", 2, SideModeNone, "numeric", &lowerIsBetter, SideAggregationMean, []Element{ElementMobility}},
+		{"success new measurement item aggregated by the best side", "eyes_open_one_leg_stand", "開眼片足立ち", "motor_function", "sec", 2, SideModeBilateral, "numeric", &higherIsBetter, SideAggregationBest, []Element{ElementBalance}},
+		{"success new measurement item of multiple elements", "multi_element_item", "複数要素の測定項目", "motor_function", "count", 1, SideModeNone, "numeric", &higherIsBetter, SideAggregationMean, []Element{ElementAgility, ElementMobility}},
+		{"success new measurement item of optional sides aggregated by the worst side", "stand_up_test", "立ち上がり", "motor_function", "level", 1, SideModeOptionalBilateral, "numeric", &higherIsBetter, SideAggregationWorst, []Element{ElementMuscleStrength}},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -44,7 +45,7 @@ func TestNewMeasurementItem(t *testing.T) {
 			createdAt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 			updatedAt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
 
-			m := NewMeasurementItem(id, code, measurementName, category, unit, trialCount, tt.bilateral, valueType, tt.scoreDirection, tt.sideAggregation, tt.elements, createdAt, updatedAt)
+			m := NewMeasurementItem(id, code, measurementName, category, unit, trialCount, tt.sideMode, valueType, tt.scoreDirection, tt.sideAggregation, tt.elements, createdAt, updatedAt)
 
 			if m.ID() != id {
 				t.Errorf("ID() = %v, want %v", m.ID(), id)
@@ -64,8 +65,8 @@ func TestNewMeasurementItem(t *testing.T) {
 			if m.TrialCount() != trialCount {
 				t.Errorf("TrialCount() = %v, want %v", m.TrialCount(), trialCount)
 			}
-			if m.Bilateral() != tt.bilateral {
-				t.Errorf("Bilateral() = %v, want %v", m.Bilateral(), tt.bilateral)
+			if m.SideMode() != tt.sideMode {
+				t.Errorf("SideMode() = %v, want %v", m.SideMode(), tt.sideMode)
 			}
 			if m.ValueType() != valueType {
 				t.Errorf("ValueType() = %v, want %v", m.ValueType(), valueType)
@@ -141,7 +142,7 @@ func TestMeasurementItemIsolatesMutableState(t *testing.T) {
 			scoreDirection := ScoreDirectionHigherIsBetter
 			elements := []Element{ElementMuscleStrength}
 
-			m := NewMeasurementItem(NewMeasurementItemID(), code, measurementName, category, unit, trialCount, true, valueType, &scoreDirection, SideAggregationMean, elements, createdAt, updatedAt)
+			m := NewMeasurementItem(NewMeasurementItemID(), code, measurementName, category, unit, trialCount, SideModeBilateral, valueType, &scoreDirection, SideAggregationMean, elements, createdAt, updatedAt)
 
 			tt.mutate(m, &scoreDirection, elements)
 

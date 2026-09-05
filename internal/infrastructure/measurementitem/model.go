@@ -13,7 +13,7 @@ type MeasurementItemModel struct {
 	Category        measurementitem.Category
 	Unit            measurementitem.Unit
 	TrialCount      measurementitem.TrialCount
-	Bilateral       bool
+	SideMode        measurementitem.SideMode
 	ValueType       measurementitem.ValueType
 	ScoreDirection  *measurementitem.ScoreDirection
 	SideAggregation measurementitem.SideAggregation

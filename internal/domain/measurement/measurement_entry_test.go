@@ -18,6 +18,7 @@ func TestNewMeasurementEntry(t *testing.T) {
 	mmHg, _ := measurementitem.NewUnit("mmHg")
 	kg, _ := measurementitem.NewUnit("kg")
 	cm, _ := measurementitem.NewUnit("cm")
+	level, _ := measurementitem.NewUnit("level")
 	singleTrial, _ := measurementitem.NewTrialCount(1)
 	twoTrials, _ := measurementitem.NewTrialCount(2)
 	pulseRateCode, _ := measurementitem.NewCode("pulse_rate")
@@ -28,12 +29,16 @@ func TestNewMeasurementEntry(t *testing.T) {
 	gripStrengthName, _ := measurementitem.NewName("握力")
 	choiceItemCode, _ := measurementitem.NewCode("choice_item")
 	choiceItemName, _ := measurementitem.NewName("選択式項目")
+	standUpTestCode, _ := measurementitem.NewCode("stand_up_test")
+	standUpTestName, _ := measurementitem.NewName("立ち上がり")
 
-	pulseRate := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), pulseRateCode, pulseRateName, vital, bpm, singleTrial, false, measurementitem.ValueTypeNumeric, nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
-	bloodPressure := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), bloodPressureCode, bloodPressureName, vital, mmHg, singleTrial, false, measurementitem.ValueTypePaired, nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
-	gripStrength := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, true, measurementitem.ValueTypeNumeric, nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
-	choiceItem := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), choiceItemCode, choiceItemName, motorFunction, cm, singleTrial, true, measurementitem.ValueTypeChoice, nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
-	unknownValueType := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), pulseRateCode, pulseRateName, vital, bpm, singleTrial, false, measurementitem.ValueType("range"), nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
+	pulseRate := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), pulseRateCode, pulseRateName, vital, bpm, singleTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
+	bloodPressure := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), bloodPressureCode, bloodPressureName, vital, mmHg, singleTrial, measurementitem.SideModeNone, measurementitem.ValueTypePaired, nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
+	gripStrength := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
+	choiceItem := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), choiceItemCode, choiceItemName, motorFunction, cm, singleTrial, measurementitem.SideModeBilateral, measurementitem.ValueTypeChoice, nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
+	standUpTest := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), standUpTestCode, standUpTestName, motorFunction, level, singleTrial, measurementitem.SideModeOptionalBilateral, measurementitem.ValueTypeNumeric, nil, measurementitem.SideAggregationWorst, nil, itemCreatedAt, itemUpdatedAt)
+	unknownSideMode := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), standUpTestCode, standUpTestName, motorFunction, level, singleTrial, measurementitem.SideMode("unilateral"), measurementitem.ValueTypeNumeric, nil, measurementitem.SideAggregationWorst, nil, itemCreatedAt, itemUpdatedAt)
+	unknownValueType := measurementitem.NewMeasurementItem(measurementitem.NewMeasurementItemID(), pulseRateCode, pulseRateName, vital, bpm, singleTrial, measurementitem.SideModeNone, measurementitem.ValueType("range"), nil, measurementitem.SideAggregationMean, nil, itemCreatedAt, itemUpdatedAt)
 	note, _ := NewNote("ふらつきあり")
 
 	tests := []struct {
@@ -118,6 +123,44 @@ func TestNewMeasurementEntry(t *testing.T) {
 			wantExpectedValueCount: 4,
 		},
 		{
+			name: "success side none on optional bilateral item",
+			item: standUpTest,
+			values: func() []MeasurementValue {
+				trialIndex, _ := NewTrialIndex(1)
+				value, _ := NewValue(4)
+				return []MeasurementValue{NewMeasurementValue(trialIndex, SideNone, &value, nil, nil)}
+			},
+			wantExpectedValueCount: 2,
+		},
+		{
+			name: "success both sides on optional bilateral item",
+			item: standUpTest,
+			values: func() []MeasurementValue {
+				trialIndex, _ := NewTrialIndex(1)
+				left, _ := NewValue(8)
+				right, _ := NewValue(7)
+				return []MeasurementValue{
+					NewMeasurementValue(trialIndex, SideLeft, &left, nil, nil),
+					NewMeasurementValue(trialIndex, SideRight, &right, nil, nil),
+				}
+			},
+			wantExpectedValueCount: 2,
+		},
+		{
+			name: "success side none and one side on optional bilateral item",
+			item: standUpTest,
+			values: func() []MeasurementValue {
+				trialIndex, _ := NewTrialIndex(1)
+				none, _ := NewValue(5)
+				right, _ := NewValue(6)
+				return []MeasurementValue{
+					NewMeasurementValue(trialIndex, SideNone, &none, nil, nil),
+					NewMeasurementValue(trialIndex, SideRight, &right, nil, nil),
+				}
+			},
+			wantExpectedValueCount: 2,
+		},
+		{
 			name:         "failure unmeasurable with values",
 			item:         gripStrength,
 			unmeasurable: true,
@@ -145,6 +188,26 @@ func TestNewMeasurementEntry(t *testing.T) {
 				trialIndex, _ := NewTrialIndex(1)
 				value, _ := NewValue(72)
 				return []MeasurementValue{NewMeasurementValue(trialIndex, SideLeft, &value, nil, nil)}
+			},
+			wantErr: ErrInvalidSide,
+		},
+		{
+			name: "failure unknown side on optional bilateral item",
+			item: standUpTest,
+			values: func() []MeasurementValue {
+				trialIndex, _ := NewTrialIndex(1)
+				value, _ := NewValue(6)
+				return []MeasurementValue{NewMeasurementValue(trialIndex, Side("both"), &value, nil, nil)}
+			},
+			wantErr: ErrInvalidSide,
+		},
+		{
+			name: "failure unknown side mode",
+			item: unknownSideMode,
+			values: func() []MeasurementValue {
+				trialIndex, _ := NewTrialIndex(1)
+				value, _ := NewValue(6)
+				return []MeasurementValue{NewMeasurementValue(trialIndex, SideNone, &value, nil, nil)}
 			},
 			wantErr: ErrInvalidSide,
 		},
