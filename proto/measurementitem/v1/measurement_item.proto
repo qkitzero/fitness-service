@@ -32,6 +32,13 @@ enum Unit {
   UNIT_LEVEL = 8;
 }
 
+enum SideMode {
+  SIDE_MODE_UNSPECIFIED = 0;
+  SIDE_MODE_NONE = 1;
+  SIDE_MODE_BILATERAL = 2;
+  SIDE_MODE_OPTIONAL_BILATERAL = 3;
+}
+
 enum ValueType {
   VALUE_TYPE_UNSPECIFIED = 0;
   VALUE_TYPE_NUMERIC = 1;
@@ -48,6 +55,7 @@ message MeasurementItem {
   uint32 trial_count = 6;
   bool bilateral = 7;
   ValueType value_type = 8;
+  SideMode side_mode = 9;
 }
 
 message ListMeasurementItemsRequest {}
