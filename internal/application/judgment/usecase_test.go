@@ -48,7 +48,7 @@ func TestItemCodesWithoutAgeGroupStandards(t *testing.T) {
 	standUpTestID := measurementitem.NewMeasurementItemID()
 	standUpTestCode, _ := measurementitem.NewCode("stand_up_test")
 	standUpTestName, _ := measurementitem.NewName("立ち上がり")
-	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, measurementitem.SideModeOptionalBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationWorst, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
 
 	heightID := measurementitem.NewMeasurementItemID()
 	heightCode, _ := measurementitem.NewCode("height")
@@ -138,7 +138,7 @@ func TestGetJudgment(t *testing.T) {
 	standUpTestID := measurementitem.NewMeasurementItemID()
 	standUpTestCode, _ := measurementitem.NewCode("stand_up_test")
 	standUpTestName, _ := measurementitem.NewName("立ち上がり")
-	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, measurementitem.SideModeOptionalBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationWorst, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
 
 	ageRange6064, _ := standard.NewAgeRange(60, 64)
 	ageRange4044, _ := standard.NewAgeRange(40, 44)
@@ -756,7 +756,7 @@ func TestListOrganizationJudgments(t *testing.T) {
 	standUpTestID := measurementitem.NewMeasurementItemID()
 	standUpTestCode, _ := measurementitem.NewCode("stand_up_test")
 	standUpTestName, _ := measurementitem.NewName("立ち上がり")
-	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, measurementitem.SideModeOptionalBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationWorst, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
 
 	ageRange4044, _ := standard.NewAgeRange(40, 44)
 	ageRange5054, _ := standard.NewAgeRange(50, 54)

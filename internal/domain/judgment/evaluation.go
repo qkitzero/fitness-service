@@ -76,7 +76,7 @@ func isBetter(candidate, current int64, scoreDirection measurementitem.ScoreDire
 
 func representativeValue(entry measurement.MeasurementEntry, item measurementitem.MeasurementItem, scoreDirection measurementitem.ScoreDirection) (measurement.Value, bool) {
 	bestBySide := make(map[measurement.Side]int64)
-	sides := make([]measurement.Side, 0, 2)
+	sides := make([]measurement.Side, 0, 3)
 	for _, measurementValue := range entry.Values() {
 		value := measurementValue.Value()
 		if value == nil {
@@ -99,18 +99,27 @@ func representativeValue(entry measurement.MeasurementEntry, item measurementite
 	}
 
 	representative := bestBySide[sides[0]]
-	if item.SideAggregation() == measurementitem.SideAggregationBest {
+	switch item.SideAggregation() {
+	case measurementitem.SideAggregationBest:
 		for _, side := range sides[1:] {
 			if isBetter(bestBySide[side], representative, scoreDirection) {
 				representative = bestBySide[side]
 			}
 		}
-	} else {
+	case measurementitem.SideAggregationWorst:
+		for _, side := range sides[1:] {
+			if isBetter(representative, bestBySide[side], scoreDirection) {
+				representative = bestBySide[side]
+			}
+		}
+	case measurementitem.SideAggregationMean:
 		sum := int64(0)
 		for _, side := range sides {
 			sum += bestBySide[side]
 		}
 		representative = divideRounded(sum, int64(len(sides)))
+	default:
+		return measurement.Value(0), false
 	}
 
 	value, err := measurement.NewValue(fromHundredths(representative))
