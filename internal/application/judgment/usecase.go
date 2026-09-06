@@ -198,6 +198,39 @@ func itemCodesOutsideAgeGroups(items []measurementitem.MeasurementItem, ageGroup
 	return codes
 }
 
+func itemCodesMissingHeight(m measurement.Measurement, items []measurementitem.MeasurementItem) []string {
+	itemByID := make(map[measurementitem.MeasurementItemID]measurementitem.MeasurementItem, len(items))
+	for _, item := range items {
+		itemByID[item.ID()] = item
+	}
+
+	for _, entry := range m.Entries() {
+		if entry.Unmeasurable() {
+			continue
+		}
+		item, ok := itemByID[entry.MeasurementItemID()]
+		if !ok || item.Code() != measurementitem.CodeHeight {
+			continue
+		}
+		for _, measurementValue := range entry.Values() {
+			if value := measurementValue.Value(); value != nil && value.Float64() > 0 {
+				return nil
+			}
+		}
+	}
+
+	codes := make([]string, 0, len(items))
+	for _, item := range items {
+		if item.Normalization() != measurementitem.NormalizationHeightRatio {
+			continue
+		}
+		codes = append(codes, item.Code().String())
+	}
+	sort.Strings(codes)
+
+	return codes
+}
+
 func (u *judgmentUsecase) evaluate(ctx context.Context, foundMeasurement measurement.Measurement, foundCustomer customer.Customer) (judgment.Evaluation, error) {
 	age := foundMeasurement.AgeAtMeasurement().Int()
 
@@ -236,6 +269,10 @@ func (u *judgmentUsecase) evaluate(ctx context.Context, foundMeasurement measure
 
 	if outsideCodes := itemCodesOutsideAgeGroups(measurementItems, ageGroupStandards, age); len(outsideCodes) > 0 {
 		log.Printf("GetJudgment: measurement %s: age %d is outside the registered age groups of gender %q for items %v", foundMeasurement.ID(), age, gender, outsideCodes)
+	}
+
+	if missingHeightCodes := itemCodesMissingHeight(foundMeasurement, measurementItems); len(missingHeightCodes) > 0 {
+		log.Printf("GetJudgment: measurement %s: the height required to normalize items %v is missing, skipping them", foundMeasurement.ID(), missingHeightCodes)
 	}
 
 	return judgment.NewEvaluation(foundMeasurement, measurementItems, gender, age, ageGroupStandards, rankStandards), nil
@@ -416,6 +453,12 @@ func (u *judgmentUsecase) ListOrganizationJudgments(ctx context.Context, organiz
 
 		if outsideCodes := itemCodesOutsideAgeGroups(measuredItems, genderStandards, age); len(outsideCodes) > 0 {
 			log.Printf("ListOrganizationJudgments: measurement %s: age %d is outside the registered age groups of gender %q for items %v", foundMeasurement.ID(), age, gender, outsideCodes)
+		}
+
+		if err == nil && len(genderStandards) > 0 {
+			if missingHeightCodes := itemCodesMissingHeight(foundMeasurement, measuredItems); len(missingHeightCodes) > 0 {
+				log.Printf("ListOrganizationJudgments: measurement %s: the height required to normalize items %v is missing, skipping them", foundMeasurement.ID(), missingHeightCodes)
+			}
 		}
 
 		evaluation := judgment.NewEvaluation(foundMeasurement, measurementItems, gender, age, genderStandards, rankStandards)
