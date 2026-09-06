@@ -32,7 +32,6 @@ func TestListMeasurementItems(t *testing.T) {
 		wantUnits      []measurementitemv1.Unit
 		wantValueTypes []measurementitemv1.ValueType
 		wantSideModes  []measurementitemv1.SideMode
-		wantBilaterals []bool
 	}{
 		{
 			name:           "success list measurement items keeps every item in order",
@@ -48,7 +47,6 @@ func TestListMeasurementItems(t *testing.T) {
 			wantUnits:      []measurementitemv1.Unit{measurementitemv1.Unit_UNIT_MMHG, measurementitemv1.Unit_UNIT_CM, measurementitemv1.Unit_UNIT_PERCENT, measurementitemv1.Unit_UNIT_KG},
 			wantValueTypes: []measurementitemv1.ValueType{measurementitemv1.ValueType_VALUE_TYPE_PAIRED, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC},
 			wantSideModes:  []measurementitemv1.SideMode{measurementitemv1.SideMode_SIDE_MODE_NONE, measurementitemv1.SideMode_SIDE_MODE_NONE, measurementitemv1.SideMode_SIDE_MODE_NONE, measurementitemv1.SideMode_SIDE_MODE_BILATERAL},
-			wantBilaterals: []bool{false, false, false, true},
 		},
 		{
 			name:           "success maps the remaining units and value types",
@@ -64,7 +62,6 @@ func TestListMeasurementItems(t *testing.T) {
 			wantUnits:      []measurementitemv1.Unit{measurementitemv1.Unit_UNIT_BPM, measurementitemv1.Unit_UNIT_SEC, measurementitemv1.Unit_UNIT_COUNT, measurementitemv1.Unit_UNIT_LEVEL, measurementitemv1.Unit_UNIT_CM},
 			wantValueTypes: []measurementitemv1.ValueType{measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_CHOICE},
 			wantSideModes:  []measurementitemv1.SideMode{measurementitemv1.SideMode_SIDE_MODE_NONE, measurementitemv1.SideMode_SIDE_MODE_BILATERAL, measurementitemv1.SideMode_SIDE_MODE_NONE, measurementitemv1.SideMode_SIDE_MODE_OPTIONAL_BILATERAL, measurementitemv1.SideMode_SIDE_MODE_NONE},
-			wantBilaterals: []bool{false, true, false, false, false},
 		},
 		{
 			name:     "success list no measurement items",
@@ -212,9 +209,6 @@ func TestListMeasurementItems(t *testing.T) {
 				}
 				if msg.GetSideMode() != tt.wantSideModes[i] {
 					t.Errorf("MeasurementItems[%d].SideMode = %v, want %v", i, msg.GetSideMode(), tt.wantSideModes[i])
-				}
-				if msg.GetBilateral() != tt.wantBilaterals[i] {
-					t.Errorf("MeasurementItems[%d].Bilateral = %v, want %v", i, msg.GetBilateral(), tt.wantBilaterals[i])
 				}
 				if msg.GetValueType() != tt.wantValueTypes[i] {
 					t.Errorf("MeasurementItems[%d].ValueType = %v, want %v", i, msg.GetValueType(), tt.wantValueTypes[i])
