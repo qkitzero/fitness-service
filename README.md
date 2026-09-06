@@ -96,6 +96,7 @@ classDiagram
             SideMode sideMode
             ValueType valueType
             ScoreDirection? scoreDirection
+            TrialAggregation trialAggregation
             SideAggregation sideAggregation
             Normalization normalization
             Element[] elements
