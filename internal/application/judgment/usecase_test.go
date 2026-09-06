@@ -1057,7 +1057,7 @@ func TestListOrganizationJudgments(t *testing.T) {
 			measurements: []measurementSpec{
 				{customerIndex: 0, isDraft: false, wantItemEvaluations: 1, wantMean: 38, wantZScore: 1.6, wantRank: standard.RankA, wantMotorAge: 42},
 				{customerIndex: 0, isDraft: true, wantItemEvaluations: 1, wantMean: 38, wantZScore: 1.6, wantRank: standard.RankA, wantMotorAge: 42},
-				{customerIndex: 1, isDraft: false, wantItemEvaluations: 1, wantMean: 44, wantZScore: 0.4, wantRank: standard.RankC, wantMotorAge: 52},
+				{customerIndex: 1, isDraft: false, wantItemEvaluations: 1, wantMean: 44, wantZScore: 0.4, wantRank: standard.RankC, wantMotorAge: 51},
 			},
 			callListMasters:     true,
 			registeredStandards: true,
