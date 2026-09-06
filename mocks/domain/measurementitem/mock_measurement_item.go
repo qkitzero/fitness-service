@@ -41,20 +41,6 @@ func (m *MockMeasurementItem) EXPECT() *MockMeasurementItemMockRecorder {
 	return m.recorder
 }
 
-// Bilateral mocks base method.
-func (m *MockMeasurementItem) Bilateral() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Bilateral")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// Bilateral indicates an expected call of Bilateral.
-func (mr *MockMeasurementItemMockRecorder) Bilateral() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Bilateral", reflect.TypeOf((*MockMeasurementItem)(nil).Bilateral))
-}
-
 // Category mocks base method.
 func (m *MockMeasurementItem) Category() measurementitem.Category {
 	m.ctrl.T.Helper()
@@ -165,6 +151,20 @@ func (m *MockMeasurementItem) SideAggregation() measurementitem.SideAggregation 
 func (mr *MockMeasurementItemMockRecorder) SideAggregation() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SideAggregation", reflect.TypeOf((*MockMeasurementItem)(nil).SideAggregation))
+}
+
+// SideMode mocks base method.
+func (m *MockMeasurementItem) SideMode() measurementitem.SideMode {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SideMode")
+	ret0, _ := ret[0].(measurementitem.SideMode)
+	return ret0
+}
+
+// SideMode indicates an expected call of SideMode.
+func (mr *MockMeasurementItemMockRecorder) SideMode() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SideMode", reflect.TypeOf((*MockMeasurementItem)(nil).SideMode))
 }
 
 // TrialCount mocks base method.

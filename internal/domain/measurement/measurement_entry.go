@@ -53,13 +53,20 @@ type valueKey struct {
 }
 
 func verifySide(item measurementitem.MeasurementItem, side Side) error {
-	if item.Bilateral() {
+	switch item.SideMode() {
+	case measurementitem.SideModeNone:
+		if side != SideNone {
+			return ErrInvalidSide
+		}
+	case measurementitem.SideModeBilateral:
 		if side != SideLeft && side != SideRight {
 			return ErrInvalidSide
 		}
-		return nil
-	}
-	if side != SideNone {
+	case measurementitem.SideModeOptionalBilateral:
+		if side != SideNone && side != SideLeft && side != SideRight {
+			return ErrInvalidSide
+		}
+	default:
 		return ErrInvalidSide
 	}
 	return nil
@@ -114,7 +121,7 @@ func NewMeasurementEntry(
 	}
 
 	expectedValueCount := item.TrialCount().Int()
-	if item.Bilateral() {
+	if item.SideMode() != measurementitem.SideModeNone {
 		expectedValueCount *= 2
 	}
 

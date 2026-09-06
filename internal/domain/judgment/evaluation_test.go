@@ -46,64 +46,74 @@ func TestNewEvaluation(t *testing.T) {
 	gripStrengthID := measurementitem.NewMeasurementItemID()
 	gripStrengthCode, _ := measurementitem.NewCode("grip_strength")
 	gripStrengthName, _ := measurementitem.NewName("握力")
-	gripStrength := measurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, true, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+	gripStrength := measurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
 
 	twoStepID := measurementitem.NewMeasurementItemID()
 	twoStepCode, _ := measurementitem.NewCode("two_step")
 	twoStepName, _ := measurementitem.NewName("2ステップ")
-	twoStep := measurementitem.NewMeasurementItem(twoStepID, twoStepCode, twoStepName, motorFunction, cm, twoTrials, false, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
+	twoStep := measurementitem.NewMeasurementItem(twoStepID, twoStepCode, twoStepName, motorFunction, cm, twoTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
 
 	timedUpAndGoID := measurementitem.NewMeasurementItemID()
 	timedUpAndGoCode, _ := measurementitem.NewCode("timed_up_and_go")
 	timedUpAndGoName, _ := measurementitem.NewName("TUG（タイム・アップ・ゴー）")
-	timedUpAndGo := measurementitem.NewMeasurementItem(timedUpAndGoID, timedUpAndGoCode, timedUpAndGoName, motorFunction, sec, twoTrials, false, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
+	timedUpAndGo := measurementitem.NewMeasurementItem(timedUpAndGoID, timedUpAndGoCode, timedUpAndGoName, motorFunction, sec, twoTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
 
 	stickReactionID := measurementitem.NewMeasurementItemID()
 	stickReactionCode, _ := measurementitem.NewCode("stick_reaction")
 	stickReactionName, _ := measurementitem.NewName("棒反応時間")
-	stickReaction := measurementitem.NewMeasurementItem(stickReactionID, stickReactionCode, stickReactionName, motorFunction, cm, fiveTrials, false, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementAgility}, createdAt, updatedAt)
+	stickReaction := measurementitem.NewMeasurementItem(stickReactionID, stickReactionCode, stickReactionName, motorFunction, cm, fiveTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementAgility}, createdAt, updatedAt)
 
 	standUpTestID := measurementitem.NewMeasurementItemID()
 	standUpTestCode, _ := measurementitem.NewCode("stand_up_test")
 	standUpTestName, _ := measurementitem.NewName("立ち上がり")
-	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, false, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, measurementitem.SideModeOptionalBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationWorst, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+
+	worstSideLowerIsBetterID := measurementitem.NewMeasurementItemID()
+	worstSideLowerIsBetterCode, _ := measurementitem.NewCode("worst_side_lower_is_better_item")
+	worstSideLowerIsBetterName, _ := measurementitem.NewName("悪い方を採る低いほど良い測定項目")
+	worstSideLowerIsBetter := measurementitem.NewMeasurementItem(worstSideLowerIsBetterID, worstSideLowerIsBetterCode, worstSideLowerIsBetterName, motorFunction, sec, twoTrials, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationWorst, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
+
+	unknownSideAggregationID := measurementitem.NewMeasurementItemID()
+	unknownSideAggregationCode, _ := measurementitem.NewCode("unknown_side_aggregation_item")
+	unknownSideAggregationName, _ := measurementitem.NewName("集約の分からない測定項目")
+	unknownSideAggregation := measurementitem.NewMeasurementItem(unknownSideAggregationID, unknownSideAggregationCode, unknownSideAggregationName, motorFunction, sec, oneTrial, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregation("median"), []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
 
 	heightID := measurementitem.NewMeasurementItemID()
 	heightCode, _ := measurementitem.NewCode("height")
 	heightName, _ := measurementitem.NewName("身長")
-	height := measurementitem.NewMeasurementItem(heightID, heightCode, heightName, physique, cm, oneTrial, false, measurementitem.ValueTypeNumeric, nil, measurementitem.SideAggregationMean, nil, createdAt, updatedAt)
+	height := measurementitem.NewMeasurementItem(heightID, heightCode, heightName, physique, cm, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, nil, measurementitem.SideAggregationMean, nil, createdAt, updatedAt)
 
 	cs30ID := measurementitem.NewMeasurementItemID()
 	cs30Code, _ := measurementitem.NewCode("cs30")
 	cs30Name, _ := measurementitem.NewName("CS-30（30秒立ち座り）")
-	cs30 := measurementitem.NewMeasurementItem(cs30ID, cs30Code, cs30Name, motorFunction, count, oneTrial, false, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleEndurance}, createdAt, updatedAt)
+	cs30 := measurementitem.NewMeasurementItem(cs30ID, cs30Code, cs30Name, motorFunction, count, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleEndurance}, createdAt, updatedAt)
 
 	sitAndReachID := measurementitem.NewMeasurementItemID()
 	sitAndReachCode, _ := measurementitem.NewCode("sit_and_reach")
 	sitAndReachName, _ := measurementitem.NewName("長座体前屈")
-	sitAndReach := measurementitem.NewMeasurementItem(sitAndReachID, sitAndReachCode, sitAndReachName, motorFunction, cm, oneTrial, false, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementFlexibility}, createdAt, updatedAt)
+	sitAndReach := measurementitem.NewMeasurementItem(sitAndReachID, sitAndReachCode, sitAndReachName, motorFunction, cm, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementFlexibility}, createdAt, updatedAt)
 
 	walk5mID := measurementitem.NewMeasurementItemID()
 	walk5mCode, _ := measurementitem.NewCode("walk_5m")
 	walk5mName, _ := measurementitem.NewName("5m歩行")
-	walk5m := measurementitem.NewMeasurementItem(walk5mID, walk5mCode, walk5mName, motorFunction, sec, oneTrial, false, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
+	walk5m := measurementitem.NewMeasurementItem(walk5mID, walk5mCode, walk5mName, motorFunction, sec, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
 
 	seatedStepping20sID := measurementitem.NewMeasurementItemID()
 	seatedStepping20sCode, _ := measurementitem.NewCode("seated_stepping_20s")
 	seatedStepping20sName, _ := measurementitem.NewName("座位ステップ（20秒）")
-	seatedStepping20s := measurementitem.NewMeasurementItem(seatedStepping20sID, seatedStepping20sCode, seatedStepping20sName, motorFunction, count, oneTrial, false, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementAgility}, createdAt, updatedAt)
+	seatedStepping20s := measurementitem.NewMeasurementItem(seatedStepping20sID, seatedStepping20sCode, seatedStepping20sName, motorFunction, count, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementAgility}, createdAt, updatedAt)
 
 	oneLegStandID := measurementitem.NewMeasurementItemID()
 	oneLegStandCode, _ := measurementitem.NewCode("eyes_open_one_leg_stand")
 	oneLegStandName, _ := measurementitem.NewName("開眼片足立ち")
-	oneLegStand := measurementitem.NewMeasurementItem(oneLegStandID, oneLegStandCode, oneLegStandName, motorFunction, sec, twoTrials, true, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationBest, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
+	oneLegStand := measurementitem.NewMeasurementItem(oneLegStandID, oneLegStandCode, oneLegStandName, motorFunction, sec, twoTrials, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationBest, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
 
 	functionalReachID := measurementitem.NewMeasurementItemID()
 	functionalReachCode, _ := measurementitem.NewCode("functional_reach")
 	functionalReachName, _ := measurementitem.NewName("ファンクショナルリーチ")
-	functionalReach := measurementitem.NewMeasurementItem(functionalReachID, functionalReachCode, functionalReachName, motorFunction, cm, oneTrial, false, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
+	functionalReach := measurementitem.NewMeasurementItem(functionalReachID, functionalReachCode, functionalReachName, motorFunction, cm, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
 
-	items := []measurementitem.MeasurementItem{gripStrength, twoStep, timedUpAndGo, stickReaction, standUpTest, height, cs30, sitAndReach, walk5m, seatedStepping20s, oneLegStand, functionalReach}
+	items := []measurementitem.MeasurementItem{gripStrength, twoStep, timedUpAndGo, stickReaction, standUpTest, worstSideLowerIsBetter, unknownSideAggregation, height, cs30, sitAndReach, walk5m, seatedStepping20s, oneLegStand, functionalReach}
 
 	ageRange4044, _ := standard.NewAgeRange(40, 44)
 	ageRange5054, _ := standard.NewAgeRange(50, 54)
@@ -138,6 +148,12 @@ func TestNewEvaluation(t *testing.T) {
 	functionalReachMean4049, _ := standard.NewMean(30)
 	functionalReachMean4549, _ := standard.NewMean(20)
 	functionalReachDeviation, _ := standard.NewStandardDeviation(5)
+	standUpTestMean, _ := standard.NewMean(6)
+	standUpTestDeviation, _ := standard.NewStandardDeviation(1.5)
+	worstSideLowerIsBetterMean, _ := standard.NewMean(8)
+	worstSideLowerIsBetterDeviation, _ := standard.NewStandardDeviation(1)
+	unknownSideAggregationMean, _ := standard.NewMean(20)
+	unknownSideAggregationDeviation, _ := standard.NewStandardDeviation(5)
 
 	ageGroupStandards := []standard.AgeGroupStandard{
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), gripStrengthID, standard.GenderMale, ageRange4044, gripMean4044, gripDeviation, createdAt, updatedAt),
@@ -158,6 +174,9 @@ func TestNewEvaluation(t *testing.T) {
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), functionalReachID, standard.GenderMale, ageRange4049, functionalReachMean4049, functionalReachDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), functionalReachID, standard.GenderMale, ageRange4044, functionalReachMean4044, functionalReachDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), functionalReachID, standard.GenderMale, ageRange4549, functionalReachMean4549, functionalReachDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), standUpTestID, standard.GenderMale, ageRange4044, standUpTestMean, standUpTestDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), worstSideLowerIsBetterID, standard.GenderMale, ageRange4044, worstSideLowerIsBetterMean, worstSideLowerIsBetterDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), unknownSideAggregationID, standard.GenderMale, ageRange4044, unknownSideAggregationMean, unknownSideAggregationDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), twoStepID, standard.GenderFemale, ageRange4044, twoStepMean, twoStepDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), twoStepID, standard.GenderFemale, ageRange6064, twoStepMean6064, twoStepDeviation, createdAt, updatedAt),
 	}
@@ -706,6 +725,98 @@ func TestNewEvaluation(t *testing.T) {
 			},
 			wantItemEvaluations:    []wantItemEvaluation{{oneLegStandID, 60, 30, 3, standard.RankA}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementBalance, 3, standard.RankA}},
+			wantMotorAge:           &motorAge42,
+		},
+		{
+			name:   "success an item aggregated by the worst side ignores the stronger side",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				left, _ := measurement.NewValue(8)
+				right, _ := measurement.NewValue(7)
+				entry, _ := measurement.NewMeasurementEntry(standUpTest, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &left, nil, nil),
+					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &right, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+			wantItemEvaluations:    []wantItemEvaluation{{standUpTestID, 7, 6, 0.67, standard.RankB}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, 0.67, standard.RankB}},
+			wantMotorAge:           &motorAge42,
+		},
+		{
+			name:   "success an item aggregated by the worst side takes the value without a side over the stronger side",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				none, _ := measurement.NewValue(5)
+				right, _ := measurement.NewValue(6)
+				entry, _ := measurement.NewMeasurementEntry(standUpTest, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &none, nil, nil),
+					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &right, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+			wantItemEvaluations:    []wantItemEvaluation{{standUpTestID, 5, 6, -0.67, standard.RankD}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, -0.67, standard.RankD}},
+			wantMotorAge:           &motorAge42,
+		},
+		{
+			name:   "success an item aggregated by the worst side takes the best trial of each side before the sides",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				firstTrial, _ := measurement.NewTrialIndex(1)
+				secondTrial, _ := measurement.NewTrialIndex(2)
+				firstLeft, _ := measurement.NewValue(7)
+				secondLeft, _ := measurement.NewValue(9)
+				firstRight, _ := measurement.NewValue(8)
+				secondRight, _ := measurement.NewValue(10)
+				entry, _ := measurement.NewMeasurementEntry(worstSideLowerIsBetter, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(firstTrial, measurement.SideLeft, &firstLeft, nil, nil),
+					measurement.NewMeasurementValue(secondTrial, measurement.SideLeft, &secondLeft, nil, nil),
+					measurement.NewMeasurementValue(firstTrial, measurement.SideRight, &firstRight, nil, nil),
+					measurement.NewMeasurementValue(secondTrial, measurement.SideRight, &secondRight, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+			wantItemEvaluations:    []wantItemEvaluation{{worstSideLowerIsBetterID, 8, 8, 0, standard.RankC}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, 0, standard.RankC}},
+			wantMotorAge:           &motorAge42,
+		},
+		{
+			name:   "success an item of an unknown side aggregation is excluded",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				left, _ := measurement.NewValue(20)
+				right, _ := measurement.NewValue(30)
+				entry, _ := measurement.NewMeasurementEntry(unknownSideAggregation, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &left, nil, nil),
+					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &right, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+		},
+		{
+			name:   "success an item scored lower is better aggregated by the worst side takes the higher side",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				left, _ := measurement.NewValue(7)
+				right, _ := measurement.NewValue(9)
+				entry, _ := measurement.NewMeasurementEntry(worstSideLowerIsBetter, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &left, nil, nil),
+					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &right, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+			wantItemEvaluations:    []wantItemEvaluation{{worstSideLowerIsBetterID, 9, 8, -1, standard.RankD}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, -1, standard.RankD}},
 			wantMotorAge:           &motorAge42,
 		},
 		{

@@ -56,6 +56,10 @@ func toDomain(m MeasurementItemModel) (measurementitem.MeasurementItem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("measurement item %q: %w", m.Code, err)
 	}
+	sideMode, err := measurementitem.NewSideMode(m.SideMode.String())
+	if err != nil {
+		return nil, fmt.Errorf("measurement item %q: %w", m.Code, err)
+	}
 	valueType, err := measurementitem.NewValueType(m.ValueType.String())
 	if err != nil {
 		return nil, fmt.Errorf("measurement item %q: %w", m.Code, err)
@@ -84,7 +88,7 @@ func toDomain(m MeasurementItemModel) (measurementitem.MeasurementItem, error) {
 		category,
 		unit,
 		trialCount,
-		m.Bilateral,
+		sideMode,
 		valueType,
 		scoreDirection,
 		sideAggregation,

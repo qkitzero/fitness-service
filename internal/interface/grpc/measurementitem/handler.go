@@ -65,6 +65,19 @@ func toProtoUnit(u domainmeasurementitem.Unit) (measurementitemv1.Unit, error) {
 	}
 }
 
+func toProtoSideMode(s domainmeasurementitem.SideMode) (measurementitemv1.SideMode, error) {
+	switch s {
+	case domainmeasurementitem.SideModeNone:
+		return measurementitemv1.SideMode_SIDE_MODE_NONE, nil
+	case domainmeasurementitem.SideModeBilateral:
+		return measurementitemv1.SideMode_SIDE_MODE_BILATERAL, nil
+	case domainmeasurementitem.SideModeOptionalBilateral:
+		return measurementitemv1.SideMode_SIDE_MODE_OPTIONAL_BILATERAL, nil
+	default:
+		return measurementitemv1.SideMode_SIDE_MODE_UNSPECIFIED, fmt.Errorf("unmapped side mode %q", s)
+	}
+}
+
 func toProtoValueType(v domainmeasurementitem.ValueType) (measurementitemv1.ValueType, error) {
 	switch v {
 	case domainmeasurementitem.ValueTypeNumeric:
@@ -87,6 +100,10 @@ func toProtoMeasurementItem(m domainmeasurementitem.MeasurementItem) (*measureme
 	if err != nil {
 		return nil, err
 	}
+	sideMode, err := toProtoSideMode(m.SideMode())
+	if err != nil {
+		return nil, err
+	}
 	valueType, err := toProtoValueType(m.ValueType())
 	if err != nil {
 		return nil, err
@@ -103,8 +120,9 @@ func toProtoMeasurementItem(m domainmeasurementitem.MeasurementItem) (*measureme
 		Category:          category,
 		Unit:              unit,
 		TrialCount:        uint32(trialCount),
-		Bilateral:         m.Bilateral(),
+		Bilateral:         sideMode == measurementitemv1.SideMode_SIDE_MODE_BILATERAL,
 		ValueType:         valueType,
+		SideMode:          sideMode,
 	}, nil
 }
 

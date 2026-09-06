@@ -11,7 +11,7 @@ type MeasurementItem interface {
 	Category() Category
 	Unit() Unit
 	TrialCount() TrialCount
-	Bilateral() bool
+	SideMode() SideMode
 	ValueType() ValueType
 	ScoreDirection() *ScoreDirection
 	SideAggregation() SideAggregation
@@ -27,7 +27,7 @@ type measurementItem struct {
 	category        Category
 	unit            Unit
 	trialCount      TrialCount
-	bilateral       bool
+	sideMode        SideMode
 	valueType       ValueType
 	scoreDirection  *ScoreDirection
 	sideAggregation SideAggregation
@@ -60,8 +60,8 @@ func (m measurementItem) TrialCount() TrialCount {
 	return m.trialCount
 }
 
-func (m measurementItem) Bilateral() bool {
-	return m.bilateral
+func (m measurementItem) SideMode() SideMode {
+	return m.sideMode
 }
 
 func (m measurementItem) ValueType() ValueType {
@@ -101,7 +101,7 @@ func NewMeasurementItem(
 	category Category,
 	unit Unit,
 	trialCount TrialCount,
-	bilateral bool,
+	sideMode SideMode,
 	valueType ValueType,
 	scoreDirection *ScoreDirection,
 	sideAggregation SideAggregation,
@@ -116,7 +116,7 @@ func NewMeasurementItem(
 		category:        category,
 		unit:            unit,
 		trialCount:      trialCount,
-		bilateral:       bilateral,
+		sideMode:        sideMode,
 		valueType:       valueType,
 		sideAggregation: sideAggregation,
 		elements:        make([]Element, len(elements)),
