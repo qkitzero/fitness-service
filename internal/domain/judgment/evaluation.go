@@ -398,9 +398,6 @@ func newMotorAge(
 	youngestFrom, oldestTo := math.MaxInt, math.MinInt
 	for _, judged := range judgedItems {
 		ageGroupStandards := ageGroupStandardsByItemID[judged.item.ID()]
-		if len(ageGroupStandards) == 0 {
-			continue
-		}
 		for _, ageGroupStandard := range ageGroupStandards {
 			ageRange := ageGroupStandard.AgeRange()
 			if ageRange.From() < youngestFrom {
