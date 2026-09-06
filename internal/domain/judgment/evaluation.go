@@ -130,6 +130,51 @@ func representativeValue(entry measurement.MeasurementEntry, item measurementite
 	return value, true
 }
 
+func heightHundredths(entries []measurement.MeasurementEntry, itemByID map[measurementitem.MeasurementItemID]measurementitem.MeasurementItem) (int64, bool) {
+	for _, entry := range entries {
+		if entry.Unmeasurable() {
+			continue
+		}
+		item, ok := itemByID[entry.MeasurementItemID()]
+		if !ok || item.Code() != measurementitem.CodeHeight {
+			continue
+		}
+		sum := int64(0)
+		count := int64(0)
+		for _, measurementValue := range entry.Values() {
+			value := measurementValue.Value()
+			if value == nil {
+				continue
+			}
+			sum += toHundredths(value.Float64())
+			count++
+		}
+		if count == 0 {
+			return 0, false
+		}
+		return divideRounded(sum, count), true
+	}
+	return 0, false
+}
+
+func normalizedValue(value measurement.Value, normalization measurementitem.Normalization, baseHundredths int64, hasBase bool) (measurement.Value, bool) {
+	switch normalization {
+	case measurementitem.NormalizationNone:
+		return value, true
+	case measurementitem.NormalizationHeightRatio:
+		if !hasBase || baseHundredths <= 0 {
+			return measurement.Value(0), false
+		}
+		normalized, err := measurement.NewValue(fromHundredths(divideRounded(evaluationScale*toHundredths(value.Float64()), baseHundredths)))
+		if err != nil {
+			return measurement.Value(0), false
+		}
+		return normalized, true
+	default:
+		return measurement.Value(0), false
+	}
+}
+
 func isYoungerAgeRange(a, b standard.AgeRange) bool {
 	if a.From() != b.From() {
 		return a.From() < b.From()
@@ -333,6 +378,7 @@ func NewEvaluation(
 	}
 
 	entries := m.Entries()
+	baseHundredths, hasBase := heightHundredths(entries, itemByID)
 	itemEvaluations := make([]ItemEvaluation, 0, len(entries))
 	judgedItems := make([]judgedItem, 0, len(entries))
 	for _, entry := range entries {
@@ -348,6 +394,10 @@ func NewEvaluation(
 			continue
 		}
 		value, ok := representativeValue(entry, item, *scoreDirection)
+		if !ok {
+			continue
+		}
+		value, ok = normalizedValue(value, item.Normalization(), baseHundredths, hasBase)
 		if !ok {
 			continue
 		}
