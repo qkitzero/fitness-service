@@ -91,6 +91,17 @@ func toProtoValueType(v domainmeasurementitem.ValueType) (measurementitemv1.Valu
 	}
 }
 
+func toProtoNormalization(n domainmeasurementitem.Normalization) (measurementitemv1.Normalization, error) {
+	switch n {
+	case domainmeasurementitem.NormalizationNone:
+		return measurementitemv1.Normalization_NORMALIZATION_NONE, nil
+	case domainmeasurementitem.NormalizationHeightRatio:
+		return measurementitemv1.Normalization_NORMALIZATION_HEIGHT_RATIO, nil
+	default:
+		return measurementitemv1.Normalization_NORMALIZATION_UNSPECIFIED, fmt.Errorf("unmapped normalization %q", n)
+	}
+}
+
 func toProtoMeasurementItem(m domainmeasurementitem.MeasurementItem) (*measurementitemv1.MeasurementItem, error) {
 	category, err := toProtoCategory(m.Category())
 	if err != nil {
@@ -108,6 +119,10 @@ func toProtoMeasurementItem(m domainmeasurementitem.MeasurementItem) (*measureme
 	if err != nil {
 		return nil, err
 	}
+	normalization, err := toProtoNormalization(m.Normalization())
+	if err != nil {
+		return nil, err
+	}
 	trialCount := m.TrialCount().Int()
 	if trialCount < 0 || int64(trialCount) > math.MaxUint32 {
 		return nil, fmt.Errorf("trial count %d out of range", trialCount)
@@ -122,6 +137,7 @@ func toProtoMeasurementItem(m domainmeasurementitem.MeasurementItem) (*measureme
 		TrialCount:        uint32(trialCount),
 		ValueType:         valueType,
 		SideMode:          sideMode,
+		Normalization:     normalization,
 	}, nil
 }
 

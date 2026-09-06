@@ -15,6 +15,7 @@ type MeasurementItem interface {
 	ValueType() ValueType
 	ScoreDirection() *ScoreDirection
 	SideAggregation() SideAggregation
+	Normalization() Normalization
 	Elements() []Element
 	CreatedAt() time.Time
 	UpdatedAt() time.Time
@@ -31,6 +32,7 @@ type measurementItem struct {
 	valueType       ValueType
 	scoreDirection  *ScoreDirection
 	sideAggregation SideAggregation
+	normalization   Normalization
 	elements        []Element
 	createdAt       time.Time
 	updatedAt       time.Time
@@ -80,6 +82,10 @@ func (m measurementItem) SideAggregation() SideAggregation {
 	return m.sideAggregation
 }
 
+func (m measurementItem) Normalization() Normalization {
+	return m.normalization
+}
+
 func (m measurementItem) Elements() []Element {
 	elements := make([]Element, len(m.elements))
 	copy(elements, m.elements)
@@ -105,6 +111,7 @@ func NewMeasurementItem(
 	valueType ValueType,
 	scoreDirection *ScoreDirection,
 	sideAggregation SideAggregation,
+	normalization Normalization,
 	elements []Element,
 	createdAt time.Time,
 	updatedAt time.Time,
@@ -119,6 +126,7 @@ func NewMeasurementItem(
 		sideMode:        sideMode,
 		valueType:       valueType,
 		sideAggregation: sideAggregation,
+		normalization:   normalization,
 		elements:        make([]Element, len(elements)),
 		createdAt:       createdAt,
 		updatedAt:       updatedAt,

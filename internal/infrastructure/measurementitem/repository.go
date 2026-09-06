@@ -76,6 +76,10 @@ func toDomain(m MeasurementItemModel) (measurementitem.MeasurementItem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("measurement item %q: %w", m.Code, err)
 	}
+	normalization, err := measurementitem.NewNormalization(m.Normalization.String())
+	if err != nil {
+		return nil, fmt.Errorf("measurement item %q: %w", m.Code, err)
+	}
 	elements, err := toElements(m)
 	if err != nil {
 		return nil, err
@@ -92,6 +96,7 @@ func toDomain(m MeasurementItemModel) (measurementitem.MeasurementItem, error) {
 		valueType,
 		scoreDirection,
 		sideAggregation,
+		normalization,
 		elements,
 		m.CreatedAt,
 		m.UpdatedAt,

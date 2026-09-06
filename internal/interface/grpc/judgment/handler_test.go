@@ -45,15 +45,15 @@ func TestGetJudgment(t *testing.T) {
 	gripStrengthID := domainmeasurementitem.NewMeasurementItemID()
 	gripStrengthCode, _ := domainmeasurementitem.NewCode("grip_strength")
 	gripStrengthName, _ := domainmeasurementitem.NewName("握力")
-	gripStrength := domainmeasurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, domainmeasurementitem.SideModeBilateral, domainmeasurementitem.ValueTypeNumeric, &higherIsBetter, domainmeasurementitem.SideAggregationMean, []domainmeasurementitem.Element{domainmeasurementitem.ElementMuscleStrength}, createdAt, updatedAt)
-	unmappedElementItem := domainmeasurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, domainmeasurementitem.SideModeBilateral, domainmeasurementitem.ValueTypeNumeric, &higherIsBetter, domainmeasurementitem.SideAggregationMean, []domainmeasurementitem.Element{domainmeasurementitem.Element("unknown")}, createdAt, updatedAt)
+	gripStrength := domainmeasurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, domainmeasurementitem.SideModeBilateral, domainmeasurementitem.ValueTypeNumeric, &higherIsBetter, domainmeasurementitem.SideAggregationMean, domainmeasurementitem.NormalizationNone, []domainmeasurementitem.Element{domainmeasurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+	unmappedElementItem := domainmeasurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, domainmeasurementitem.SideModeBilateral, domainmeasurementitem.ValueTypeNumeric, &higherIsBetter, domainmeasurementitem.SideAggregationMean, domainmeasurementitem.NormalizationNone, []domainmeasurementitem.Element{domainmeasurementitem.Element("unknown")}, createdAt, updatedAt)
 
 	oneTrial, _ := domainmeasurementitem.NewTrialCount(1)
 	count, _ := domainmeasurementitem.NewUnit("count")
 	cs30ID := domainmeasurementitem.NewMeasurementItemID()
 	cs30Code, _ := domainmeasurementitem.NewCode("cs30")
 	cs30Name, _ := domainmeasurementitem.NewName("CS-30（30秒立ち座り）")
-	cs30 := domainmeasurementitem.NewMeasurementItem(cs30ID, cs30Code, cs30Name, motorFunction, count, oneTrial, domainmeasurementitem.SideModeNone, domainmeasurementitem.ValueTypeNumeric, &higherIsBetter, domainmeasurementitem.SideAggregationMean, []domainmeasurementitem.Element{domainmeasurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+	cs30 := domainmeasurementitem.NewMeasurementItem(cs30ID, cs30Code, cs30Name, motorFunction, count, oneTrial, domainmeasurementitem.SideModeNone, domainmeasurementitem.ValueTypeNumeric, &higherIsBetter, domainmeasurementitem.SideAggregationMean, domainmeasurementitem.NormalizationNone, []domainmeasurementitem.Element{domainmeasurementitem.ElementMuscleStrength}, createdAt, updatedAt)
 	items := []domainmeasurementitem.MeasurementItem{gripStrength, cs30}
 
 	ageRange6064, _ := domainstandard.NewAgeRange(60, 64)
@@ -473,8 +473,8 @@ func TestListOrganizationJudgments(t *testing.T) {
 	gripStrengthID := domainmeasurementitem.NewMeasurementItemID()
 	gripStrengthCode, _ := domainmeasurementitem.NewCode("grip_strength")
 	gripStrengthName, _ := domainmeasurementitem.NewName("握力")
-	gripStrength := domainmeasurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, domainmeasurementitem.SideModeBilateral, domainmeasurementitem.ValueTypeNumeric, &higherIsBetter, domainmeasurementitem.SideAggregationMean, []domainmeasurementitem.Element{domainmeasurementitem.ElementMuscleStrength}, createdAt, updatedAt)
-	unmappedElementItem := domainmeasurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, domainmeasurementitem.SideModeBilateral, domainmeasurementitem.ValueTypeNumeric, &higherIsBetter, domainmeasurementitem.SideAggregationMean, []domainmeasurementitem.Element{domainmeasurementitem.Element("unknown")}, createdAt, updatedAt)
+	gripStrength := domainmeasurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, domainmeasurementitem.SideModeBilateral, domainmeasurementitem.ValueTypeNumeric, &higherIsBetter, domainmeasurementitem.SideAggregationMean, domainmeasurementitem.NormalizationNone, []domainmeasurementitem.Element{domainmeasurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+	unmappedElementItem := domainmeasurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, domainmeasurementitem.SideModeBilateral, domainmeasurementitem.ValueTypeNumeric, &higherIsBetter, domainmeasurementitem.SideAggregationMean, domainmeasurementitem.NormalizationNone, []domainmeasurementitem.Element{domainmeasurementitem.Element("unknown")}, createdAt, updatedAt)
 
 	ageRange6064, _ := domainstandard.NewAgeRange(60, 64)
 	gripStrengthMean, _ := domainstandard.NewMean(38)

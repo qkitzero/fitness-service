@@ -97,6 +97,7 @@ classDiagram
             ValueType valueType
             ScoreDirection? scoreDirection
             SideAggregation sideAggregation
+            Normalization normalization
             Element[] elements
         }
     }

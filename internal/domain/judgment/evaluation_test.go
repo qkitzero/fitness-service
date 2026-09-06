@@ -46,74 +46,84 @@ func TestNewEvaluation(t *testing.T) {
 	gripStrengthID := measurementitem.NewMeasurementItemID()
 	gripStrengthCode, _ := measurementitem.NewCode("grip_strength")
 	gripStrengthName, _ := measurementitem.NewName("握力")
-	gripStrength := measurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+	gripStrength := measurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
 
 	twoStepID := measurementitem.NewMeasurementItemID()
 	twoStepCode, _ := measurementitem.NewCode("two_step")
 	twoStepName, _ := measurementitem.NewName("2ステップ")
-	twoStep := measurementitem.NewMeasurementItem(twoStepID, twoStepCode, twoStepName, motorFunction, cm, twoTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
+	twoStep := measurementitem.NewMeasurementItem(twoStepID, twoStepCode, twoStepName, motorFunction, cm, twoTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
 
 	timedUpAndGoID := measurementitem.NewMeasurementItemID()
 	timedUpAndGoCode, _ := measurementitem.NewCode("timed_up_and_go")
 	timedUpAndGoName, _ := measurementitem.NewName("TUG（タイム・アップ・ゴー）")
-	timedUpAndGo := measurementitem.NewMeasurementItem(timedUpAndGoID, timedUpAndGoCode, timedUpAndGoName, motorFunction, sec, twoTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
+	timedUpAndGo := measurementitem.NewMeasurementItem(timedUpAndGoID, timedUpAndGoCode, timedUpAndGoName, motorFunction, sec, twoTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
 
 	stickReactionID := measurementitem.NewMeasurementItemID()
 	stickReactionCode, _ := measurementitem.NewCode("stick_reaction")
 	stickReactionName, _ := measurementitem.NewName("棒反応時間")
-	stickReaction := measurementitem.NewMeasurementItem(stickReactionID, stickReactionCode, stickReactionName, motorFunction, cm, fiveTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementAgility}, createdAt, updatedAt)
+	stickReaction := measurementitem.NewMeasurementItem(stickReactionID, stickReactionCode, stickReactionName, motorFunction, cm, fiveTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementAgility}, createdAt, updatedAt)
 
 	standUpTestID := measurementitem.NewMeasurementItemID()
 	standUpTestCode, _ := measurementitem.NewCode("stand_up_test")
 	standUpTestName, _ := measurementitem.NewName("立ち上がり")
-	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, measurementitem.SideModeOptionalBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationWorst, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, measurementitem.SideModeOptionalBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationWorst, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
 
 	worstSideLowerIsBetterID := measurementitem.NewMeasurementItemID()
 	worstSideLowerIsBetterCode, _ := measurementitem.NewCode("worst_side_lower_is_better_item")
 	worstSideLowerIsBetterName, _ := measurementitem.NewName("悪い方を採る低いほど良い測定項目")
-	worstSideLowerIsBetter := measurementitem.NewMeasurementItem(worstSideLowerIsBetterID, worstSideLowerIsBetterCode, worstSideLowerIsBetterName, motorFunction, sec, twoTrials, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationWorst, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
+	worstSideLowerIsBetter := measurementitem.NewMeasurementItem(worstSideLowerIsBetterID, worstSideLowerIsBetterCode, worstSideLowerIsBetterName, motorFunction, sec, twoTrials, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationWorst, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
 
 	unknownSideAggregationID := measurementitem.NewMeasurementItemID()
 	unknownSideAggregationCode, _ := measurementitem.NewCode("unknown_side_aggregation_item")
 	unknownSideAggregationName, _ := measurementitem.NewName("集約の分からない測定項目")
-	unknownSideAggregation := measurementitem.NewMeasurementItem(unknownSideAggregationID, unknownSideAggregationCode, unknownSideAggregationName, motorFunction, sec, oneTrial, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregation("median"), []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
+	unknownSideAggregation := measurementitem.NewMeasurementItem(unknownSideAggregationID, unknownSideAggregationCode, unknownSideAggregationName, motorFunction, sec, oneTrial, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregation("median"), measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
+
+	heightRatioID := measurementitem.NewMeasurementItemID()
+	heightRatioCode, _ := measurementitem.NewCode("height_ratio_item")
+	heightRatioName, _ := measurementitem.NewName("身長比で評価する測定項目")
+	heightRatioItem := measurementitem.NewMeasurementItem(heightRatioID, heightRatioCode, heightRatioName, motorFunction, cm, twoTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationHeightRatio, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
+
+	unknownNormalizationID := measurementitem.NewMeasurementItemID()
+	unknownNormalizationCode, _ := measurementitem.NewCode("unknown_normalization_item")
+	unknownNormalizationName, _ := measurementitem.NewName("正規化の分からない測定項目")
+	unknownNormalization := measurementitem.NewMeasurementItem(unknownNormalizationID, unknownNormalizationCode, unknownNormalizationName, motorFunction, cm, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, measurementitem.Normalization("weight_ratio"), []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
 
 	heightID := measurementitem.NewMeasurementItemID()
 	heightCode, _ := measurementitem.NewCode("height")
 	heightName, _ := measurementitem.NewName("身長")
-	height := measurementitem.NewMeasurementItem(heightID, heightCode, heightName, physique, cm, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, nil, measurementitem.SideAggregationMean, nil, createdAt, updatedAt)
+	height := measurementitem.NewMeasurementItem(heightID, heightCode, heightName, physique, cm, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, nil, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, nil, createdAt, updatedAt)
 
 	cs30ID := measurementitem.NewMeasurementItemID()
 	cs30Code, _ := measurementitem.NewCode("cs30")
 	cs30Name, _ := measurementitem.NewName("CS-30（30秒立ち座り）")
-	cs30 := measurementitem.NewMeasurementItem(cs30ID, cs30Code, cs30Name, motorFunction, count, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMuscleEndurance}, createdAt, updatedAt)
+	cs30 := measurementitem.NewMeasurementItem(cs30ID, cs30Code, cs30Name, motorFunction, count, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementMuscleEndurance}, createdAt, updatedAt)
 
 	sitAndReachID := measurementitem.NewMeasurementItemID()
 	sitAndReachCode, _ := measurementitem.NewCode("sit_and_reach")
 	sitAndReachName, _ := measurementitem.NewName("長座体前屈")
-	sitAndReach := measurementitem.NewMeasurementItem(sitAndReachID, sitAndReachCode, sitAndReachName, motorFunction, cm, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementFlexibility}, createdAt, updatedAt)
+	sitAndReach := measurementitem.NewMeasurementItem(sitAndReachID, sitAndReachCode, sitAndReachName, motorFunction, cm, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementFlexibility}, createdAt, updatedAt)
 
 	walk5mID := measurementitem.NewMeasurementItemID()
 	walk5mCode, _ := measurementitem.NewCode("walk_5m")
 	walk5mName, _ := measurementitem.NewName("5m歩行")
-	walk5m := measurementitem.NewMeasurementItem(walk5mID, walk5mCode, walk5mName, motorFunction, sec, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
+	walk5m := measurementitem.NewMeasurementItem(walk5mID, walk5mCode, walk5mName, motorFunction, sec, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
 
 	seatedStepping20sID := measurementitem.NewMeasurementItemID()
 	seatedStepping20sCode, _ := measurementitem.NewCode("seated_stepping_20s")
 	seatedStepping20sName, _ := measurementitem.NewName("座位ステップ（20秒）")
-	seatedStepping20s := measurementitem.NewMeasurementItem(seatedStepping20sID, seatedStepping20sCode, seatedStepping20sName, motorFunction, count, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementAgility}, createdAt, updatedAt)
+	seatedStepping20s := measurementitem.NewMeasurementItem(seatedStepping20sID, seatedStepping20sCode, seatedStepping20sName, motorFunction, count, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementAgility}, createdAt, updatedAt)
 
 	oneLegStandID := measurementitem.NewMeasurementItemID()
 	oneLegStandCode, _ := measurementitem.NewCode("eyes_open_one_leg_stand")
 	oneLegStandName, _ := measurementitem.NewName("開眼片足立ち")
-	oneLegStand := measurementitem.NewMeasurementItem(oneLegStandID, oneLegStandCode, oneLegStandName, motorFunction, sec, twoTrials, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationBest, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
+	oneLegStand := measurementitem.NewMeasurementItem(oneLegStandID, oneLegStandCode, oneLegStandName, motorFunction, sec, twoTrials, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationBest, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
 
 	functionalReachID := measurementitem.NewMeasurementItemID()
 	functionalReachCode, _ := measurementitem.NewCode("functional_reach")
 	functionalReachName, _ := measurementitem.NewName("ファンクショナルリーチ")
-	functionalReach := measurementitem.NewMeasurementItem(functionalReachID, functionalReachCode, functionalReachName, motorFunction, cm, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
+	functionalReach := measurementitem.NewMeasurementItem(functionalReachID, functionalReachCode, functionalReachName, motorFunction, cm, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
 
-	items := []measurementitem.MeasurementItem{gripStrength, twoStep, timedUpAndGo, stickReaction, standUpTest, worstSideLowerIsBetter, unknownSideAggregation, height, cs30, sitAndReach, walk5m, seatedStepping20s, oneLegStand, functionalReach}
+	items := []measurementitem.MeasurementItem{gripStrength, twoStep, timedUpAndGo, stickReaction, standUpTest, worstSideLowerIsBetter, unknownSideAggregation, heightRatioItem, unknownNormalization, height, cs30, sitAndReach, walk5m, seatedStepping20s, oneLegStand, functionalReach}
 
 	ageRange4044, _ := standard.NewAgeRange(40, 44)
 	ageRange5054, _ := standard.NewAgeRange(50, 54)
@@ -123,6 +133,8 @@ func TestNewEvaluation(t *testing.T) {
 	gripMean5054, _ := standard.NewMean(42)
 	gripMean6064, _ := standard.NewMean(38)
 	gripDeviation, _ := standard.NewStandardDeviation(5)
+	heightRatioMean, _ := standard.NewMean(1.6)
+	heightRatioDeviation, _ := standard.NewStandardDeviation(0.15)
 	twoStepMean, _ := standard.NewMean(160)
 	twoStepMean6064, _ := standard.NewMean(140)
 	twoStepDeviation, _ := standard.NewStandardDeviation(15)
@@ -160,6 +172,8 @@ func TestNewEvaluation(t *testing.T) {
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), gripStrengthID, standard.GenderMale, ageRange5054, gripMean5054, gripDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), gripStrengthID, standard.GenderMale, ageRange6064, gripMean6064, gripDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), twoStepID, standard.GenderMale, ageRange4044, twoStepMean, twoStepDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), heightRatioID, standard.GenderMale, ageRange4044, heightRatioMean, heightRatioDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), unknownNormalizationID, standard.GenderMale, ageRange4044, heightRatioMean, heightRatioDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), timedUpAndGoID, standard.GenderMale, ageRange4044, timedUpAndGoMean, timedUpAndGoDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), stickReactionID, standard.GenderMale, ageRange4044, stickReactionMean, stickReactionDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), cs30ID, standard.GenderMale, ageRange4044, cs30Mean, cs30Deviation, createdAt, updatedAt),
@@ -404,6 +418,138 @@ func TestNewEvaluation(t *testing.T) {
 			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 38, 46, -1.6, standard.RankE}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, -1.6, standard.RankE}},
 			wantMotorAge:           &motorAge62,
+		},
+		{
+			name:   "success a normalized item is judged by the value divided by the height",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				firstTrial, _ := measurement.NewTrialIndex(1)
+				secondTrial, _ := measurement.NewTrialIndex(2)
+				firstStride, _ := measurement.NewValue(245)
+				secondStride, _ := measurement.NewValue(240)
+				strideEntry, _ := measurement.NewMeasurementEntry(heightRatioItem, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(firstTrial, measurement.SideNone, &firstStride, nil, nil),
+					measurement.NewMeasurementValue(secondTrial, measurement.SideNone, &secondStride, nil, nil),
+				})
+				heightValue, _ := measurement.NewValue(165)
+				heightEntry, _ := measurement.NewMeasurementEntry(height, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(firstTrial, measurement.SideNone, &heightValue, nil, nil),
+				})
+				return []measurement.MeasurementEntry{strideEntry, heightEntry}
+			},
+			wantItemEvaluations:    []wantItemEvaluation{{heightRatioID, 1.48, 1.6, -0.8, standard.RankD}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, -0.8, standard.RankD}},
+			wantMotorAge:           &motorAge42,
+		},
+		{
+			name:   "success a normalized item is excluded without the height",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				stride, _ := measurement.NewValue(245)
+				strideEntry, _ := measurement.NewMeasurementEntry(heightRatioItem, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &stride, nil, nil),
+				})
+				return []measurement.MeasurementEntry{strideEntry}
+			},
+		},
+		{
+			name:   "success a normalized item is excluded when the height is unmeasurable",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				stride, _ := measurement.NewValue(245)
+				strideEntry, _ := measurement.NewMeasurementEntry(heightRatioItem, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &stride, nil, nil),
+				})
+				note, _ := measurement.NewNote("車椅子のため測定不可")
+				heightEntry, _ := measurement.NewMeasurementEntry(height, true, note, nil)
+				return []measurement.MeasurementEntry{strideEntry, heightEntry}
+			},
+		},
+		{
+			name:   "success a normalized item is excluded when the height has no value",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				stride, _ := measurement.NewValue(245)
+				strideEntry, _ := measurement.NewMeasurementEntry(heightRatioItem, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &stride, nil, nil),
+				})
+				heightEntry, _ := measurement.NewMeasurementEntry(height, false, nil, nil)
+				return []measurement.MeasurementEntry{strideEntry, heightEntry}
+			},
+		},
+		{
+			name:   "success a normalized item is excluded when the recorded height is empty",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				stride, _ := measurement.NewValue(245)
+				strideEntry, _ := measurement.NewMeasurementEntry(heightRatioItem, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &stride, nil, nil),
+				})
+				heightEntry := measurement.ReconstructMeasurementEntry(heightID, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, nil, nil, nil),
+				})
+				return []measurement.MeasurementEntry{strideEntry, heightEntry}
+			},
+		},
+		{
+			name:   "success a normalized item is excluded when the height is zero",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				stride, _ := measurement.NewValue(245)
+				strideEntry, _ := measurement.NewMeasurementEntry(heightRatioItem, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &stride, nil, nil),
+				})
+				heightValue, _ := measurement.NewValue(0)
+				heightEntry, _ := measurement.NewMeasurementEntry(height, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &heightValue, nil, nil),
+				})
+				return []measurement.MeasurementEntry{strideEntry, heightEntry}
+			},
+		},
+		{
+			name:   "success a normalized item is excluded when the ratio is out of the value range",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				stride, _ := measurement.NewValue(9999.99)
+				strideEntry, _ := measurement.NewMeasurementEntry(heightRatioItem, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &stride, nil, nil),
+				})
+				heightValue, _ := measurement.NewValue(0.01)
+				heightEntry, _ := measurement.NewMeasurementEntry(height, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &heightValue, nil, nil),
+				})
+				return []measurement.MeasurementEntry{strideEntry, heightEntry}
+			},
+		},
+		{
+			name:   "success an item of an unknown normalization is excluded",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				value, _ := measurement.NewValue(245)
+				entry, _ := measurement.NewMeasurementEntry(unknownNormalization, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &value, nil, nil),
+				})
+				heightValue, _ := measurement.NewValue(165)
+				heightEntry, _ := measurement.NewMeasurementEntry(height, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &heightValue, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry, heightEntry}
+			},
 		},
 		{
 			name:   "success an item without a score direction is excluded",

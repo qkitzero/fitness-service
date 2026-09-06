@@ -10,6 +10,8 @@ const codeMaxLen = 64
 
 type Code string
 
+const CodeHeight Code = "height"
+
 func (c Code) String() string {
 	return string(c)
 }
