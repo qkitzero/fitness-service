@@ -123,14 +123,23 @@ func TestNewEvaluation(t *testing.T) {
 	oneLegStandName, _ := measurementitem.NewName("開眼片足立ち")
 	oneLegStand := measurementitem.NewMeasurementItem(oneLegStandID, oneLegStandCode, oneLegStandName, motorFunction, sec, twoTrials, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.TrialAggregationBest, measurementitem.SideAggregationBest, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
 
+	peakInMiddleID := measurementitem.NewMeasurementItemID()
+	peakInMiddleCode, _ := measurementitem.NewCode("peak_in_middle")
+	peakInMiddleName, _ := measurementitem.NewName("中年でピークを迎える項目")
+	peakInMiddle := measurementitem.NewMeasurementItem(peakInMiddleID, peakInMiddleCode, peakInMiddleName, motorFunction, cm, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.TrialAggregationBest, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementFlexibility}, createdAt, updatedAt)
+
 	functionalReachID := measurementitem.NewMeasurementItemID()
 	functionalReachCode, _ := measurementitem.NewCode("functional_reach")
 	functionalReachName, _ := measurementitem.NewName("ファンクショナルリーチ")
 	functionalReach := measurementitem.NewMeasurementItem(functionalReachID, functionalReachCode, functionalReachName, motorFunction, cm, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.TrialAggregationBest, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
 
-	items := []measurementitem.MeasurementItem{gripStrength, twoStep, timedUpAndGo, stickReaction, standUpTest, worstSideLowerIsBetter, unknownTrialAggregation, unknownSideAggregation, heightRatioItem, unknownNormalization, height, cs30, sitAndReach, walk5m, seatedStepping20s, oneLegStand, functionalReach}
+	items := []measurementitem.MeasurementItem{gripStrength, twoStep, timedUpAndGo, stickReaction, standUpTest, worstSideLowerIsBetter, unknownTrialAggregation, unknownSideAggregation, heightRatioItem, unknownNormalization, height, cs30, sitAndReach, walk5m, seatedStepping20s, oneLegStand, functionalReach, peakInMiddle}
 
 	ageRange4044, _ := standard.NewAgeRange(40, 44)
+	peakInMiddleMean4044, _ := standard.NewMean(40)
+	peakInMiddleMean5054, _ := standard.NewMean(44)
+	peakInMiddleMean6064, _ := standard.NewMean(40)
+	peakInMiddleDeviation, _ := standard.NewStandardDeviation(5)
 	ageRange5054, _ := standard.NewAgeRange(50, 54)
 	ageRange4049, _ := standard.NewAgeRange(40, 49)
 	ageRange6064, _ := standard.NewAgeRange(60, 64)
@@ -199,6 +208,9 @@ func TestNewEvaluation(t *testing.T) {
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), worstSideLowerIsBetterID, standard.GenderMale, ageRange4044, worstSideLowerIsBetterMean, worstSideLowerIsBetterDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), unknownTrialAggregationID, standard.GenderMale, ageRange4044, unknownTrialAggregationMean, unknownTrialAggregationDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), unknownSideAggregationID, standard.GenderMale, ageRange4044, unknownSideAggregationMean, unknownSideAggregationDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), peakInMiddleID, standard.GenderMale, ageRange4044, peakInMiddleMean4044, peakInMiddleDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), peakInMiddleID, standard.GenderMale, ageRange5054, peakInMiddleMean5054, peakInMiddleDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), peakInMiddleID, standard.GenderMale, ageRange6064, peakInMiddleMean6064, peakInMiddleDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), twoStepID, standard.GenderFemale, ageRange4044, twoStepMean, twoStepDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), twoStepID, standard.GenderFemale, ageRange6064, twoStepMean6064, twoStepDeviation, createdAt, updatedAt),
 	}
@@ -221,10 +233,9 @@ func TestNewEvaluation(t *testing.T) {
 
 	motorAge38 := 38
 	motorAge42 := 42
-	motorAge43 := 43
 	motorAge45 := 45
-	motorAge47 := 47
 	motorAge52 := 52
+	motorAge47 := 47
 	motorAge62 := 62
 	motorAge67 := 67
 	motorAge68 := 68
@@ -938,7 +949,7 @@ func TestNewEvaluation(t *testing.T) {
 			},
 			wantItemEvaluations:    []wantItemEvaluation{{oneLegStandID, 60, 30, 3, standard.RankA}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementBalance, 3, standard.RankA}},
-			wantMotorAge:           &motorAge43,
+			wantMotorAge:           &motorAge42,
 		},
 		{
 			name:   "success an item aggregated by the worst side ignores the stronger side",
@@ -1056,6 +1067,38 @@ func TestNewEvaluation(t *testing.T) {
 			wantMotorAge:           &motorAge42,
 		},
 		{
+			name:   "success a value matching both sides of a peak is judged as the age nearest the measured age",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				value, _ := measurement.NewValue(40)
+				entry, _ := measurement.NewMeasurementEntry(peakInMiddle, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &value, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+			wantItemEvaluations:    []wantItemEvaluation{{peakInMiddleID, 40, 40, 0, standard.RankC}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementFlexibility, 0, standard.RankC}},
+			wantMotorAge:           &motorAge42,
+		},
+		{
+			name:   "success a value matching both sides of a peak is judged as the older age for an older measured age",
+			gender: standard.GenderMale,
+			age:    62,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				value, _ := measurement.NewValue(40)
+				entry, _ := measurement.NewMeasurementEntry(peakInMiddle, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &value, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+			wantItemEvaluations:    []wantItemEvaluation{{peakInMiddleID, 40, 40, 0, standard.RankC}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementFlexibility, 0, standard.RankC}},
+			wantMotorAge:           &motorAge62,
+		},
+		{
 			name:   "success the motor age falls between the medians of two age groups",
 			gender: standard.GenderMale,
 			age:    42,
@@ -1140,7 +1183,7 @@ func TestNewEvaluation(t *testing.T) {
 				{measurementitem.ElementMuscleStrength, -1.6, standard.RankE},
 				{measurementitem.ElementFlexibility, 0.4, standard.RankC},
 			},
-			wantMotorAge: &motorAge52,
+			wantMotorAge: &motorAge42,
 		},
 		{
 			name:   "success the motor age is computed on the age group standards of every judged item",

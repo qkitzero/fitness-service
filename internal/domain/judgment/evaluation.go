@@ -10,9 +10,13 @@ import (
 )
 
 const (
-	evaluationScale                 = 100
-	maxYoungerAgeGroupFallbackYears = 2
-	maxOlderAgeGroupFallbackYears   = 20
+	evaluationScale                   = 100
+	maxYoungerAgeGroupFallbackYears   = 2
+	maxOlderAgeGroupFallbackYears     = 20
+	motorAgeSearchYearsBelowAgeGroups = 2
+	motorAgeSearchYearsAboveAgeGroups = 20
+	motorAgeMin                       = 0
+	motorAgeMax                       = 150
 )
 
 type Evaluation interface {
@@ -316,7 +320,7 @@ type standardCurve struct {
 	standardDeviations []int64
 }
 
-func newStandardCurve(ageGroupStandards []standard.AgeGroupStandard) (standardCurve, bool) {
+func newStandardCurve(ageGroupStandards []standard.AgeGroupStandard) standardCurve {
 	sorted := make([]standard.AgeGroupStandard, len(ageGroupStandards))
 	copy(sorted, ageGroupStandards)
 	sort.Slice(sorted, func(i, j int) bool {
@@ -334,7 +338,7 @@ func newStandardCurve(ageGroupStandards []standard.AgeGroupStandard) (standardCu
 		curve.standardDeviations = append(curve.standardDeviations, toHundredths(ageGroupStandard.StandardDeviation().Float64()))
 	}
 
-	return curve, len(curve.ages) > 0
+	return curve
 }
 
 func extrapolatedMean(meanHundredths, meanDeltaHundredths, ageSpan, ageOffset int64) int64 {
@@ -346,10 +350,10 @@ func extrapolatedMean(meanHundredths, meanDeltaHundredths, ageSpan, ageOffset in
 }
 
 func (c standardCurve) at(age int) (int64, int64) {
-	last := len(c.ages) - 1
-	if last == 0 {
+	if len(c.ages) == 1 {
 		return c.means[0], c.standardDeviations[0]
 	}
+	last := len(c.ages) - 1
 	if age <= c.ages[0] {
 		return extrapolatedMean(
 			c.means[0],
@@ -366,37 +370,36 @@ func (c standardCurve) at(age int) (int64, int64) {
 			int64(age-c.ages[last]),
 		), c.standardDeviations[last]
 	}
-	for i := 0; i < last; i++ {
-		if age < c.ages[i] || age > c.ages[i+1] {
-			continue
-		}
-		ageSpan := int64(c.ages[i+1] - c.ages[i])
-		ageOffset := int64(age - c.ages[i])
-		mean := c.means[i] + divideRounded((c.means[i+1]-c.means[i])*ageOffset, ageSpan)
-		standardDeviation := c.standardDeviations[i] + divideRounded((c.standardDeviations[i+1]-c.standardDeviations[i])*ageOffset, ageSpan)
-		return mean, standardDeviation
-	}
 
-	return c.means[last], c.standardDeviations[last]
+	i := 0
+	for c.ages[i+1] < age {
+		i++
+	}
+	ageSpan := int64(c.ages[i+1] - c.ages[i])
+	ageOffset := int64(age - c.ages[i])
+	mean := c.means[i] + divideRounded((c.means[i+1]-c.means[i])*ageOffset, ageSpan)
+	standardDeviation := c.standardDeviations[i] + divideRounded((c.standardDeviations[i+1]-c.standardDeviations[i])*ageOffset, ageSpan)
+
+	return mean, standardDeviation
+}
+
+type judgedCurve struct {
+	curve          standardCurve
+	value          measurement.Value
+	scoreDirection measurementitem.ScoreDirection
 }
 
 func newMotorAge(
 	judgedItems []judgedItem,
 	ageGroupStandardsByItemID map[measurementitem.MeasurementItemID][]standard.AgeGroupStandard,
+	age int,
 ) *MotorAge {
-	curves := make([]standardCurve, 0, len(judgedItems))
-	values := make([]measurement.Value, 0, len(judgedItems))
-	scoreDirections := make([]measurementitem.ScoreDirection, 0, len(judgedItems))
-	youngestFrom, oldestTo, youngestNode, oldestNode := 0, 0, 0, 0
+	judgedCurves := make([]judgedCurve, 0, len(judgedItems))
+	youngestFrom, oldestTo := math.MaxInt, math.MinInt
 	for _, judged := range judgedItems {
 		ageGroupStandards := ageGroupStandardsByItemID[judged.item.ID()]
-		curve, ok := newStandardCurve(ageGroupStandards)
-		if !ok {
+		if len(ageGroupStandards) == 0 {
 			continue
-		}
-		if len(curves) == 0 {
-			youngestFrom, oldestTo = ageGroupStandards[0].AgeRange().From(), ageGroupStandards[0].AgeRange().To()
-			youngestNode, oldestNode = curve.ages[0], curve.ages[len(curve.ages)-1]
 		}
 		for _, ageGroupStandard := range ageGroupStandards {
 			ageRange := ageGroupStandard.AgeRange()
@@ -407,46 +410,44 @@ func newMotorAge(
 				oldestTo = ageRange.To()
 			}
 		}
-		if curve.ages[0] < youngestNode {
-			youngestNode = curve.ages[0]
-		}
-		if node := curve.ages[len(curve.ages)-1]; node > oldestNode {
-			oldestNode = node
-		}
-		curves = append(curves, curve)
-		values = append(values, judged.value)
-		scoreDirections = append(scoreDirections, *judged.item.ScoreDirection())
+		judgedCurves = append(judgedCurves, judgedCurve{
+			curve:          newStandardCurve(ageGroupStandards),
+			value:          judged.value,
+			scoreDirection: *judged.item.ScoreDirection(),
+		})
 	}
-	if len(curves) == 0 {
+	if len(judgedCurves) == 0 {
 		return nil
 	}
 
-	lowestAge := youngestFrom - maxYoungerAgeGroupFallbackYears
-	if lowestAge < 0 {
-		lowestAge = 0
+	lowestAge := youngestFrom - motorAgeSearchYearsBelowAgeGroups
+	if lowestAge < motorAgeMin {
+		lowestAge = motorAgeMin
 	}
-	highestAge := oldestTo + maxOlderAgeGroupFallbackYears
-	nodeSpanDoubled := int64(youngestNode + oldestNode)
+	highestAge := oldestTo + motorAgeSearchYearsAboveAgeGroups
+	if highestAge > motorAgeMax {
+		highestAge = motorAgeMax
+	}
 
 	best := lowestAge
 	bestDistance := int64(-1)
-	bestNodeSpanOffset := int64(-1)
-	for age := lowestAge; age <= highestAge; age++ {
+	bestAgeOffset := 0
+	for candidate := lowestAge; candidate <= highestAge; candidate++ {
 		distance := int64(0)
-		for i, curve := range curves {
-			mean, standardDeviation := curve.at(age)
-			zScore := zScoreHundredthsOf(values[i], mean, standardDeviation, scoreDirections[i])
+		for _, judged := range judgedCurves {
+			mean, standardDeviation := judged.curve.at(candidate)
+			zScore := zScoreHundredthsOf(judged.value, mean, standardDeviation, judged.scoreDirection)
 			if zScore < 0 {
 				zScore = -zScore
 			}
 			distance += zScore
 		}
-		nodeSpanOffset := int64(2*age) - nodeSpanDoubled
-		if nodeSpanOffset < 0 {
-			nodeSpanOffset = -nodeSpanOffset
+		ageOffset := candidate - age
+		if ageOffset < 0 {
+			ageOffset = -ageOffset
 		}
-		if bestDistance < 0 || distance < bestDistance || (distance == bestDistance && nodeSpanOffset < bestNodeSpanOffset) {
-			best, bestDistance, bestNodeSpanOffset = age, distance, nodeSpanOffset
+		if bestDistance < 0 || distance < bestDistance || (distance == bestDistance && ageOffset < bestAgeOffset) {
+			best, bestDistance, bestAgeOffset = candidate, distance, ageOffset
 		}
 	}
 
@@ -523,6 +524,6 @@ func NewEvaluation(
 	return &evaluation{
 		itemEvaluations:    itemEvaluations,
 		elementEvaluations: newElementEvaluations(itemEvaluations, itemByID, rankStandards),
-		motorAge:           newMotorAge(judgedItems, ageGroupStandardsByItemID),
+		motorAge:           newMotorAge(judgedItems, ageGroupStandardsByItemID, age),
 	}
 }
