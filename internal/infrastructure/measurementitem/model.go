@@ -7,20 +7,21 @@ import (
 )
 
 type MeasurementItemModel struct {
-	ID              measurementitem.MeasurementItemID
-	Code            measurementitem.Code
-	Name            measurementitem.Name
-	Category        measurementitem.Category
-	Unit            measurementitem.Unit
-	TrialCount      measurementitem.TrialCount
-	SideMode        measurementitem.SideMode
-	ValueType       measurementitem.ValueType
-	ScoreDirection  *measurementitem.ScoreDirection
-	SideAggregation measurementitem.SideAggregation
-	Normalization   measurementitem.Normalization
-	CreatedAt       time.Time                     `gorm:"autoCreateTime:false"`
-	UpdatedAt       time.Time                     `gorm:"autoUpdateTime:false"`
-	Elements        []MeasurementItemElementModel `gorm:"foreignKey:MeasurementItemID;references:ID"`
+	ID               measurementitem.MeasurementItemID
+	Code             measurementitem.Code
+	Name             measurementitem.Name
+	Category         measurementitem.Category
+	Unit             measurementitem.Unit
+	TrialCount       measurementitem.TrialCount
+	SideMode         measurementitem.SideMode
+	ValueType        measurementitem.ValueType
+	ScoreDirection   *measurementitem.ScoreDirection
+	TrialAggregation measurementitem.TrialAggregation
+	SideAggregation  measurementitem.SideAggregation
+	Normalization    measurementitem.Normalization
+	CreatedAt        time.Time                     `gorm:"autoCreateTime:false"`
+	UpdatedAt        time.Time                     `gorm:"autoUpdateTime:false"`
+	Elements         []MeasurementItemElementModel `gorm:"foreignKey:MeasurementItemID;references:ID"`
 }
 
 func (MeasurementItemModel) TableName() string {

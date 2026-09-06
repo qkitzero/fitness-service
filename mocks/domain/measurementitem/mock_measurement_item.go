@@ -181,6 +181,20 @@ func (mr *MockMeasurementItemMockRecorder) SideMode() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SideMode", reflect.TypeOf((*MockMeasurementItem)(nil).SideMode))
 }
 
+// TrialAggregation mocks base method.
+func (m *MockMeasurementItem) TrialAggregation() measurementitem.TrialAggregation {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TrialAggregation")
+	ret0, _ := ret[0].(measurementitem.TrialAggregation)
+	return ret0
+}
+
+// TrialAggregation indicates an expected call of TrialAggregation.
+func (mr *MockMeasurementItemMockRecorder) TrialAggregation() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TrialAggregation", reflect.TypeOf((*MockMeasurementItem)(nil).TrialAggregation))
+}
+
 // TrialCount mocks base method.
 func (m *MockMeasurementItem) TrialCount() measurementitem.TrialCount {
 	m.ctrl.T.Helper()

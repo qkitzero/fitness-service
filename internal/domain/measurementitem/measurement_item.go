@@ -14,6 +14,7 @@ type MeasurementItem interface {
 	SideMode() SideMode
 	ValueType() ValueType
 	ScoreDirection() *ScoreDirection
+	TrialAggregation() TrialAggregation
 	SideAggregation() SideAggregation
 	Normalization() Normalization
 	Elements() []Element
@@ -22,20 +23,21 @@ type MeasurementItem interface {
 }
 
 type measurementItem struct {
-	id              MeasurementItemID
-	code            Code
-	name            Name
-	category        Category
-	unit            Unit
-	trialCount      TrialCount
-	sideMode        SideMode
-	valueType       ValueType
-	scoreDirection  *ScoreDirection
-	sideAggregation SideAggregation
-	normalization   Normalization
-	elements        []Element
-	createdAt       time.Time
-	updatedAt       time.Time
+	id               MeasurementItemID
+	code             Code
+	name             Name
+	category         Category
+	unit             Unit
+	trialCount       TrialCount
+	sideMode         SideMode
+	valueType        ValueType
+	scoreDirection   *ScoreDirection
+	trialAggregation TrialAggregation
+	sideAggregation  SideAggregation
+	normalization    Normalization
+	elements         []Element
+	createdAt        time.Time
+	updatedAt        time.Time
 }
 
 func (m measurementItem) ID() MeasurementItemID {
@@ -78,6 +80,10 @@ func (m measurementItem) ScoreDirection() *ScoreDirection {
 	return &s
 }
 
+func (m measurementItem) TrialAggregation() TrialAggregation {
+	return m.trialAggregation
+}
+
 func (m measurementItem) SideAggregation() SideAggregation {
 	return m.sideAggregation
 }
@@ -110,6 +116,7 @@ func NewMeasurementItem(
 	sideMode SideMode,
 	valueType ValueType,
 	scoreDirection *ScoreDirection,
+	trialAggregation TrialAggregation,
 	sideAggregation SideAggregation,
 	normalization Normalization,
 	elements []Element,
@@ -117,19 +124,20 @@ func NewMeasurementItem(
 	updatedAt time.Time,
 ) MeasurementItem {
 	m := &measurementItem{
-		id:              id,
-		code:            code,
-		name:            name,
-		category:        category,
-		unit:            unit,
-		trialCount:      trialCount,
-		sideMode:        sideMode,
-		valueType:       valueType,
-		sideAggregation: sideAggregation,
-		normalization:   normalization,
-		elements:        make([]Element, len(elements)),
-		createdAt:       createdAt,
-		updatedAt:       updatedAt,
+		id:               id,
+		code:             code,
+		name:             name,
+		category:         category,
+		unit:             unit,
+		trialCount:       trialCount,
+		sideMode:         sideMode,
+		valueType:        valueType,
+		trialAggregation: trialAggregation,
+		sideAggregation:  sideAggregation,
+		normalization:    normalization,
+		elements:         make([]Element, len(elements)),
+		createdAt:        createdAt,
+		updatedAt:        updatedAt,
 	}
 	copy(m.elements, elements)
 	if scoreDirection != nil {
