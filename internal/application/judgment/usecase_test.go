@@ -115,6 +115,156 @@ func TestItemCodesWithoutAgeGroupStandards(t *testing.T) {
 	}
 }
 
+func TestItemCodesMissingHeight(t *testing.T) {
+	t.Parallel()
+	createdAt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	updatedAt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
+	motorFunction, _ := measurementitem.NewCategory("motor_function")
+	physique, _ := measurementitem.NewCategory("physique")
+	kg, _ := measurementitem.NewUnit("kg")
+	cm, _ := measurementitem.NewUnit("cm")
+	oneTrial, _ := measurementitem.NewTrialCount(1)
+	twoTrials, _ := measurementitem.NewTrialCount(2)
+	higherIsBetter := measurementitem.ScoreDirectionHigherIsBetter
+
+	gripStrengthID := measurementitem.NewMeasurementItemID()
+	gripStrengthCode, _ := measurementitem.NewCode("grip_strength")
+	gripStrengthName, _ := measurementitem.NewName("握力")
+	gripStrength := measurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+
+	twoStepID := measurementitem.NewMeasurementItemID()
+	twoStepCode, _ := measurementitem.NewCode("two_step")
+	twoStepName, _ := measurementitem.NewName("2ステップ")
+	twoStep := measurementitem.NewMeasurementItem(twoStepID, twoStepCode, twoStepName, motorFunction, cm, twoTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationHeightRatio, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
+
+	anotherRatioID := measurementitem.NewMeasurementItemID()
+	anotherRatioCode, _ := measurementitem.NewCode("another_ratio_item")
+	anotherRatioName, _ := measurementitem.NewName("身長比で評価する別の測定項目")
+	anotherRatio := measurementitem.NewMeasurementItem(anotherRatioID, anotherRatioCode, anotherRatioName, motorFunction, cm, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationHeightRatio, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
+
+	heightID := measurementitem.NewMeasurementItemID()
+	heightCode, _ := measurementitem.NewCode("height")
+	heightName, _ := measurementitem.NewName("身長")
+	height := measurementitem.NewMeasurementItem(heightID, heightCode, heightName, physique, cm, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, nil, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, nil, createdAt, updatedAt)
+
+	trialIndex, _ := measurement.NewTrialIndex(1)
+	stride, _ := measurement.NewValue(245)
+	heightValue, _ := measurement.NewValue(165)
+	zeroValue, _ := measurement.NewValue(0)
+
+	tests := []struct {
+		name         string
+		items        []measurementitem.MeasurementItem
+		measuredIDs  []measurementitem.MeasurementItemID
+		unmeasurable []measurementitem.MeasurementItemID
+		valueless    []measurementitem.MeasurementItemID
+		zeroHeight   bool
+		want         []string
+	}{
+		{
+			name:        "a normalized item is listed when the height is not measured",
+			items:       []measurementitem.MeasurementItem{twoStep, gripStrength},
+			measuredIDs: []measurementitem.MeasurementItemID{twoStepID, gripStrengthID},
+			want:        []string{"two_step"},
+		},
+		{
+			name:        "a normalized item is not listed when the height is measured",
+			items:       []measurementitem.MeasurementItem{twoStep, height},
+			measuredIDs: []measurementitem.MeasurementItemID{twoStepID, heightID},
+			want:        []string{},
+		},
+		{
+			name:         "a normalized item is listed when the height is unmeasurable",
+			items:        []measurementitem.MeasurementItem{twoStep, height},
+			measuredIDs:  []measurementitem.MeasurementItemID{twoStepID, heightID},
+			unmeasurable: []measurementitem.MeasurementItemID{heightID},
+			want:         []string{"two_step"},
+		},
+		{
+			name:        "a normalized item is listed when the height is zero",
+			items:       []measurementitem.MeasurementItem{twoStep, height},
+			measuredIDs: []measurementitem.MeasurementItemID{twoStepID, heightID},
+			zeroHeight:  true,
+			want:        []string{"two_step"},
+		},
+		{
+			name:        "a normalized item is listed when the height has no value",
+			items:       []measurementitem.MeasurementItem{twoStep, height},
+			measuredIDs: []measurementitem.MeasurementItemID{twoStepID, heightID},
+			valueless:   []measurementitem.MeasurementItemID{heightID},
+			want:        []string{"two_step"},
+		},
+		{
+			name:        "an item without normalization is not listed",
+			items:       []measurementitem.MeasurementItem{gripStrength},
+			measuredIDs: []measurementitem.MeasurementItemID{gripStrengthID},
+			want:        []string{},
+		},
+		{
+			name:        "listed codes are sorted",
+			items:       []measurementitem.MeasurementItem{twoStep, anotherRatio},
+			measuredIDs: []measurementitem.MeasurementItemID{twoStepID, anotherRatioID},
+			want:        []string{"another_ratio_item", "two_step"},
+		},
+		{
+			name:  "nothing is listed without any item",
+			items: []measurementitem.MeasurementItem{},
+			want:  []string{},
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			isListed := func(ids []measurementitem.MeasurementItemID, id measurementitem.MeasurementItemID) bool {
+				for _, listed := range ids {
+					if listed == id {
+						return true
+					}
+				}
+				return false
+			}
+
+			entries := make([]measurement.MeasurementEntry, 0, len(tt.measuredIDs))
+			for _, measuredID := range tt.measuredIDs {
+				mockEntry := mocksmeasurement.NewMockMeasurementEntry(ctrl)
+				mockEntry.EXPECT().MeasurementItemID().Return(measuredID).AnyTimes()
+				mockEntry.EXPECT().Unmeasurable().Return(isListed(tt.unmeasurable, measuredID)).AnyTimes()
+				values := []measurement.MeasurementValue{}
+				if !isListed(tt.valueless, measuredID) {
+					value := stride
+					if measuredID == heightID {
+						value = heightValue
+						if tt.zeroHeight {
+							value = zeroValue
+						}
+					}
+					values = append(values, measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &value, nil, nil))
+				}
+				mockEntry.EXPECT().Values().Return(values).AnyTimes()
+				entries = append(entries, mockEntry)
+			}
+
+			mockMeasurement := mocksmeasurement.NewMockMeasurement(ctrl)
+			mockMeasurement.EXPECT().Entries().Return(entries).AnyTimes()
+
+			got := itemCodesMissingHeight(mockMeasurement, tt.items)
+			if len(got) != len(tt.want) {
+				t.Fatalf("len(itemCodesMissingHeight()) = %v, want %v", len(got), len(tt.want))
+			}
+			for i, want := range tt.want {
+				if got[i] != want {
+					t.Errorf("itemCodesMissingHeight()[%d] = %v, want %v", i, got[i], want)
+				}
+			}
+		})
+	}
+}
+
 func TestGetJudgment(t *testing.T) {
 	t.Parallel()
 	tenantID, _ := tenant.NewTenantID("0f4a1a2b-3c4d-5e6f-7a8b-9c0d1e2f3a4b")
@@ -132,6 +282,12 @@ func TestGetJudgment(t *testing.T) {
 	gripStrengthCode, _ := measurementitem.NewCode("grip_strength")
 	gripStrengthName, _ := measurementitem.NewName("握力")
 	gripStrength := measurementitem.NewMeasurementItem(gripStrengthID, gripStrengthCode, gripStrengthName, motorFunction, kg, twoTrials, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
+
+	cm, _ := measurementitem.NewUnit("cm")
+	twoStepID := measurementitem.NewMeasurementItemID()
+	twoStepCode, _ := measurementitem.NewCode("two_step")
+	twoStepName, _ := measurementitem.NewName("2ステップ")
+	twoStep := measurementitem.NewMeasurementItem(twoStepID, twoStepCode, twoStepName, motorFunction, cm, twoTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationHeightRatio, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
 
 	level, _ := measurementitem.NewUnit("level")
 	oneTrial, _ := measurementitem.NewTrialCount(1)
@@ -168,6 +324,14 @@ func TestGetJudgment(t *testing.T) {
 		trialIndex, _ := measurement.NewTrialIndex(1)
 		value, _ := measurement.NewValue(6)
 		return measurement.ReconstructMeasurementEntry(standUpTestID, false, nil, []measurement.MeasurementValue{
+			measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &value, nil, nil),
+		})
+	}
+
+	twoStepEntry := func() measurement.MeasurementEntry {
+		trialIndex, _ := measurement.NewTrialIndex(1)
+		value, _ := measurement.NewValue(245)
+		return measurement.ReconstructMeasurementEntry(twoStepID, false, nil, []measurement.MeasurementValue{
 			measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &value, nil, nil),
 		})
 	}
@@ -210,6 +374,7 @@ func TestGetJudgment(t *testing.T) {
 		callListStandards        bool
 		evaluated                bool
 		withUnregisteredItem     bool
+		withNormalizedItem       bool
 		findByIDsErr             error
 		listAgeGroupStandardsErr error
 		listRankStandardsErr     error
@@ -291,6 +456,25 @@ func TestGetJudgment(t *testing.T) {
 			callListStandards:       true,
 			evaluated:               true,
 			withUnregisteredItem:    true,
+			callPrescribe:           true,
+			callFindByMeasurementID: true,
+			advice:                  advice,
+			wantAdvice:              advice,
+			wantItemEvaluations:     1,
+			wantPrescribedMenus:     []judgment.PrescriptionSource{judgment.PrescriptionSourceFixed, judgment.PrescriptionSourceAgeDecade},
+		},
+		{
+			name:                    "success get judgment of a measurement missing the height of a normalized item",
+			success:                 true,
+			ctx:                     context.Background(),
+			userID:                  userID,
+			callFindMeasurement:     true,
+			callFindCustomer:        true,
+			myTenantIDs:             []string{tenantID.String()},
+			gender:                  customer.GenderMale,
+			callListStandards:       true,
+			evaluated:               true,
+			withNormalizedItem:      true,
 			callPrescribe:           true,
 			callFindByMeasurementID: true,
 			advice:                  advice,
@@ -580,6 +764,9 @@ func TestGetJudgment(t *testing.T) {
 					if tt.withUnregisteredItem {
 						measurementEntries = append(measurementEntries, standUpTestEntry())
 					}
+					if tt.withNormalizedItem {
+						measurementEntries = append(measurementEntries, twoStepEntry())
+					}
 					mockMeasurement.EXPECT().Entries().Return(measurementEntries).AnyTimes()
 					foundMeasurement = mockMeasurement
 				}
@@ -605,10 +792,16 @@ func TestGetJudgment(t *testing.T) {
 				if tt.withUnregisteredItem {
 					measurementItemIDs = append(measurementItemIDs, standUpTestID)
 				}
+				if tt.withNormalizedItem {
+					measurementItemIDs = append(measurementItemIDs, twoStepID)
+				}
 				if tt.evaluated {
 					measurementItems = []measurementitem.MeasurementItem{gripStrength}
 					if tt.withUnregisteredItem {
 						measurementItems = append(measurementItems, standUpTest)
+					}
+					if tt.withNormalizedItem {
+						measurementItems = append(measurementItems, twoStep)
 					}
 					targetAgeGroupStandards = ageGroupStandards
 					targetRankStandards = rankStandards
@@ -758,6 +951,12 @@ func TestListOrganizationJudgments(t *testing.T) {
 	standUpTestName, _ := measurementitem.NewName("立ち上がり")
 	standUpTest := measurementitem.NewMeasurementItem(standUpTestID, standUpTestCode, standUpTestName, motorFunction, level, oneTrial, measurementitem.SideModeOptionalBilateral, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationWorst, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementMuscleStrength}, createdAt, updatedAt)
 
+	cm, _ := measurementitem.NewUnit("cm")
+	twoStepID := measurementitem.NewMeasurementItemID()
+	twoStepCode, _ := measurementitem.NewCode("two_step")
+	twoStepName, _ := measurementitem.NewName("2ステップ")
+	twoStep := measurementitem.NewMeasurementItem(twoStepID, twoStepCode, twoStepName, motorFunction, cm, twoTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.SideAggregationMean, measurementitem.NormalizationHeightRatio, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
+
 	ageRange4044, _ := standard.NewAgeRange(40, 44)
 	ageRange5054, _ := standard.NewAgeRange(50, 54)
 	ageRange6064, _ := standard.NewAgeRange(60, 64)
@@ -802,6 +1001,14 @@ func TestListOrganizationJudgments(t *testing.T) {
 		})
 	}
 
+	twoStepEntry := func() measurement.MeasurementEntry {
+		trialIndex, _ := measurement.NewTrialIndex(1)
+		value, _ := measurement.NewValue(245)
+		return measurement.ReconstructMeasurementEntry(twoStepID, false, nil, []measurement.MeasurementValue{
+			measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &value, nil, nil),
+		})
+	}
+
 	type measurementSpec struct {
 		customerIndex       int
 		isDraft             bool
@@ -833,6 +1040,7 @@ func TestListOrganizationJudgments(t *testing.T) {
 		callListMasters          bool
 		registeredStandards      bool
 		unregisteredItem         bool
+		normalizedItem           bool
 		listMeasurementItemsErr  error
 		listAgeGroupStandardsErr error
 		listRankStandardsErr     error
@@ -925,6 +1133,22 @@ func TestListOrganizationJudgments(t *testing.T) {
 			callListMasters:     true,
 			registeredStandards: true,
 			unregisteredItem:    true,
+		},
+		{
+			name:                 "success list judgments missing the height of a normalized item",
+			success:              true,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			callListCustomers:    true,
+			genders:              []customer.Gender{customer.GenderMale},
+			callListMeasurements: true,
+			measurements: []measurementSpec{
+				{customerIndex: 0, isDraft: false, wantItemEvaluations: 1, wantMean: 38, wantZScore: 1.6, wantRank: standard.RankA, wantMotorAge: 42},
+			},
+			callListMasters:     true,
+			registeredStandards: true,
+			normalizedItem:      true,
 		},
 		{
 			name:                 "success list no judgments of an organization without customers",
@@ -1106,6 +1330,9 @@ func TestListOrganizationJudgments(t *testing.T) {
 						if tt.unregisteredItem {
 							measurementEntries = append(measurementEntries, standUpTestEntry())
 						}
+						if tt.normalizedItem {
+							measurementEntries = append(measurementEntries, twoStepEntry())
+						}
 						mockMeasurement.EXPECT().Entries().Return(measurementEntries).AnyTimes()
 						measurements = append(measurements, mockMeasurement)
 					}
@@ -1121,6 +1348,9 @@ func TestListOrganizationJudgments(t *testing.T) {
 					measurementItems = []measurementitem.MeasurementItem{gripStrength}
 					if tt.unregisteredItem {
 						measurementItems = append(measurementItems, standUpTest)
+					}
+					if tt.normalizedItem {
+						measurementItems = append(measurementItems, twoStep)
 					}
 					targetAgeGroupStandards = ageGroupStandards
 					targetRankStandards = rankStandards
