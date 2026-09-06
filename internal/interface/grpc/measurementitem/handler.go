@@ -120,7 +120,6 @@ func toProtoMeasurementItem(m domainmeasurementitem.MeasurementItem) (*measureme
 		Category:          category,
 		Unit:              unit,
 		TrialCount:        uint32(trialCount),
-		Bilateral:         sideMode == measurementitemv1.SideMode_SIDE_MODE_BILATERAL,
 		ValueType:         valueType,
 		SideMode:          sideMode,
 	}, nil

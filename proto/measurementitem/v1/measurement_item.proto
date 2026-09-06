@@ -53,7 +53,8 @@ message MeasurementItem {
   Category category = 4;
   Unit unit = 5;
   uint32 trial_count = 6;
-  bool bilateral = 7;
+  reserved 7;
+  reserved "bilateral";
   ValueType value_type = 8;
   SideMode side_mode = 9;
 }

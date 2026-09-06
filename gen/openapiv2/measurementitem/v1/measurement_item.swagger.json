@@ -113,9 +113,6 @@
           "type": "integer",
           "format": "int64"
         },
-        "bilateral": {
-          "type": "boolean"
-        },
         "valueType": {
           "$ref": "#/definitions/v1ValueType"
         },
