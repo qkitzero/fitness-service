@@ -17,6 +17,7 @@ type MeasurementItemModel struct {
 	ValueType       measurementitem.ValueType
 	ScoreDirection  *measurementitem.ScoreDirection
 	SideAggregation measurementitem.SideAggregation
+	Normalization   measurementitem.Normalization
 	CreatedAt       time.Time                     `gorm:"autoCreateTime:false"`
 	UpdatedAt       time.Time                     `gorm:"autoUpdateTime:false"`
 	Elements        []MeasurementItemElementModel `gorm:"foreignKey:MeasurementItemID;references:ID"`
