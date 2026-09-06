@@ -245,13 +245,22 @@ func findAgeGroupStandard(ageGroupStandards []standard.AgeGroupStandard, age int
 	return nil, false
 }
 
-func zScoreHundredths(value measurement.Value, ageGroupStandard standard.AgeGroupStandard, scoreDirection measurementitem.ScoreDirection) int64 {
-	deviation := toHundredths(value.Float64()) - toHundredths(ageGroupStandard.Mean().Float64())
-	zScore := divideRounded(evaluationScale*deviation, toHundredths(ageGroupStandard.StandardDeviation().Float64()))
+func zScoreHundredthsOf(value measurement.Value, meanHundredths, standardDeviationHundredths int64, scoreDirection measurementitem.ScoreDirection) int64 {
+	deviation := toHundredths(value.Float64()) - meanHundredths
+	zScore := divideRounded(evaluationScale*deviation, standardDeviationHundredths)
 	if scoreDirection == measurementitem.ScoreDirectionLowerIsBetter {
 		return -zScore
 	}
 	return zScore
+}
+
+func zScoreHundredths(value measurement.Value, ageGroupStandard standard.AgeGroupStandard, scoreDirection measurementitem.ScoreDirection) int64 {
+	return zScoreHundredthsOf(
+		value,
+		toHundredths(ageGroupStandard.Mean().Float64()),
+		toHundredths(ageGroupStandard.StandardDeviation().Float64()),
+		scoreDirection,
+	)
 }
 
 func findRank(rankStandards []standard.RankStandard, zScore standard.ZScore) (standard.Rank, bool) {
@@ -301,76 +310,143 @@ func newElementEvaluations(
 	return elementEvaluations
 }
 
-func isPreferredAgeRanges(candidate, current []standard.AgeRange) bool {
-	if len(candidate) != len(current) {
-		return len(candidate) > len(current)
-	}
-	for i := range candidate {
-		if candidate[i] != current[i] {
-			return isYoungerAgeRange(candidate[i], current[i])
+type standardCurve struct {
+	ages               []int
+	means              []int64
+	standardDeviations []int64
+}
+
+func newStandardCurve(ageGroupStandards []standard.AgeGroupStandard) (standardCurve, bool) {
+	sorted := make([]standard.AgeGroupStandard, len(ageGroupStandards))
+	copy(sorted, ageGroupStandards)
+	sort.Slice(sorted, func(i, j int) bool {
+		return isYoungerAgeRange(sorted[i].AgeRange(), sorted[j].AgeRange())
+	})
+
+	curve := standardCurve{}
+	for _, ageGroupStandard := range sorted {
+		age := ageGroupStandard.AgeRange().Median()
+		if len(curve.ages) > 0 && age <= curve.ages[len(curve.ages)-1] {
+			continue
 		}
+		curve.ages = append(curve.ages, age)
+		curve.means = append(curve.means, toHundredths(ageGroupStandard.Mean().Float64()))
+		curve.standardDeviations = append(curve.standardDeviations, toHundredths(ageGroupStandard.StandardDeviation().Float64()))
 	}
-	return false
+
+	return curve, len(curve.ages) > 0
+}
+
+func extrapolatedMean(meanHundredths, meanDeltaHundredths, ageSpan, ageOffset int64) int64 {
+	extrapolated := meanHundredths + divideRounded(meanDeltaHundredths*ageOffset, ageSpan)
+	if extrapolated < 0 {
+		return 0
+	}
+	return extrapolated
+}
+
+func (c standardCurve) at(age int) (int64, int64) {
+	last := len(c.ages) - 1
+	if last == 0 {
+		return c.means[0], c.standardDeviations[0]
+	}
+	if age <= c.ages[0] {
+		return extrapolatedMean(
+			c.means[0],
+			c.means[1]-c.means[0],
+			int64(c.ages[1]-c.ages[0]),
+			int64(age-c.ages[0]),
+		), c.standardDeviations[0]
+	}
+	if age >= c.ages[last] {
+		return extrapolatedMean(
+			c.means[last],
+			c.means[last]-c.means[last-1],
+			int64(c.ages[last]-c.ages[last-1]),
+			int64(age-c.ages[last]),
+		), c.standardDeviations[last]
+	}
+	for i := 0; i < last; i++ {
+		if age < c.ages[i] || age > c.ages[i+1] {
+			continue
+		}
+		ageSpan := int64(c.ages[i+1] - c.ages[i])
+		ageOffset := int64(age - c.ages[i])
+		mean := c.means[i] + divideRounded((c.means[i+1]-c.means[i])*ageOffset, ageSpan)
+		standardDeviation := c.standardDeviations[i] + divideRounded((c.standardDeviations[i+1]-c.standardDeviations[i])*ageOffset, ageSpan)
+		return mean, standardDeviation
+	}
+
+	return c.means[last], c.standardDeviations[last]
 }
 
 func newMotorAge(
 	judgedItems []judgedItem,
 	ageGroupStandardsByItemID map[measurementitem.MeasurementItemID][]standard.AgeGroupStandard,
 ) *MotorAge {
-	standardsByItemAndAgeRange := make(map[measurementitem.MeasurementItemID]map[standard.AgeRange]standard.AgeGroupStandard, len(judgedItems))
+	curves := make([]standardCurve, 0, len(judgedItems))
+	values := make([]measurement.Value, 0, len(judgedItems))
+	scoreDirections := make([]measurementitem.ScoreDirection, 0, len(judgedItems))
+	youngestFrom, oldestTo, youngestNode, oldestNode := 0, 0, 0, 0
 	for _, judged := range judgedItems {
-		standardsByAgeRange := make(map[standard.AgeRange]standard.AgeGroupStandard)
-		for _, ageGroupStandard := range ageGroupStandardsByItemID[judged.item.ID()] {
-			standardsByAgeRange[ageGroupStandard.AgeRange()] = ageGroupStandard
+		ageGroupStandards := ageGroupStandardsByItemID[judged.item.ID()]
+		curve, ok := newStandardCurve(ageGroupStandards)
+		if !ok {
+			continue
 		}
-		standardsByItemAndAgeRange[judged.item.ID()] = standardsByAgeRange
+		if len(curves) == 0 {
+			youngestFrom, oldestTo = ageGroupStandards[0].AgeRange().From(), ageGroupStandards[0].AgeRange().To()
+			youngestNode, oldestNode = curve.ages[0], curve.ages[len(curve.ages)-1]
+		}
+		for _, ageGroupStandard := range ageGroupStandards {
+			ageRange := ageGroupStandard.AgeRange()
+			if ageRange.From() < youngestFrom {
+				youngestFrom = ageRange.From()
+			}
+			if ageRange.To() > oldestTo {
+				oldestTo = ageRange.To()
+			}
+		}
+		if curve.ages[0] < youngestNode {
+			youngestNode = curve.ages[0]
+		}
+		if node := curve.ages[len(curve.ages)-1]; node > oldestNode {
+			oldestNode = node
+		}
+		curves = append(curves, curve)
+		values = append(values, judged.value)
+		scoreDirections = append(scoreDirections, *judged.item.ScoreDirection())
 	}
-
-	ageRanges := make([]standard.AgeRange, 0)
-	for _, judged := range judgedItems {
-		candidate := make([]standard.AgeRange, 0, len(standardsByItemAndAgeRange[judged.item.ID()]))
-		for ageRange := range standardsByItemAndAgeRange[judged.item.ID()] {
-			candidate = append(candidate, ageRange)
-		}
-		sort.Slice(candidate, func(i, j int) bool {
-			return isYoungerAgeRange(candidate[i], candidate[j])
-		})
-		if isPreferredAgeRanges(candidate, ageRanges) {
-			ageRanges = candidate
-		}
-	}
-	if len(ageRanges) == 0 {
+	if len(curves) == 0 {
 		return nil
 	}
 
-	coveringItems := make([]judgedItem, 0, len(judgedItems))
-	for _, judged := range judgedItems {
-		covers := true
-		for _, ageRange := range ageRanges {
-			if _, ok := standardsByItemAndAgeRange[judged.item.ID()][ageRange]; !ok {
-				covers = false
-				break
-			}
-		}
-		if covers {
-			coveringItems = append(coveringItems, judged)
-		}
+	lowestAge := youngestFrom - maxYoungerAgeGroupFallbackYears
+	if lowestAge < 0 {
+		lowestAge = 0
 	}
+	highestAge := oldestTo + maxOlderAgeGroupFallbackYears
+	nodeSpanDoubled := int64(youngestNode + oldestNode)
 
-	best := ageRanges[0]
+	best := lowestAge
 	bestDistance := int64(-1)
-	for _, ageRange := range ageRanges {
+	bestNodeSpanOffset := int64(-1)
+	for age := lowestAge; age <= highestAge; age++ {
 		distance := int64(0)
-		for _, judged := range coveringItems {
-			zScore := zScoreHundredths(judged.value, standardsByItemAndAgeRange[judged.item.ID()][ageRange], *judged.item.ScoreDirection())
+		for i, curve := range curves {
+			mean, standardDeviation := curve.at(age)
+			zScore := zScoreHundredthsOf(values[i], mean, standardDeviation, scoreDirections[i])
 			if zScore < 0 {
 				zScore = -zScore
 			}
 			distance += zScore
 		}
-		if bestDistance < 0 || distance < bestDistance {
-			best = ageRange
-			bestDistance = distance
+		nodeSpanOffset := int64(2*age) - nodeSpanDoubled
+		if nodeSpanOffset < 0 {
+			nodeSpanOffset = -nodeSpanOffset
+		}
+		if bestDistance < 0 || distance < bestDistance || (distance == bestDistance && nodeSpanOffset < bestNodeSpanOffset) {
+			best, bestDistance, bestNodeSpanOffset = age, distance, nodeSpanOffset
 		}
 	}
 

@@ -2,35 +2,26 @@ package judgment
 
 import (
 	"testing"
-
-	"github.com/qkitzero/fitness-service/internal/domain/standard"
 )
 
 func TestNewMotorAge(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
 		name string
-		from int
-		to   int
+		age  int
 		want MotorAge
 	}{
-		{"success new motor age from an odd width age range", 45, 49, MotorAge(47)},
-		{"success new motor age from an even width age range", 40, 49, MotorAge(45)},
-		{"success new motor age from a single age range", 45, 45, MotorAge(45)},
-		{"success new motor age from the lowest age range", 0, 4, MotorAge(2)},
-		{"success new motor age from an open ended age range", 65, 150, MotorAge(65)},
+		{"success new motor age", 47, MotorAge(47)},
+		{"success new motor age from the lowest age", 0, MotorAge(0)},
+		{"success new motor age from an age below the registered age groups", 18, MotorAge(18)},
+		{"success new motor age from an age above the registered age groups", 99, MotorAge(99)},
 	}
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			ageRange, err := standard.NewAgeRange(tt.from, tt.to)
-			if err != nil {
-				t.Fatalf("failed to new age range: %v", err)
-			}
-
-			motorAge := NewMotorAge(ageRange)
+			motorAge := NewMotorAge(tt.age)
 
 			if motorAge != tt.want {
 				t.Errorf("NewMotorAge() = %v, want %v", motorAge, tt.want)

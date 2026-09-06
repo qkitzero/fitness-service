@@ -219,10 +219,16 @@ func TestNewEvaluation(t *testing.T) {
 	rankStandards := []standard.RankStandard{rankStandardA, rankStandardB, rankStandardC, rankStandardD, rankStandardE}
 	extremeRankStandards := []standard.RankStandard{rankStandardA, rankStandardE}
 
+	motorAge38 := 38
 	motorAge42 := 42
+	motorAge43 := 43
 	motorAge45 := 45
+	motorAge47 := 47
 	motorAge52 := 52
 	motorAge62 := 62
+	motorAge67 := 67
+	motorAge68 := 68
+	motorAge82 := 82
 
 	tests := []struct {
 		name                   string
@@ -255,7 +261,7 @@ func TestNewEvaluation(t *testing.T) {
 			},
 			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 36, 46, -2, standard.RankE}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, -2, standard.RankE}},
-			wantMotorAge:           &motorAge62,
+			wantMotorAge:           &motorAge67,
 		},
 		{
 			name:   "success a multi trial item is judged by the best trial",
@@ -343,7 +349,7 @@ func TestNewEvaluation(t *testing.T) {
 			},
 			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 53.5, 46, 1.5, standard.RankA}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, 1.5, standard.RankA}},
-			wantMotorAge:           &motorAge42,
+			wantMotorAge:           &motorAge38,
 		},
 		{
 			name:   "success a lower is better item ranks higher when the value is smaller",
@@ -657,7 +663,7 @@ func TestNewEvaluation(t *testing.T) {
 			},
 		},
 		{
-			name:   "success an age just above every age group is judged by the oldest age group",
+			name:   "success an age just above every age group is judged on the slope of the oldest age groups",
 			gender: standard.GenderMale,
 			age:    84,
 			entries: func() []measurement.MeasurementEntry {
@@ -671,7 +677,7 @@ func TestNewEvaluation(t *testing.T) {
 			},
 			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 30, 38, -1.6, standard.RankE}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, -1.6, standard.RankE}},
-			wantMotorAge:           &motorAge62,
+			wantMotorAge:           &motorAge82,
 		},
 		{
 			name:   "success an age too far above every age group is excluded",
@@ -784,7 +790,7 @@ func TestNewEvaluation(t *testing.T) {
 			},
 			wantItemEvaluations:    []wantItemEvaluation{{twoStepID, 190, 160, 2, standard.RankA}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, 2, standard.RankA}},
-			wantMotorAge:           &motorAge42,
+			wantMotorAge:           &motorAge38,
 		},
 		{
 			name:   "success every item is excluded when the gender has no age group standards",
@@ -932,7 +938,7 @@ func TestNewEvaluation(t *testing.T) {
 			},
 			wantItemEvaluations:    []wantItemEvaluation{{oneLegStandID, 60, 30, 3, standard.RankA}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementBalance, 3, standard.RankA}},
-			wantMotorAge:           &motorAge42,
+			wantMotorAge:           &motorAge43,
 		},
 		{
 			name:   "success an item aggregated by the worst side ignores the stronger side",
@@ -1050,6 +1056,40 @@ func TestNewEvaluation(t *testing.T) {
 			wantMotorAge:           &motorAge42,
 		},
 		{
+			name:   "success the motor age falls between the medians of two age groups",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				value, _ := measurement.NewValue(44)
+				entry, _ := measurement.NewMeasurementEntry(gripStrength, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &value, nil, nil),
+					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &value, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 44, 46, -0.4, standard.RankC}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, -0.4, standard.RankC}},
+			wantMotorAge:           &motorAge47,
+		},
+		{
+			name:   "success the motor age is extrapolated past the median of the oldest age group",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				trialIndex, _ := measurement.NewTrialIndex(1)
+				value, _ := measurement.NewValue(35.6)
+				entry, _ := measurement.NewMeasurementEntry(gripStrength, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(trialIndex, measurement.SideLeft, &value, nil, nil),
+					measurement.NewMeasurementValue(trialIndex, measurement.SideRight, &value, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 35.6, 46, -2.08, standard.RankE}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, -2.08, standard.RankE}},
+			wantMotorAge:           &motorAge68,
+		},
+		{
 			name:   "success opposite deviations within an age group do not cancel out",
 			gender: standard.GenderMale,
 			age:    42,
@@ -1073,10 +1113,10 @@ func TestNewEvaluation(t *testing.T) {
 				{measurementitem.ElementFlexibility, 0.4, standard.RankC},
 				{measurementitem.ElementMobility, 0.4, standard.RankC},
 			},
-			wantMotorAge: &motorAge42,
+			wantMotorAge: &motorAge45,
 		},
 		{
-			name:   "success an item that does not cover every age group is left out of the motor age",
+			name:   "success an item that does not cover every age group still contributes to the motor age",
 			gender: standard.GenderMale,
 			age:    42,
 			entries: func() []measurement.MeasurementEntry {
@@ -1100,10 +1140,10 @@ func TestNewEvaluation(t *testing.T) {
 				{measurementitem.ElementMuscleStrength, -1.6, standard.RankE},
 				{measurementitem.ElementFlexibility, 0.4, standard.RankC},
 			},
-			wantMotorAge: &motorAge62,
+			wantMotorAge: &motorAge52,
 		},
 		{
-			name:   "success the motor age is computed on the age groups of a single item when no item covers all of them",
+			name:   "success the motor age is computed on the age group standards of every judged item",
 			gender: standard.GenderMale,
 			age:    42,
 			entries: func() []measurement.MeasurementEntry {
