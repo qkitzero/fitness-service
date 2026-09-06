@@ -39,7 +39,7 @@ func TestNewEvaluation(t *testing.T) {
 	level, _ := measurementitem.NewUnit("level")
 	oneTrial, _ := measurementitem.NewTrialCount(1)
 	twoTrials, _ := measurementitem.NewTrialCount(2)
-	fiveTrials, _ := measurementitem.NewTrialCount(5)
+	threeTrials, _ := measurementitem.NewTrialCount(3)
 	higherIsBetter := measurementitem.ScoreDirectionHigherIsBetter
 	lowerIsBetter := measurementitem.ScoreDirectionLowerIsBetter
 
@@ -61,7 +61,7 @@ func TestNewEvaluation(t *testing.T) {
 	stickReactionID := measurementitem.NewMeasurementItemID()
 	stickReactionCode, _ := measurementitem.NewCode("stick_reaction")
 	stickReactionName, _ := measurementitem.NewName("棒反応時間")
-	stickReaction := measurementitem.NewMeasurementItem(stickReactionID, stickReactionCode, stickReactionName, motorFunction, cm, fiveTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.TrialAggregationBest, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementAgility}, createdAt, updatedAt)
+	stickReaction := measurementitem.NewMeasurementItem(stickReactionID, stickReactionCode, stickReactionName, motorFunction, cm, threeTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.TrialAggregationMean, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementAgility}, createdAt, updatedAt)
 
 	standUpTestID := measurementitem.NewMeasurementItemID()
 	standUpTestCode, _ := measurementitem.NewCode("stand_up_test")
@@ -72,6 +72,11 @@ func TestNewEvaluation(t *testing.T) {
 	worstSideLowerIsBetterCode, _ := measurementitem.NewCode("worst_side_lower_is_better_item")
 	worstSideLowerIsBetterName, _ := measurementitem.NewName("悪い方を採る低いほど良い測定項目")
 	worstSideLowerIsBetter := measurementitem.NewMeasurementItem(worstSideLowerIsBetterID, worstSideLowerIsBetterCode, worstSideLowerIsBetterName, motorFunction, sec, twoTrials, measurementitem.SideModeBilateral, measurementitem.ValueTypeNumeric, &lowerIsBetter, measurementitem.TrialAggregationBest, measurementitem.SideAggregationWorst, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementMobility}, createdAt, updatedAt)
+
+	unknownTrialAggregationID := measurementitem.NewMeasurementItemID()
+	unknownTrialAggregationCode, _ := measurementitem.NewCode("unknown_trial_aggregation_item")
+	unknownTrialAggregationName, _ := measurementitem.NewName("試行の集約の分からない測定項目")
+	unknownTrialAggregation := measurementitem.NewMeasurementItem(unknownTrialAggregationID, unknownTrialAggregationCode, unknownTrialAggregationName, motorFunction, sec, twoTrials, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.TrialAggregation("median"), measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
 
 	unknownSideAggregationID := measurementitem.NewMeasurementItemID()
 	unknownSideAggregationCode, _ := measurementitem.NewCode("unknown_side_aggregation_item")
@@ -123,7 +128,7 @@ func TestNewEvaluation(t *testing.T) {
 	functionalReachName, _ := measurementitem.NewName("ファンクショナルリーチ")
 	functionalReach := measurementitem.NewMeasurementItem(functionalReachID, functionalReachCode, functionalReachName, motorFunction, cm, oneTrial, measurementitem.SideModeNone, measurementitem.ValueTypeNumeric, &higherIsBetter, measurementitem.TrialAggregationBest, measurementitem.SideAggregationMean, measurementitem.NormalizationNone, []measurementitem.Element{measurementitem.ElementBalance}, createdAt, updatedAt)
 
-	items := []measurementitem.MeasurementItem{gripStrength, twoStep, timedUpAndGo, stickReaction, standUpTest, worstSideLowerIsBetter, unknownSideAggregation, heightRatioItem, unknownNormalization, height, cs30, sitAndReach, walk5m, seatedStepping20s, oneLegStand, functionalReach}
+	items := []measurementitem.MeasurementItem{gripStrength, twoStep, timedUpAndGo, stickReaction, standUpTest, worstSideLowerIsBetter, unknownTrialAggregation, unknownSideAggregation, heightRatioItem, unknownNormalization, height, cs30, sitAndReach, walk5m, seatedStepping20s, oneLegStand, functionalReach}
 
 	ageRange4044, _ := standard.NewAgeRange(40, 44)
 	ageRange5054, _ := standard.NewAgeRange(50, 54)
@@ -164,6 +169,8 @@ func TestNewEvaluation(t *testing.T) {
 	standUpTestDeviation, _ := standard.NewStandardDeviation(1.5)
 	worstSideLowerIsBetterMean, _ := standard.NewMean(8)
 	worstSideLowerIsBetterDeviation, _ := standard.NewStandardDeviation(1)
+	unknownTrialAggregationMean, _ := standard.NewMean(20)
+	unknownTrialAggregationDeviation, _ := standard.NewStandardDeviation(5)
 	unknownSideAggregationMean, _ := standard.NewMean(20)
 	unknownSideAggregationDeviation, _ := standard.NewStandardDeviation(5)
 
@@ -190,6 +197,7 @@ func TestNewEvaluation(t *testing.T) {
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), functionalReachID, standard.GenderMale, ageRange4549, functionalReachMean4549, functionalReachDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), standUpTestID, standard.GenderMale, ageRange4044, standUpTestMean, standUpTestDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), worstSideLowerIsBetterID, standard.GenderMale, ageRange4044, worstSideLowerIsBetterMean, worstSideLowerIsBetterDeviation, createdAt, updatedAt),
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), unknownTrialAggregationID, standard.GenderMale, ageRange4044, unknownTrialAggregationMean, unknownTrialAggregationDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), unknownSideAggregationID, standard.GenderMale, ageRange4044, unknownSideAggregationMean, unknownSideAggregationDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), twoStepID, standard.GenderFemale, ageRange4044, twoStepMean, twoStepDeviation, createdAt, updatedAt),
 		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), twoStepID, standard.GenderFemale, ageRange6064, twoStepMean6064, twoStepDeviation, createdAt, updatedAt),
@@ -254,8 +262,26 @@ func TestNewEvaluation(t *testing.T) {
 			gender: standard.GenderMale,
 			age:    42,
 			entries: func() []measurement.MeasurementEntry {
-				values := make([]measurement.MeasurementValue, 0, 5)
-				for i, f := range []float64{24, 22, 18, 20, 26} {
+				values := make([]measurement.MeasurementValue, 0, 2)
+				for i, f := range []float64{6, 7.5} {
+					trialIndex, _ := measurement.NewTrialIndex(i + 1)
+					value, _ := measurement.NewValue(f)
+					values = append(values, measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &value, nil, nil))
+				}
+				entry, _ := measurement.NewMeasurementEntry(timedUpAndGo, false, nil, values)
+				return []measurement.MeasurementEntry{entry}
+			},
+			wantItemEvaluations:    []wantItemEvaluation{{timedUpAndGoID, 6, 6.5, 0.5, standard.RankB}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, 0.5, standard.RankB}},
+			wantMotorAge:           &motorAge42,
+		},
+		{
+			name:   "success a multi trial item is judged by the mean of the trials",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				values := make([]measurement.MeasurementValue, 0, 3)
+				for i, f := range []float64{18.2, 19.5, 20.1} {
 					trialIndex, _ := measurement.NewTrialIndex(i + 1)
 					value, _ := measurement.NewValue(f)
 					values = append(values, measurement.NewMeasurementValue(trialIndex, measurement.SideNone, &value, nil, nil))
@@ -263,9 +289,44 @@ func TestNewEvaluation(t *testing.T) {
 				entry, _ := measurement.NewMeasurementEntry(stickReaction, false, nil, values)
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{stickReactionID, 18, 20, 0.5, standard.RankB}},
-			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementAgility, 0.5, standard.RankB}},
+			wantItemEvaluations:    []wantItemEvaluation{{stickReactionID, 19.27, 20, 0.18, standard.RankC}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementAgility, 0.18, standard.RankC}},
 			wantMotorAge:           &motorAge42,
+		},
+		{
+			name:   "success a multi trial item is judged by the mean of the recorded trials",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				firstTrial, _ := measurement.NewTrialIndex(1)
+				thirdTrial, _ := measurement.NewTrialIndex(3)
+				first, _ := measurement.NewValue(18)
+				third, _ := measurement.NewValue(20)
+				entry, _ := measurement.NewMeasurementEntry(stickReaction, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(firstTrial, measurement.SideNone, &first, nil, nil),
+					measurement.NewMeasurementValue(thirdTrial, measurement.SideNone, &third, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
+			wantItemEvaluations:    []wantItemEvaluation{{stickReactionID, 19, 20, 0.25, standard.RankC}},
+			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementAgility, 0.25, standard.RankC}},
+			wantMotorAge:           &motorAge42,
+		},
+		{
+			name:   "success an item of an unknown trial aggregation is excluded",
+			gender: standard.GenderMale,
+			age:    42,
+			entries: func() []measurement.MeasurementEntry {
+				firstTrial, _ := measurement.NewTrialIndex(1)
+				secondTrial, _ := measurement.NewTrialIndex(2)
+				first, _ := measurement.NewValue(20)
+				second, _ := measurement.NewValue(30)
+				entry, _ := measurement.NewMeasurementEntry(unknownTrialAggregation, false, nil, []measurement.MeasurementValue{
+					measurement.NewMeasurementValue(firstTrial, measurement.SideNone, &first, nil, nil),
+					measurement.NewMeasurementValue(secondTrial, measurement.SideNone, &second, nil, nil),
+				})
+				return []measurement.MeasurementEntry{entry}
+			},
 		},
 		{
 			name:   "success a z score on a rank boundary belongs to the upper rank",
