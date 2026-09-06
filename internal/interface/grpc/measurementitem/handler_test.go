@@ -18,53 +18,73 @@ import (
 func TestListMeasurementItems(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name           string
-		codes          []string
-		names          []string
-		categories     []measurementitem.Category
-		units          []measurementitem.Unit
-		trialCounts    []int
-		sideModes      []measurementitem.SideMode
-		valueTypes     []measurementitem.ValueType
-		listErr        error
-		wantCode       codes.Code
-		wantCategories []measurementitemv1.Category
-		wantUnits      []measurementitemv1.Unit
-		wantValueTypes []measurementitemv1.ValueType
-		wantSideModes  []measurementitemv1.SideMode
-		wantBilaterals []bool
+		name               string
+		codes              []string
+		names              []string
+		categories         []measurementitem.Category
+		units              []measurementitem.Unit
+		trialCounts        []int
+		sideModes          []measurementitem.SideMode
+		valueTypes         []measurementitem.ValueType
+		normalizations     []measurementitem.Normalization
+		listErr            error
+		wantCode           codes.Code
+		wantCategories     []measurementitemv1.Category
+		wantUnits          []measurementitemv1.Unit
+		wantValueTypes     []measurementitemv1.ValueType
+		wantSideModes      []measurementitemv1.SideMode
+		wantNormalizations []measurementitemv1.Normalization
 	}{
 		{
-			name:           "success list measurement items keeps every item in order",
-			codes:          []string{"blood_pressure", "height", "body_fat_percentage", "grip_strength"},
-			names:          []string{"血圧", "身長", "体脂肪率", "握力"},
-			categories:     []measurementitem.Category{measurementitem.CategoryVital, measurementitem.CategoryPhysique, measurementitem.CategoryBodyComposition, measurementitem.CategoryMotorFunction},
-			units:          []measurementitem.Unit{measurementitem.UnitMmHg, measurementitem.UnitCm, measurementitem.UnitPercent, measurementitem.UnitKg},
-			trialCounts:    []int{1, 1, 1, 2},
-			sideModes:      []measurementitem.SideMode{measurementitem.SideModeNone, measurementitem.SideModeNone, measurementitem.SideModeNone, measurementitem.SideModeBilateral},
-			valueTypes:     []measurementitem.ValueType{measurementitem.ValueTypePaired, measurementitem.ValueTypeNumeric, measurementitem.ValueTypeNumeric, measurementitem.ValueTypeNumeric},
-			wantCode:       codes.OK,
-			wantCategories: []measurementitemv1.Category{measurementitemv1.Category_CATEGORY_VITAL, measurementitemv1.Category_CATEGORY_PHYSIQUE, measurementitemv1.Category_CATEGORY_BODY_COMPOSITION, measurementitemv1.Category_CATEGORY_MOTOR_FUNCTION},
-			wantUnits:      []measurementitemv1.Unit{measurementitemv1.Unit_UNIT_MMHG, measurementitemv1.Unit_UNIT_CM, measurementitemv1.Unit_UNIT_PERCENT, measurementitemv1.Unit_UNIT_KG},
-			wantValueTypes: []measurementitemv1.ValueType{measurementitemv1.ValueType_VALUE_TYPE_PAIRED, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC},
-			wantSideModes:  []measurementitemv1.SideMode{measurementitemv1.SideMode_SIDE_MODE_NONE, measurementitemv1.SideMode_SIDE_MODE_NONE, measurementitemv1.SideMode_SIDE_MODE_NONE, measurementitemv1.SideMode_SIDE_MODE_BILATERAL},
-			wantBilaterals: []bool{false, false, false, true},
+			name:               "success list measurement items keeps every item in order",
+			codes:              []string{"blood_pressure", "height", "body_fat_percentage", "grip_strength"},
+			names:              []string{"血圧", "身長", "体脂肪率", "握力"},
+			categories:         []measurementitem.Category{measurementitem.CategoryVital, measurementitem.CategoryPhysique, measurementitem.CategoryBodyComposition, measurementitem.CategoryMotorFunction},
+			units:              []measurementitem.Unit{measurementitem.UnitMmHg, measurementitem.UnitCm, measurementitem.UnitPercent, measurementitem.UnitKg},
+			trialCounts:        []int{1, 1, 1, 2},
+			sideModes:          []measurementitem.SideMode{measurementitem.SideModeNone, measurementitem.SideModeNone, measurementitem.SideModeNone, measurementitem.SideModeBilateral},
+			valueTypes:         []measurementitem.ValueType{measurementitem.ValueTypePaired, measurementitem.ValueTypeNumeric, measurementitem.ValueTypeNumeric, measurementitem.ValueTypeNumeric},
+			normalizations:     []measurementitem.Normalization{measurementitem.NormalizationNone, measurementitem.NormalizationNone, measurementitem.NormalizationNone, measurementitem.NormalizationNone},
+			wantCode:           codes.OK,
+			wantCategories:     []measurementitemv1.Category{measurementitemv1.Category_CATEGORY_VITAL, measurementitemv1.Category_CATEGORY_PHYSIQUE, measurementitemv1.Category_CATEGORY_BODY_COMPOSITION, measurementitemv1.Category_CATEGORY_MOTOR_FUNCTION},
+			wantUnits:          []measurementitemv1.Unit{measurementitemv1.Unit_UNIT_MMHG, measurementitemv1.Unit_UNIT_CM, measurementitemv1.Unit_UNIT_PERCENT, measurementitemv1.Unit_UNIT_KG},
+			wantValueTypes:     []measurementitemv1.ValueType{measurementitemv1.ValueType_VALUE_TYPE_PAIRED, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC},
+			wantSideModes:      []measurementitemv1.SideMode{measurementitemv1.SideMode_SIDE_MODE_NONE, measurementitemv1.SideMode_SIDE_MODE_NONE, measurementitemv1.SideMode_SIDE_MODE_NONE, measurementitemv1.SideMode_SIDE_MODE_BILATERAL},
+			wantNormalizations: []measurementitemv1.Normalization{measurementitemv1.Normalization_NORMALIZATION_NONE, measurementitemv1.Normalization_NORMALIZATION_NONE, measurementitemv1.Normalization_NORMALIZATION_NONE, measurementitemv1.Normalization_NORMALIZATION_NONE},
 		},
 		{
-			name:           "success maps the remaining units and value types",
-			codes:          []string{"pulse_rate", "eyes_closed_one_leg_stand", "cs30", "stand_up_test", "choice_item"},
-			names:          []string{"脈拍", "閉眼片足立ち", "CS-30（30秒立ち座り）", "立ち上がり", "選択式項目"},
-			categories:     []measurementitem.Category{measurementitem.CategoryVital, measurementitem.CategoryMotorFunction, measurementitem.CategoryMotorFunction, measurementitem.CategoryMotorFunction, measurementitem.CategoryMotorFunction},
-			units:          []measurementitem.Unit{measurementitem.UnitBpm, measurementitem.UnitSec, measurementitem.UnitCount, measurementitem.UnitLevel, measurementitem.UnitCm},
-			trialCounts:    []int{1, 2, 1, 1, 1},
-			sideModes:      []measurementitem.SideMode{measurementitem.SideModeNone, measurementitem.SideModeBilateral, measurementitem.SideModeNone, measurementitem.SideModeOptionalBilateral, measurementitem.SideModeNone},
-			valueTypes:     []measurementitem.ValueType{measurementitem.ValueTypeNumeric, measurementitem.ValueTypeNumeric, measurementitem.ValueTypeNumeric, measurementitem.ValueTypeNumeric, measurementitem.ValueTypeChoice},
-			wantCode:       codes.OK,
-			wantCategories: []measurementitemv1.Category{measurementitemv1.Category_CATEGORY_VITAL, measurementitemv1.Category_CATEGORY_MOTOR_FUNCTION, measurementitemv1.Category_CATEGORY_MOTOR_FUNCTION, measurementitemv1.Category_CATEGORY_MOTOR_FUNCTION, measurementitemv1.Category_CATEGORY_MOTOR_FUNCTION},
-			wantUnits:      []measurementitemv1.Unit{measurementitemv1.Unit_UNIT_BPM, measurementitemv1.Unit_UNIT_SEC, measurementitemv1.Unit_UNIT_COUNT, measurementitemv1.Unit_UNIT_LEVEL, measurementitemv1.Unit_UNIT_CM},
-			wantValueTypes: []measurementitemv1.ValueType{measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_CHOICE},
-			wantSideModes:  []measurementitemv1.SideMode{measurementitemv1.SideMode_SIDE_MODE_NONE, measurementitemv1.SideMode_SIDE_MODE_BILATERAL, measurementitemv1.SideMode_SIDE_MODE_NONE, measurementitemv1.SideMode_SIDE_MODE_OPTIONAL_BILATERAL, measurementitemv1.SideMode_SIDE_MODE_NONE},
-			wantBilaterals: []bool{false, true, false, false, false},
+			name:               "success maps the remaining units and value types",
+			codes:              []string{"pulse_rate", "eyes_closed_one_leg_stand", "cs30", "stand_up_test", "choice_item"},
+			names:              []string{"脈拍", "閉眼片足立ち", "CS-30（30秒立ち座り）", "立ち上がり", "選択式項目"},
+			categories:         []measurementitem.Category{measurementitem.CategoryVital, measurementitem.CategoryMotorFunction, measurementitem.CategoryMotorFunction, measurementitem.CategoryMotorFunction, measurementitem.CategoryMotorFunction},
+			units:              []measurementitem.Unit{measurementitem.UnitBpm, measurementitem.UnitSec, measurementitem.UnitCount, measurementitem.UnitLevel, measurementitem.UnitCm},
+			trialCounts:        []int{1, 2, 1, 1, 1},
+			sideModes:          []measurementitem.SideMode{measurementitem.SideModeNone, measurementitem.SideModeBilateral, measurementitem.SideModeNone, measurementitem.SideModeOptionalBilateral, measurementitem.SideModeNone},
+			valueTypes:         []measurementitem.ValueType{measurementitem.ValueTypeNumeric, measurementitem.ValueTypeNumeric, measurementitem.ValueTypeNumeric, measurementitem.ValueTypeNumeric, measurementitem.ValueTypeChoice},
+			normalizations:     []measurementitem.Normalization{measurementitem.NormalizationNone, measurementitem.NormalizationNone, measurementitem.NormalizationNone, measurementitem.NormalizationNone, measurementitem.NormalizationNone},
+			wantCode:           codes.OK,
+			wantCategories:     []measurementitemv1.Category{measurementitemv1.Category_CATEGORY_VITAL, measurementitemv1.Category_CATEGORY_MOTOR_FUNCTION, measurementitemv1.Category_CATEGORY_MOTOR_FUNCTION, measurementitemv1.Category_CATEGORY_MOTOR_FUNCTION, measurementitemv1.Category_CATEGORY_MOTOR_FUNCTION},
+			wantUnits:          []measurementitemv1.Unit{measurementitemv1.Unit_UNIT_BPM, measurementitemv1.Unit_UNIT_SEC, measurementitemv1.Unit_UNIT_COUNT, measurementitemv1.Unit_UNIT_LEVEL, measurementitemv1.Unit_UNIT_CM},
+			wantValueTypes:     []measurementitemv1.ValueType{measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_NUMERIC, measurementitemv1.ValueType_VALUE_TYPE_CHOICE},
+			wantSideModes:      []measurementitemv1.SideMode{measurementitemv1.SideMode_SIDE_MODE_NONE, measurementitemv1.SideMode_SIDE_MODE_BILATERAL, measurementitemv1.SideMode_SIDE_MODE_NONE, measurementitemv1.SideMode_SIDE_MODE_OPTIONAL_BILATERAL, measurementitemv1.SideMode_SIDE_MODE_NONE},
+			wantNormalizations: []measurementitemv1.Normalization{measurementitemv1.Normalization_NORMALIZATION_NONE, measurementitemv1.Normalization_NORMALIZATION_NONE, measurementitemv1.Normalization_NORMALIZATION_NONE, measurementitemv1.Normalization_NORMALIZATION_NONE, measurementitemv1.Normalization_NORMALIZATION_NONE},
+		},
+		{
+			name:               "success maps the height ratio normalization",
+			codes:              []string{"two_step"},
+			names:              []string{"2ステップ"},
+			categories:         []measurementitem.Category{measurementitem.CategoryMotorFunction},
+			units:              []measurementitem.Unit{measurementitem.UnitCm},
+			trialCounts:        []int{2},
+			sideModes:          []measurementitem.SideMode{measurementitem.SideModeNone},
+			valueTypes:         []measurementitem.ValueType{measurementitem.ValueTypeNumeric},
+			normalizations:     []measurementitem.Normalization{measurementitem.NormalizationHeightRatio},
+			wantCode:           codes.OK,
+			wantCategories:     []measurementitemv1.Category{measurementitemv1.Category_CATEGORY_MOTOR_FUNCTION},
+			wantUnits:          []measurementitemv1.Unit{measurementitemv1.Unit_UNIT_CM},
+			wantValueTypes:     []measurementitemv1.ValueType{measurementitemv1.ValueType_VALUE_TYPE_NUMERIC},
+			wantSideModes:      []measurementitemv1.SideMode{measurementitemv1.SideMode_SIDE_MODE_NONE},
+			wantNormalizations: []measurementitemv1.Normalization{measurementitemv1.Normalization_NORMALIZATION_HEIGHT_RATIO},
 		},
 		{
 			name:     "success list no measurement items",
@@ -91,59 +111,76 @@ func TestListMeasurementItems(t *testing.T) {
 			wantCode: codes.Internal,
 		},
 		{
-			name:        "failure unmapped category",
-			codes:       []string{"grip_strength"},
-			names:       []string{"握力"},
-			categories:  []measurementitem.Category{measurementitem.Category("flexibility")},
-			units:       []measurementitem.Unit{measurementitem.UnitKg},
-			trialCounts: []int{2},
-			sideModes:   []measurementitem.SideMode{measurementitem.SideModeBilateral},
-			valueTypes:  []measurementitem.ValueType{measurementitem.ValueTypeNumeric},
-			wantCode:    codes.Internal,
+			name:           "failure unmapped category",
+			codes:          []string{"grip_strength"},
+			names:          []string{"握力"},
+			categories:     []measurementitem.Category{measurementitem.Category("flexibility")},
+			units:          []measurementitem.Unit{measurementitem.UnitKg},
+			trialCounts:    []int{2},
+			sideModes:      []measurementitem.SideMode{measurementitem.SideModeBilateral},
+			valueTypes:     []measurementitem.ValueType{measurementitem.ValueTypeNumeric},
+			normalizations: []measurementitem.Normalization{measurementitem.NormalizationNone},
+			wantCode:       codes.Internal,
 		},
 		{
-			name:        "failure unmapped unit",
-			codes:       []string{"grip_strength"},
-			names:       []string{"握力"},
-			categories:  []measurementitem.Category{measurementitem.CategoryMotorFunction},
-			units:       []measurementitem.Unit{measurementitem.Unit("newton")},
-			trialCounts: []int{2},
-			sideModes:   []measurementitem.SideMode{measurementitem.SideModeBilateral},
-			valueTypes:  []measurementitem.ValueType{measurementitem.ValueTypeNumeric},
-			wantCode:    codes.Internal,
+			name:           "failure unmapped unit",
+			codes:          []string{"grip_strength"},
+			names:          []string{"握力"},
+			categories:     []measurementitem.Category{measurementitem.CategoryMotorFunction},
+			units:          []measurementitem.Unit{measurementitem.Unit("newton")},
+			trialCounts:    []int{2},
+			sideModes:      []measurementitem.SideMode{measurementitem.SideModeBilateral},
+			valueTypes:     []measurementitem.ValueType{measurementitem.ValueTypeNumeric},
+			normalizations: []measurementitem.Normalization{measurementitem.NormalizationNone},
+			wantCode:       codes.Internal,
 		},
 		{
-			name:        "failure unmapped side mode",
-			codes:       []string{"grip_strength"},
-			names:       []string{"握力"},
-			categories:  []measurementitem.Category{measurementitem.CategoryMotorFunction},
-			units:       []measurementitem.Unit{measurementitem.UnitKg},
-			trialCounts: []int{2},
-			sideModes:   []measurementitem.SideMode{measurementitem.SideMode("unilateral")},
-			valueTypes:  []measurementitem.ValueType{measurementitem.ValueTypeNumeric},
-			wantCode:    codes.Internal,
+			name:           "failure unmapped side mode",
+			codes:          []string{"grip_strength"},
+			names:          []string{"握力"},
+			categories:     []measurementitem.Category{measurementitem.CategoryMotorFunction},
+			units:          []measurementitem.Unit{measurementitem.UnitKg},
+			trialCounts:    []int{2},
+			sideModes:      []measurementitem.SideMode{measurementitem.SideMode("unilateral")},
+			valueTypes:     []measurementitem.ValueType{measurementitem.ValueTypeNumeric},
+			normalizations: []measurementitem.Normalization{measurementitem.NormalizationNone},
+			wantCode:       codes.Internal,
 		},
 		{
-			name:        "failure unmapped value type",
-			codes:       []string{"grip_strength"},
-			names:       []string{"握力"},
-			categories:  []measurementitem.Category{measurementitem.CategoryMotorFunction},
-			units:       []measurementitem.Unit{measurementitem.UnitKg},
-			trialCounts: []int{2},
-			sideModes:   []measurementitem.SideMode{measurementitem.SideModeBilateral},
-			valueTypes:  []measurementitem.ValueType{measurementitem.ValueType("range")},
-			wantCode:    codes.Internal,
+			name:           "failure unmapped value type",
+			codes:          []string{"grip_strength"},
+			names:          []string{"握力"},
+			categories:     []measurementitem.Category{measurementitem.CategoryMotorFunction},
+			units:          []measurementitem.Unit{measurementitem.UnitKg},
+			trialCounts:    []int{2},
+			sideModes:      []measurementitem.SideMode{measurementitem.SideModeBilateral},
+			valueTypes:     []measurementitem.ValueType{measurementitem.ValueType("range")},
+			normalizations: []measurementitem.Normalization{measurementitem.NormalizationNone},
+			wantCode:       codes.Internal,
 		},
 		{
-			name:        "failure trial count out of proto range",
-			codes:       []string{"grip_strength"},
-			names:       []string{"握力"},
-			categories:  []measurementitem.Category{measurementitem.CategoryMotorFunction},
-			units:       []measurementitem.Unit{measurementitem.UnitKg},
-			trialCounts: []int{-1},
-			sideModes:   []measurementitem.SideMode{measurementitem.SideModeBilateral},
-			valueTypes:  []measurementitem.ValueType{measurementitem.ValueTypeNumeric},
-			wantCode:    codes.Internal,
+			name:           "failure unmapped normalization",
+			codes:          []string{"two_step"},
+			names:          []string{"2ステップ"},
+			categories:     []measurementitem.Category{measurementitem.CategoryMotorFunction},
+			units:          []measurementitem.Unit{measurementitem.UnitCm},
+			trialCounts:    []int{2},
+			sideModes:      []measurementitem.SideMode{measurementitem.SideModeNone},
+			valueTypes:     []measurementitem.ValueType{measurementitem.ValueTypeNumeric},
+			normalizations: []measurementitem.Normalization{measurementitem.Normalization("weight_ratio")},
+			wantCode:       codes.Internal,
+		},
+		{
+			name:           "failure trial count out of proto range",
+			codes:          []string{"grip_strength"},
+			names:          []string{"握力"},
+			categories:     []measurementitem.Category{measurementitem.CategoryMotorFunction},
+			units:          []measurementitem.Unit{measurementitem.UnitKg},
+			trialCounts:    []int{-1},
+			sideModes:      []measurementitem.SideMode{measurementitem.SideModeBilateral},
+			valueTypes:     []measurementitem.ValueType{measurementitem.ValueTypeNumeric},
+			normalizations: []measurementitem.Normalization{measurementitem.NormalizationNone},
+			wantCode:       codes.Internal,
 		},
 	}
 	for _, tt := range tests {
@@ -169,6 +206,7 @@ func TestListMeasurementItems(t *testing.T) {
 				mockMeasurementItem.EXPECT().TrialCount().Return(measurementitem.TrialCount(tt.trialCounts[i])).AnyTimes()
 				mockMeasurementItem.EXPECT().SideMode().Return(tt.sideModes[i]).AnyTimes()
 				mockMeasurementItem.EXPECT().ValueType().Return(tt.valueTypes[i]).AnyTimes()
+				mockMeasurementItem.EXPECT().Normalization().Return(tt.normalizations[i]).AnyTimes()
 				measurementItems = append(measurementItems, mockMeasurementItem)
 			}
 
@@ -213,11 +251,11 @@ func TestListMeasurementItems(t *testing.T) {
 				if msg.GetSideMode() != tt.wantSideModes[i] {
 					t.Errorf("MeasurementItems[%d].SideMode = %v, want %v", i, msg.GetSideMode(), tt.wantSideModes[i])
 				}
-				if msg.GetBilateral() != tt.wantBilaterals[i] {
-					t.Errorf("MeasurementItems[%d].Bilateral = %v, want %v", i, msg.GetBilateral(), tt.wantBilaterals[i])
-				}
 				if msg.GetValueType() != tt.wantValueTypes[i] {
 					t.Errorf("MeasurementItems[%d].ValueType = %v, want %v", i, msg.GetValueType(), tt.wantValueTypes[i])
+				}
+				if msg.GetNormalization() != tt.wantNormalizations[i] {
+					t.Errorf("MeasurementItems[%d].Normalization = %v, want %v", i, msg.GetNormalization(), tt.wantNormalizations[i])
 				}
 			}
 		})

@@ -125,6 +125,20 @@ func (mr *MockMeasurementItemMockRecorder) Name() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Name", reflect.TypeOf((*MockMeasurementItem)(nil).Name))
 }
 
+// Normalization mocks base method.
+func (m *MockMeasurementItem) Normalization() measurementitem.Normalization {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Normalization")
+	ret0, _ := ret[0].(measurementitem.Normalization)
+	return ret0
+}
+
+// Normalization indicates an expected call of Normalization.
+func (mr *MockMeasurementItemMockRecorder) Normalization() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Normalization", reflect.TypeOf((*MockMeasurementItem)(nil).Normalization))
+}
+
 // ScoreDirection mocks base method.
 func (m *MockMeasurementItem) ScoreDirection() *measurementitem.ScoreDirection {
 	m.ctrl.T.Helper()
@@ -165,6 +179,20 @@ func (m *MockMeasurementItem) SideMode() measurementitem.SideMode {
 func (mr *MockMeasurementItemMockRecorder) SideMode() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SideMode", reflect.TypeOf((*MockMeasurementItem)(nil).SideMode))
+}
+
+// TrialAggregation mocks base method.
+func (m *MockMeasurementItem) TrialAggregation() measurementitem.TrialAggregation {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "TrialAggregation")
+	ret0, _ := ret[0].(measurementitem.TrialAggregation)
+	return ret0
+}
+
+// TrialAggregation indicates an expected call of TrialAggregation.
+func (mr *MockMeasurementItemMockRecorder) TrialAggregation() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TrialAggregation", reflect.TypeOf((*MockMeasurementItem)(nil).TrialAggregation))
 }
 
 // TrialCount mocks base method.

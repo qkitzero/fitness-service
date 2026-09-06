@@ -46,6 +46,12 @@ enum ValueType {
   VALUE_TYPE_CHOICE = 3;
 }
 
+enum Normalization {
+  NORMALIZATION_UNSPECIFIED = 0;
+  NORMALIZATION_NONE = 1;
+  NORMALIZATION_HEIGHT_RATIO = 2;
+}
+
 message MeasurementItem {
   string measurement_item_id = 1;
   string code = 2;
@@ -53,9 +59,11 @@ message MeasurementItem {
   Category category = 4;
   Unit unit = 5;
   uint32 trial_count = 6;
-  bool bilateral = 7;
+  reserved 7;
+  reserved "bilateral";
   ValueType value_type = 8;
   SideMode side_mode = 9;
+  Normalization normalization = 10;
 }
 
 message ListMeasurementItemsRequest {}

@@ -72,7 +72,15 @@ func toDomain(m MeasurementItemModel) (measurementitem.MeasurementItem, error) {
 		}
 		scoreDirection = &s
 	}
+	trialAggregation, err := measurementitem.NewTrialAggregation(m.TrialAggregation.String())
+	if err != nil {
+		return nil, fmt.Errorf("measurement item %q: %w", m.Code, err)
+	}
 	sideAggregation, err := measurementitem.NewSideAggregation(m.SideAggregation.String())
+	if err != nil {
+		return nil, fmt.Errorf("measurement item %q: %w", m.Code, err)
+	}
+	normalization, err := measurementitem.NewNormalization(m.Normalization.String())
 	if err != nil {
 		return nil, fmt.Errorf("measurement item %q: %w", m.Code, err)
 	}
@@ -91,7 +99,9 @@ func toDomain(m MeasurementItemModel) (measurementitem.MeasurementItem, error) {
 		sideMode,
 		valueType,
 		scoreDirection,
+		trialAggregation,
 		sideAggregation,
+		normalization,
 		elements,
 		m.CreatedAt,
 		m.UpdatedAt,

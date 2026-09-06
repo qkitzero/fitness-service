@@ -74,50 +74,74 @@ func isBetter(candidate, current int64, scoreDirection measurementitem.ScoreDire
 	return candidate > current
 }
 
+func aggregateTrials(trials []int64, trialAggregation measurementitem.TrialAggregation, scoreDirection measurementitem.ScoreDirection) (int64, bool) {
+	switch trialAggregation {
+	case measurementitem.TrialAggregationBest:
+		best := trials[0]
+		for _, trial := range trials[1:] {
+			if isBetter(trial, best, scoreDirection) {
+				best = trial
+			}
+		}
+		return best, true
+	case measurementitem.TrialAggregationMean:
+		sum := int64(0)
+		for _, trial := range trials {
+			sum += trial
+		}
+		return divideRounded(sum, int64(len(trials))), true
+	default:
+		return 0, false
+	}
+}
+
 func representativeValue(entry measurement.MeasurementEntry, item measurementitem.MeasurementItem, scoreDirection measurementitem.ScoreDirection) (measurement.Value, bool) {
-	bestBySide := make(map[measurement.Side]int64)
+	trialsBySide := make(map[measurement.Side][]int64)
 	sides := make([]measurement.Side, 0, 3)
 	for _, measurementValue := range entry.Values() {
 		value := measurementValue.Value()
 		if value == nil {
 			continue
 		}
-		hundredths := toHundredths(value.Float64())
 		side := measurementValue.Side()
-		best, ok := bestBySide[side]
-		if !ok {
-			bestBySide[side] = hundredths
+		if _, ok := trialsBySide[side]; !ok {
 			sides = append(sides, side)
-			continue
 		}
-		if isBetter(hundredths, best, scoreDirection) {
-			bestBySide[side] = hundredths
-		}
+		trialsBySide[side] = append(trialsBySide[side], toHundredths(value.Float64()))
 	}
 	if len(sides) == 0 {
 		return measurement.Value(0), false
 	}
 
-	representative := bestBySide[sides[0]]
+	sideValues := make([]int64, 0, len(sides))
+	for _, side := range sides {
+		aggregated, ok := aggregateTrials(trialsBySide[side], item.TrialAggregation(), scoreDirection)
+		if !ok {
+			return measurement.Value(0), false
+		}
+		sideValues = append(sideValues, aggregated)
+	}
+
+	representative := sideValues[0]
 	switch item.SideAggregation() {
 	case measurementitem.SideAggregationBest:
-		for _, side := range sides[1:] {
-			if isBetter(bestBySide[side], representative, scoreDirection) {
-				representative = bestBySide[side]
+		for _, sideValue := range sideValues[1:] {
+			if isBetter(sideValue, representative, scoreDirection) {
+				representative = sideValue
 			}
 		}
 	case measurementitem.SideAggregationWorst:
-		for _, side := range sides[1:] {
-			if isBetter(representative, bestBySide[side], scoreDirection) {
-				representative = bestBySide[side]
+		for _, sideValue := range sideValues[1:] {
+			if isBetter(representative, sideValue, scoreDirection) {
+				representative = sideValue
 			}
 		}
 	case measurementitem.SideAggregationMean:
 		sum := int64(0)
-		for _, side := range sides {
-			sum += bestBySide[side]
+		for _, sideValue := range sideValues {
+			sum += sideValue
 		}
-		representative = divideRounded(sum, int64(len(sides)))
+		representative = divideRounded(sum, int64(len(sideValues)))
 	default:
 		return measurement.Value(0), false
 	}
@@ -128,6 +152,51 @@ func representativeValue(entry measurement.MeasurementEntry, item measurementite
 	}
 
 	return value, true
+}
+
+func heightHundredths(entries []measurement.MeasurementEntry, itemByID map[measurementitem.MeasurementItemID]measurementitem.MeasurementItem) (int64, bool) {
+	for _, entry := range entries {
+		if entry.Unmeasurable() {
+			continue
+		}
+		item, ok := itemByID[entry.MeasurementItemID()]
+		if !ok || item.Code() != measurementitem.CodeHeight {
+			continue
+		}
+		sum := int64(0)
+		count := int64(0)
+		for _, measurementValue := range entry.Values() {
+			value := measurementValue.Value()
+			if value == nil {
+				continue
+			}
+			sum += toHundredths(value.Float64())
+			count++
+		}
+		if count == 0 {
+			return 0, false
+		}
+		return divideRounded(sum, count), true
+	}
+	return 0, false
+}
+
+func normalizedValue(value measurement.Value, normalization measurementitem.Normalization, baseHundredths int64, hasBase bool) (measurement.Value, bool) {
+	switch normalization {
+	case measurementitem.NormalizationNone:
+		return value, true
+	case measurementitem.NormalizationHeightRatio:
+		if !hasBase || baseHundredths <= 0 {
+			return measurement.Value(0), false
+		}
+		normalized, err := measurement.NewValue(fromHundredths(divideRounded(evaluationScale*toHundredths(value.Float64()), baseHundredths)))
+		if err != nil {
+			return measurement.Value(0), false
+		}
+		return normalized, true
+	default:
+		return measurement.Value(0), false
+	}
 }
 
 func isYoungerAgeRange(a, b standard.AgeRange) bool {
@@ -333,6 +402,7 @@ func NewEvaluation(
 	}
 
 	entries := m.Entries()
+	baseHundredths, hasBase := heightHundredths(entries, itemByID)
 	itemEvaluations := make([]ItemEvaluation, 0, len(entries))
 	judgedItems := make([]judgedItem, 0, len(entries))
 	for _, entry := range entries {
@@ -348,6 +418,10 @@ func NewEvaluation(
 			continue
 		}
 		value, ok := representativeValue(entry, item, *scoreDirection)
+		if !ok {
+			continue
+		}
+		value, ok = normalizedValue(value, item.Normalization(), baseHundredths, hasBase)
 		if !ok {
 			continue
 		}
