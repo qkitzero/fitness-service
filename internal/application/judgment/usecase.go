@@ -231,13 +231,90 @@ func itemCodesMissingHeight(m measurement.Measurement, items []measurementitem.M
 	return codes
 }
 
-func (u *judgmentUsecase) evaluate(ctx context.Context, foundMeasurement measurement.Measurement, foundCustomer customer.Customer) (judgment.Evaluation, error) {
-	age := foundMeasurement.AgeAtMeasurement().Int()
+type measurementEvaluator struct {
+	operation                 string
+	measurementItemByID       map[measurementitem.MeasurementItemID]measurementitem.MeasurementItem
+	ageGroupStandardsByGender map[standard.Gender][]standard.AgeGroupStandard
+	evaluatorByGender         map[standard.Gender]judgment.Evaluator
+	measurementItems          []measurementitem.MeasurementItem
+	rankStandards             []standard.RankStandard
+}
 
+func newMeasurementEvaluator(operation string, measurementItems []measurementitem.MeasurementItem, ageGroupStandards []standard.AgeGroupStandard, rankStandards []standard.RankStandard) *measurementEvaluator {
+	measurementItemByID := make(map[measurementitem.MeasurementItemID]measurementitem.MeasurementItem, len(measurementItems))
+	for _, measurementItem := range measurementItems {
+		measurementItemByID[measurementItem.ID()] = measurementItem
+	}
+
+	ageGroupStandardsByGender := make(map[standard.Gender][]standard.AgeGroupStandard)
+	for _, ageGroupStandard := range ageGroupStandards {
+		gender := ageGroupStandard.Gender()
+		ageGroupStandardsByGender[gender] = append(ageGroupStandardsByGender[gender], ageGroupStandard)
+	}
+
+	return &measurementEvaluator{
+		operation:                 operation,
+		measurementItemByID:       measurementItemByID,
+		ageGroupStandardsByGender: ageGroupStandardsByGender,
+		evaluatorByGender:         make(map[standard.Gender]judgment.Evaluator),
+		measurementItems:          measurementItems,
+		rankStandards:             rankStandards,
+	}
+}
+
+func (e *measurementEvaluator) evaluator(gender standard.Gender) judgment.Evaluator {
+	if found, ok := e.evaluatorByGender[gender]; ok {
+		return found
+	}
+
+	created := judgment.NewEvaluator(e.measurementItems, gender, e.ageGroupStandardsByGender[gender], e.rankStandards)
+	e.evaluatorByGender[gender] = created
+
+	return created
+}
+
+func (e *measurementEvaluator) evaluate(m measurement.Measurement, customerGender customer.Gender) judgment.Evaluation {
+	age := m.AgeAtMeasurement().Int()
+
+	gender, err := standard.NewGender(customerGender.String())
+	if err != nil {
+		log.Printf("%s: measurement %s: no standards exist for customer gender %q, returning an empty evaluation", e.operation, m.ID(), customerGender)
+		return e.evaluator(gender).Evaluate(m, age)
+	}
+
+	entries := m.Entries()
+	genderStandards := e.ageGroupStandardsByGender[gender]
+	if len(entries) > 0 && len(genderStandards) == 0 {
+		log.Printf("%s: measurement %s: no age group standards are registered for gender %q, returning an empty evaluation", e.operation, m.ID(), gender)
+		return e.evaluator(gender).Evaluate(m, age)
+	}
+
+	measuredItems := make([]measurementitem.MeasurementItem, 0, len(entries))
+	for _, entry := range entries {
+		if measurementItem, ok := e.measurementItemByID[entry.MeasurementItemID()]; ok {
+			measuredItems = append(measuredItems, measurementItem)
+		}
+	}
+
+	if unregisteredCodes := itemCodesWithoutAgeGroupStandards(measuredItems, genderStandards); len(unregisteredCodes) > 0 {
+		log.Printf("%s: measurement %s: the age group standards of gender %q are missing for items %v", e.operation, m.ID(), gender, unregisteredCodes)
+	}
+
+	if outsideCodes := itemCodesOutsideAgeGroups(measuredItems, genderStandards, age); len(outsideCodes) > 0 {
+		log.Printf("%s: measurement %s: age %d is outside the registered age groups of gender %q for items %v", e.operation, m.ID(), age, gender, outsideCodes)
+	}
+
+	if missingHeightCodes := itemCodesMissingHeight(m, measuredItems); len(missingHeightCodes) > 0 {
+		log.Printf("%s: measurement %s: the height required to normalize items %v is missing, skipping them", e.operation, m.ID(), missingHeightCodes)
+	}
+
+	return e.evaluator(gender).Evaluate(m, age)
+}
+
+func (u *judgmentUsecase) evaluate(ctx context.Context, foundMeasurement measurement.Measurement, foundCustomer customer.Customer) (judgment.Evaluation, error) {
 	gender, err := standard.NewGender(foundCustomer.Gender().String())
 	if err != nil {
-		log.Printf("GetJudgment: measurement %s: no standards exist for customer gender %q, returning an empty evaluation", foundMeasurement.ID(), foundCustomer.Gender())
-		return judgment.NewEvaluator(nil, gender, nil, nil).Evaluate(foundMeasurement, age), nil
+		return newMeasurementEvaluator("GetJudgment", nil, nil, nil).evaluate(foundMeasurement, foundCustomer.Gender()), nil
 	}
 
 	entries := foundMeasurement.Entries()
@@ -261,21 +338,7 @@ func (u *judgmentUsecase) evaluate(ctx context.Context, foundMeasurement measure
 		return nil, err
 	}
 
-	if len(entries) > 0 && len(ageGroupStandards) == 0 {
-		log.Printf("GetJudgment: measurement %s: no age group standards are registered for gender %q, returning an empty evaluation", foundMeasurement.ID(), gender)
-	} else if unregisteredCodes := itemCodesWithoutAgeGroupStandards(measurementItems, ageGroupStandards); len(unregisteredCodes) > 0 {
-		log.Printf("GetJudgment: measurement %s: the age group standards of gender %q are missing for items %v", foundMeasurement.ID(), gender, unregisteredCodes)
-	}
-
-	if outsideCodes := itemCodesOutsideAgeGroups(measurementItems, ageGroupStandards, age); len(outsideCodes) > 0 {
-		log.Printf("GetJudgment: measurement %s: age %d is outside the registered age groups of gender %q for items %v", foundMeasurement.ID(), age, gender, outsideCodes)
-	}
-
-	if missingHeightCodes := itemCodesMissingHeight(foundMeasurement, measurementItems); len(missingHeightCodes) > 0 {
-		log.Printf("GetJudgment: measurement %s: the height required to normalize items %v is missing, skipping them", foundMeasurement.ID(), missingHeightCodes)
-	}
-
-	return judgment.NewEvaluator(measurementItems, gender, ageGroupStandards, rankStandards).Evaluate(foundMeasurement, age), nil
+	return newMeasurementEvaluator("GetJudgment", measurementItems, ageGroupStandards, rankStandards).evaluate(foundMeasurement, foundCustomer.Gender()), nil
 }
 
 func (u *judgmentUsecase) prescribe(ctx context.Context, foundMeasurement measurement.Measurement, evaluation judgment.Evaluation) (judgment.Prescription, error) {
@@ -412,64 +475,17 @@ func (u *judgmentUsecase) ListOrganizationJudgments(ctx context.Context, organiz
 		return nil, err
 	}
 
-	ageGroupStandardsByGender := make(map[standard.Gender][]standard.AgeGroupStandard, len(ageGroupStandards))
-	for _, ageGroupStandard := range ageGroupStandards {
-		gender := ageGroupStandard.Gender()
-		ageGroupStandardsByGender[gender] = append(ageGroupStandardsByGender[gender], ageGroupStandard)
-	}
-
-	measurementItemByID := make(map[measurementitem.MeasurementItemID]measurementitem.MeasurementItem, len(measurementItems))
-	for _, measurementItem := range measurementItems {
-		measurementItemByID[measurementItem.ID()] = measurementItem
-	}
+	evaluator := newMeasurementEvaluator("ListOrganizationJudgments", measurementItems, ageGroupStandards, rankStandards)
 
 	results := make([]OrganizationJudgmentResult, 0, len(measurements))
 	for _, foundMeasurement := range measurements {
-		age := foundMeasurement.AgeAtMeasurement().Int()
-		customerGender := customerGenderByID[foundMeasurement.CustomerID()]
-
-		gender, err := standard.NewGender(customerGender.String())
-		if err != nil {
-			log.Printf("ListOrganizationJudgments: measurement %s: no standards exist for customer gender %q, returning an empty evaluation", foundMeasurement.ID(), customerGender)
-		}
-
-		genderStandards := ageGroupStandardsByGender[gender]
-		if err == nil && len(genderStandards) == 0 {
-			log.Printf("ListOrganizationJudgments: measurement %s: no age group standards are registered for gender %q, returning an empty evaluation", foundMeasurement.ID(), gender)
-		}
-
-		measuredItems := make([]measurementitem.MeasurementItem, 0, len(foundMeasurement.Entries()))
-		for _, entry := range foundMeasurement.Entries() {
-			if measurementItem, ok := measurementItemByID[entry.MeasurementItemID()]; ok {
-				measuredItems = append(measuredItems, measurementItem)
-			}
-		}
-
-		if err == nil && len(genderStandards) > 0 {
-			if unregisteredCodes := itemCodesWithoutAgeGroupStandards(measuredItems, genderStandards); len(unregisteredCodes) > 0 {
-				log.Printf("ListOrganizationJudgments: measurement %s: the age group standards of gender %q are missing for items %v", foundMeasurement.ID(), gender, unregisteredCodes)
-			}
-		}
-
-		if outsideCodes := itemCodesOutsideAgeGroups(measuredItems, genderStandards, age); len(outsideCodes) > 0 {
-			log.Printf("ListOrganizationJudgments: measurement %s: age %d is outside the registered age groups of gender %q for items %v", foundMeasurement.ID(), age, gender, outsideCodes)
-		}
-
-		if err == nil && len(genderStandards) > 0 {
-			if missingHeightCodes := itemCodesMissingHeight(foundMeasurement, measuredItems); len(missingHeightCodes) > 0 {
-				log.Printf("ListOrganizationJudgments: measurement %s: the height required to normalize items %v is missing, skipping them", foundMeasurement.ID(), missingHeightCodes)
-			}
-		}
-
-		evaluation := judgment.NewEvaluator(measurementItems, gender, genderStandards, rankStandards).Evaluate(foundMeasurement, age)
-
 		results = append(results, OrganizationJudgmentResult{
 			CustomerID:       foundMeasurement.CustomerID(),
 			MeasurementID:    foundMeasurement.ID(),
 			MeasuredOn:       foundMeasurement.MeasuredOn(),
 			AgeAtMeasurement: foundMeasurement.AgeAtMeasurement(),
 			IsDraft:          foundMeasurement.IsDraft(),
-			Evaluation:       evaluation,
+			Evaluation:       evaluator.evaluate(foundMeasurement, customerGenderByID[foundMeasurement.CustomerID()]),
 		})
 	}
 
