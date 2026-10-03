@@ -102,6 +102,60 @@ func toProtoNormalization(n domainmeasurementitem.Normalization) (measurementite
 	}
 }
 
+func toProtoScoreDirection(s domainmeasurementitem.ScoreDirection) (measurementitemv1.ScoreDirection, error) {
+	switch s {
+	case domainmeasurementitem.ScoreDirectionHigherIsBetter:
+		return measurementitemv1.ScoreDirection_SCORE_DIRECTION_HIGHER_IS_BETTER, nil
+	case domainmeasurementitem.ScoreDirectionLowerIsBetter:
+		return measurementitemv1.ScoreDirection_SCORE_DIRECTION_LOWER_IS_BETTER, nil
+	default:
+		return measurementitemv1.ScoreDirection_SCORE_DIRECTION_UNSPECIFIED, fmt.Errorf("unmapped score direction %q", s)
+	}
+}
+
+func toProtoTrialAggregation(t domainmeasurementitem.TrialAggregation) (measurementitemv1.TrialAggregation, error) {
+	switch t {
+	case domainmeasurementitem.TrialAggregationMean:
+		return measurementitemv1.TrialAggregation_TRIAL_AGGREGATION_MEAN, nil
+	case domainmeasurementitem.TrialAggregationBest:
+		return measurementitemv1.TrialAggregation_TRIAL_AGGREGATION_BEST, nil
+	default:
+		return measurementitemv1.TrialAggregation_TRIAL_AGGREGATION_UNSPECIFIED, fmt.Errorf("unmapped trial aggregation %q", t)
+	}
+}
+
+func toProtoSideAggregation(s domainmeasurementitem.SideAggregation) (measurementitemv1.SideAggregation, error) {
+	switch s {
+	case domainmeasurementitem.SideAggregationMean:
+		return measurementitemv1.SideAggregation_SIDE_AGGREGATION_MEAN, nil
+	case domainmeasurementitem.SideAggregationBest:
+		return measurementitemv1.SideAggregation_SIDE_AGGREGATION_BEST, nil
+	case domainmeasurementitem.SideAggregationWorst:
+		return measurementitemv1.SideAggregation_SIDE_AGGREGATION_WORST, nil
+	default:
+		return measurementitemv1.SideAggregation_SIDE_AGGREGATION_UNSPECIFIED, fmt.Errorf("unmapped side aggregation %q", s)
+	}
+}
+
+func toProtoItemElement(e domainmeasurementitem.Element) (measurementitemv1.ItemElement, error) {
+	switch e {
+	case domainmeasurementitem.ElementMuscleStrength:
+		return measurementitemv1.ItemElement_ITEM_ELEMENT_MUSCLE_STRENGTH, nil
+	case domainmeasurementitem.ElementMuscleEndurance:
+		return measurementitemv1.ItemElement_ITEM_ELEMENT_MUSCLE_ENDURANCE, nil
+	case domainmeasurementitem.ElementFlexibility:
+		return measurementitemv1.ItemElement_ITEM_ELEMENT_FLEXIBILITY, nil
+	case domainmeasurementitem.ElementAgility:
+		return measurementitemv1.ItemElement_ITEM_ELEMENT_AGILITY, nil
+	case domainmeasurementitem.ElementBalance:
+		return measurementitemv1.ItemElement_ITEM_ELEMENT_BALANCE, nil
+	case domainmeasurementitem.ElementMobility:
+		return measurementitemv1.ItemElement_ITEM_ELEMENT_MOBILITY, nil
+	default:
+		return measurementitemv1.ItemElement_ITEM_ELEMENT_UNSPECIFIED, fmt.Errorf("unmapped element %q", e)
+	}
+}
+
 func toProtoMeasurementItem(m domainmeasurementitem.MeasurementItem) (*measurementitemv1.MeasurementItem, error) {
 	category, err := toProtoCategory(m.Category())
 	if err != nil {
@@ -123,12 +177,29 @@ func toProtoMeasurementItem(m domainmeasurementitem.MeasurementItem) (*measureme
 	if err != nil {
 		return nil, err
 	}
+	trialAggregation, err := toProtoTrialAggregation(m.TrialAggregation())
+	if err != nil {
+		return nil, err
+	}
+	sideAggregation, err := toProtoSideAggregation(m.SideAggregation())
+	if err != nil {
+		return nil, err
+	}
+	domainElements := m.Elements()
+	elements := make([]measurementitemv1.ItemElement, 0, len(domainElements))
+	for _, e := range domainElements {
+		element, err := toProtoItemElement(e)
+		if err != nil {
+			return nil, err
+		}
+		elements = append(elements, element)
+	}
 	trialCount := m.TrialCount().Int()
 	if trialCount < 0 || int64(trialCount) > math.MaxUint32 {
 		return nil, fmt.Errorf("trial count %d out of range", trialCount)
 	}
 
-	return &measurementitemv1.MeasurementItem{
+	msg := &measurementitemv1.MeasurementItem{
 		MeasurementItemId: m.ID().String(),
 		Code:              m.Code().String(),
 		Name:              m.Name().String(),
@@ -138,7 +209,19 @@ func toProtoMeasurementItem(m domainmeasurementitem.MeasurementItem) (*measureme
 		ValueType:         valueType,
 		SideMode:          sideMode,
 		Normalization:     normalization,
-	}, nil
+		TrialAggregation:  trialAggregation,
+		SideAggregation:   sideAggregation,
+		Elements:          elements,
+	}
+	if sd := m.ScoreDirection(); sd != nil {
+		scoreDirection, err := toProtoScoreDirection(*sd)
+		if err != nil {
+			return nil, err
+		}
+		msg.ScoreDirection = &scoreDirection
+	}
+
+	return msg, nil
 }
 
 func mapMeasurementItemError(err error, op string) error {
