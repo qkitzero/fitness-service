@@ -52,6 +52,35 @@ enum Normalization {
   NORMALIZATION_HEIGHT_RATIO = 2;
 }
 
+enum ScoreDirection {
+  SCORE_DIRECTION_UNSPECIFIED = 0;
+  SCORE_DIRECTION_HIGHER_IS_BETTER = 1;
+  SCORE_DIRECTION_LOWER_IS_BETTER = 2;
+}
+
+enum TrialAggregation {
+  TRIAL_AGGREGATION_UNSPECIFIED = 0;
+  TRIAL_AGGREGATION_MEAN = 1;
+  TRIAL_AGGREGATION_BEST = 2;
+}
+
+enum SideAggregation {
+  SIDE_AGGREGATION_UNSPECIFIED = 0;
+  SIDE_AGGREGATION_MEAN = 1;
+  SIDE_AGGREGATION_BEST = 2;
+  SIDE_AGGREGATION_WORST = 3;
+}
+
+enum ItemElement {
+  ITEM_ELEMENT_UNSPECIFIED = 0;
+  ITEM_ELEMENT_MUSCLE_STRENGTH = 1;
+  ITEM_ELEMENT_MUSCLE_ENDURANCE = 2;
+  ITEM_ELEMENT_FLEXIBILITY = 3;
+  ITEM_ELEMENT_AGILITY = 4;
+  ITEM_ELEMENT_BALANCE = 5;
+  ITEM_ELEMENT_MOBILITY = 6;
+}
+
 message MeasurementItem {
   string measurement_item_id = 1;
   string code = 2;
@@ -64,6 +93,10 @@ message MeasurementItem {
   ValueType value_type = 8;
   SideMode side_mode = 9;
   Normalization normalization = 10;
+  optional ScoreDirection score_direction = 11;
+  TrialAggregation trial_aggregation = 12;
+  SideAggregation side_aggregation = 13;
+  repeated ItemElement elements = 14;
 }
 
 message ListMeasurementItemsRequest {}
