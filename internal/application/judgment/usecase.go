@@ -36,6 +36,17 @@ type OrganizationJudgmentResult struct {
 	Evaluation       judgment.Evaluation
 }
 
+type AgeGroupFallback struct {
+	MaxYoungerYears int
+	MaxOlderYears   int
+}
+
+type JudgmentCriteria struct {
+	RankStandards     []standard.RankStandard
+	AgeGroupStandards []standard.AgeGroupStandard
+	AgeGroupFallback  AgeGroupFallback
+}
+
 type AdvicePatch struct {
 	Advice    *judgment.Advice
 	HasAdvice bool
@@ -56,6 +67,7 @@ type JudgmentUsecase interface {
 	UpsertJudgmentAdvice(ctx context.Context, measurementID measurement.MeasurementID, patch AdvicePatch) (judgment.Judgment, error)
 	UpsertPrescription(ctx context.Context, measurementID measurement.MeasurementID, menus []PrescribedMenuInput) (judgment.Prescription, error)
 	DeletePrescription(ctx context.Context, measurementID measurement.MeasurementID) error
+	GetJudgmentCriteria(ctx context.Context) (JudgmentCriteria, error)
 }
 
 type judgmentUsecase struct {
@@ -620,4 +632,29 @@ func (u *judgmentUsecase) DeletePrescription(ctx context.Context, measurementID 
 	}
 
 	return u.prescribedMenuOverrideRepo.DeleteByMeasurementID(ctx, measurementID)
+}
+
+func (u *judgmentUsecase) GetJudgmentCriteria(ctx context.Context) (JudgmentCriteria, error) {
+	if _, err := u.authService.VerifyToken(ctx); err != nil {
+		return JudgmentCriteria{}, err
+	}
+
+	rankStandards, err := u.rankStandardRepo.List(ctx)
+	if err != nil {
+		return JudgmentCriteria{}, err
+	}
+
+	ageGroupStandards, err := u.ageGroupStandardRepo.List(ctx)
+	if err != nil {
+		return JudgmentCriteria{}, err
+	}
+
+	return JudgmentCriteria{
+		RankStandards:     rankStandards,
+		AgeGroupStandards: ageGroupStandards,
+		AgeGroupFallback: AgeGroupFallback{
+			MaxYoungerYears: judgment.MaxYoungerAgeGroupFallbackYears,
+			MaxOlderYears:   judgment.MaxOlderAgeGroupFallbackYears,
+		},
+	}, nil
 }

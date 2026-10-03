@@ -73,6 +73,21 @@ func (mr *MockJudgmentUsecaseMockRecorder) GetJudgment(ctx, measurementID any) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJudgment", reflect.TypeOf((*MockJudgmentUsecase)(nil).GetJudgment), ctx, measurementID)
 }
 
+// GetJudgmentCriteria mocks base method.
+func (m *MockJudgmentUsecase) GetJudgmentCriteria(ctx context.Context) (judgment.JudgmentCriteria, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetJudgmentCriteria", ctx)
+	ret0, _ := ret[0].(judgment.JudgmentCriteria)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetJudgmentCriteria indicates an expected call of GetJudgmentCriteria.
+func (mr *MockJudgmentUsecaseMockRecorder) GetJudgmentCriteria(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetJudgmentCriteria", reflect.TypeOf((*MockJudgmentUsecase)(nil).GetJudgmentCriteria), ctx)
+}
+
 // ListOrganizationJudgments mocks base method.
 func (m *MockJudgmentUsecase) ListOrganizationJudgments(ctx context.Context, organizationID organization.OrganizationID, includeInactive bool) ([]judgment.OrganizationJudgmentResult, error) {
 	m.ctrl.T.Helper()
