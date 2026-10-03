@@ -377,7 +377,7 @@ func (u *judgmentUsecase) ListOrganizationJudgments(ctx context.Context, organiz
 		return nil, err
 	}
 
-	customers, err := u.customerRepo.ListByOrganizationID(ctx, organizationID, includeInactive)
+	customers, err := u.customerRepo.ListByOrganizationID(ctx, foundOrganization.TenantID(), organizationID, includeInactive)
 	if err != nil {
 		return nil, err
 	}

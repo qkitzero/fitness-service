@@ -113,9 +113,9 @@ func (r *customerRepository) ListByTenantID(ctx context.Context, tenantID tenant
 	return customers, nil
 }
 
-func (r *customerRepository) ListByOrganizationID(ctx context.Context, organizationID organization.OrganizationID, includeInactive bool) ([]customer.Customer, error) {
+func (r *customerRepository) ListByOrganizationID(ctx context.Context, tenantID tenant.TenantID, organizationID organization.OrganizationID, includeInactive bool) ([]customer.Customer, error) {
 	var customerModels []CustomerModel
-	query := r.db.WithContext(ctx).Where("organization_id = ?", organizationID)
+	query := r.db.WithContext(ctx).Where("tenant_id = ?", tenantID).Where("organization_id = ?", organizationID)
 	if !includeInactive {
 		query = query.Where("is_active = ?", true)
 	}

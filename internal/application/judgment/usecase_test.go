@@ -1302,7 +1302,7 @@ func TestListOrganizationJudgments(t *testing.T) {
 						customers = append(customers, mockCustomer)
 					}
 				}
-				mockCustomerRepository.EXPECT().ListByOrganizationID(tt.ctx, organizationID, tt.includeInactive).Return(customers, tt.listCustomersErr).Times(1)
+				mockCustomerRepository.EXPECT().ListByOrganizationID(tt.ctx, tenantID, organizationID, tt.includeInactive).Return(customers, tt.listCustomersErr).Times(1)
 			}
 
 			measurementIDs := make([]measurement.MeasurementID, 0, len(tt.measurements))

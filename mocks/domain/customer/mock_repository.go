@@ -87,18 +87,18 @@ func (mr *MockCustomerRepositoryMockRecorder) FindByID(ctx, customerID any) *gom
 }
 
 // ListByOrganizationID mocks base method.
-func (m *MockCustomerRepository) ListByOrganizationID(ctx context.Context, organizationID organization.OrganizationID, includeInactive bool) ([]customer.Customer, error) {
+func (m *MockCustomerRepository) ListByOrganizationID(ctx context.Context, tenantID tenant.TenantID, organizationID organization.OrganizationID, includeInactive bool) ([]customer.Customer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByOrganizationID", ctx, organizationID, includeInactive)
+	ret := m.ctrl.Call(m, "ListByOrganizationID", ctx, tenantID, organizationID, includeInactive)
 	ret0, _ := ret[0].([]customer.Customer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListByOrganizationID indicates an expected call of ListByOrganizationID.
-func (mr *MockCustomerRepositoryMockRecorder) ListByOrganizationID(ctx, organizationID, includeInactive any) *gomock.Call {
+func (mr *MockCustomerRepositoryMockRecorder) ListByOrganizationID(ctx, tenantID, organizationID, includeInactive any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByOrganizationID", reflect.TypeOf((*MockCustomerRepository)(nil).ListByOrganizationID), ctx, organizationID, includeInactive)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByOrganizationID", reflect.TypeOf((*MockCustomerRepository)(nil).ListByOrganizationID), ctx, tenantID, organizationID, includeInactive)
 }
 
 // ListByTenantID mocks base method.

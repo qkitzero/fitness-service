@@ -546,8 +546,8 @@ func TestListByOrganizationID(t *testing.T) {
 				customerRows := sqlmock.NewRows(columns).
 					AddRow(uuid.New().String(), tenantID, "test customer 1", "テストカナ", "male", testBirthDate, "0312345678", "test1@example.com", "1234567", "東京都", "千代田区", "1-1-1", "テストビル", "緊急 太郎", "父", "09012345678", testOrganizationID, true, testCreatedAt, testUpdatedAt).
 					AddRow(uuid.New().String(), tenantID, "test customer 2", "テストカナ", "female", testBirthDate, "0312345679", "test2@example.com", "1234568", "大阪府", "大阪市", "2-2-2", "更新ビル", "緊急 花子", "母", "08012345678", testOrganizationID, true, testCreatedAt, testUpdatedAt)
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE organization_id = $1 AND is_active = $2 ORDER BY created_at, id`)).
-					WithArgs(organizationID, true).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE tenant_id = $1 AND organization_id = $2 AND is_active = $3 ORDER BY created_at, id`)).
+					WithArgs(tenantID, organizationID, true).
 					WillReturnRows(customerRows)
 			},
 		},
@@ -561,8 +561,8 @@ func TestListByOrganizationID(t *testing.T) {
 				customerRows := sqlmock.NewRows(columns).
 					AddRow(uuid.New().String(), tenantID, "test customer 1", "テストカナ", "male", testBirthDate, "0312345678", "test1@example.com", "1234567", "東京都", "千代田区", "1-1-1", "テストビル", "緊急 太郎", "父", "09012345678", testOrganizationID, true, testCreatedAt, testUpdatedAt).
 					AddRow(uuid.New().String(), tenantID, "test customer 2", "テストカナ", "female", testBirthDate, "0312345679", "test2@example.com", "1234568", "大阪府", "大阪市", "2-2-2", "更新ビル", "緊急 花子", "母", "08012345678", testOrganizationID, false, testCreatedAt, testUpdatedAt)
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE organization_id = $1 ORDER BY created_at, id`)).
-					WithArgs(organizationID).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE tenant_id = $1 AND organization_id = $2 ORDER BY created_at, id`)).
+					WithArgs(tenantID, organizationID).
 					WillReturnRows(customerRows)
 			},
 		},
@@ -573,8 +573,8 @@ func TestListByOrganizationID(t *testing.T) {
 			wantActive:      []bool{},
 			includeInactive: false,
 			setup: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE organization_id = $1 AND is_active = $2 ORDER BY created_at, id`)).
-					WithArgs(organizationID, true).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE tenant_id = $1 AND organization_id = $2 AND is_active = $3 ORDER BY created_at, id`)).
+					WithArgs(tenantID, organizationID, true).
 					WillReturnRows(sqlmock.NewRows(columns))
 			},
 		},
@@ -583,8 +583,8 @@ func TestListByOrganizationID(t *testing.T) {
 			success:         false,
 			includeInactive: false,
 			setup: func(mock sqlmock.Sqlmock) {
-				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE organization_id = $1 AND is_active = $2 ORDER BY created_at, id`)).
-					WithArgs(organizationID, true).
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "customers" WHERE tenant_id = $1 AND organization_id = $2 AND is_active = $3 ORDER BY created_at, id`)).
+					WithArgs(tenantID, organizationID, true).
 					WillReturnError(errors.New("list customers error"))
 			},
 		},
@@ -608,7 +608,7 @@ func TestListByOrganizationID(t *testing.T) {
 
 			repo := NewCustomerRepository(gormDB)
 
-			customers, err := repo.ListByOrganizationID(context.Background(), organizationID, tt.includeInactive)
+			customers, err := repo.ListByOrganizationID(context.Background(), tenantID, organizationID, tt.includeInactive)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}
