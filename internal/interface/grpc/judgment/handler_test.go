@@ -94,7 +94,7 @@ func TestGetJudgment(t *testing.T) {
 		measuredBy, _ := domainstaff.NewStaffID("google-oauth2|000000000000000000000")
 		ageAtMeasurement, _ := domainmeasurement.NewAgeAtMeasurement(62)
 		m := domainmeasurement.ReconstructMeasurement(domainmeasurement.NewMeasurementID(), domaincustomer.NewCustomerID(), measuredOn, measuredBy, ageAtMeasurement, measuredBy, false, []domainmeasurement.MeasurementEntry{gripStrengthEntry, cs30Entry}, createdAt, updatedAt)
-		return domainjudgment.NewEvaluation(m, evaluatedItems, domainstandard.GenderMale, 62, ageGroupStandards, rs)
+		return domainjudgment.NewEvaluator(evaluatedItems, domainstandard.GenderMale, ageGroupStandards, rs).Evaluate(m, 62)
 	}
 
 	advice, _ := domainjudgment.NewAdvice("週2回のスクワットを継続してください")
@@ -504,7 +504,7 @@ func TestListOrganizationJudgments(t *testing.T) {
 		})
 		measuredBy, _ := domainstaff.NewStaffID("google-oauth2|000000000000000000000")
 		m := domainmeasurement.ReconstructMeasurement(domainmeasurement.NewMeasurementID(), domaincustomer.NewCustomerID(), measuredOn, measuredBy, ageAtMeasurement, measuredBy, false, []domainmeasurement.MeasurementEntry{gripStrengthEntry}, createdAt, updatedAt)
-		return domainjudgment.NewEvaluation(m, evaluatedItems, domainstandard.GenderMale, 62, ageGroupStandards, rs)
+		return domainjudgment.NewEvaluator(evaluatedItems, domainstandard.GenderMale, ageGroupStandards, rs).Evaluate(m, 62)
 	}
 
 	motorAge62 := uint32(62)

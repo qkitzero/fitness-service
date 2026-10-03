@@ -57,21 +57,6 @@ func (mr *MockAgeGroupStandardRepositoryMockRecorder) List(ctx any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockAgeGroupStandardRepository)(nil).List), ctx)
 }
 
-// ListByItemID mocks base method.
-func (m *MockAgeGroupStandardRepository) ListByItemID(ctx context.Context, measurementItemID measurementitem.MeasurementItemID) ([]standard.AgeGroupStandard, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByItemID", ctx, measurementItemID)
-	ret0, _ := ret[0].([]standard.AgeGroupStandard)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListByItemID indicates an expected call of ListByItemID.
-func (mr *MockAgeGroupStandardRepositoryMockRecorder) ListByItemID(ctx, measurementItemID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByItemID", reflect.TypeOf((*MockAgeGroupStandardRepository)(nil).ListByItemID), ctx, measurementItemID)
-}
-
 // ListByItemIDsAndGender mocks base method.
 func (m *MockAgeGroupStandardRepository) ListByItemIDsAndGender(ctx context.Context, measurementItemIDs []measurementitem.MeasurementItemID, gender standard.Gender) ([]standard.AgeGroupStandard, error) {
 	m.ctrl.T.Helper()

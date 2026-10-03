@@ -383,6 +383,33 @@ func (c standardCurve) at(age int) (int64, int64) {
 	return mean, standardDeviation
 }
 
+type itemStandards struct {
+	ageGroupStandards []standard.AgeGroupStandard
+	curve             standardCurve
+	youngestFrom      int
+	oldestTo          int
+}
+
+func newItemStandards(ageGroupStandards []standard.AgeGroupStandard) itemStandards {
+	youngestFrom, oldestTo := math.MaxInt, math.MinInt
+	for _, ageGroupStandard := range ageGroupStandards {
+		ageRange := ageGroupStandard.AgeRange()
+		if ageRange.From() < youngestFrom {
+			youngestFrom = ageRange.From()
+		}
+		if ageRange.To() > oldestTo {
+			oldestTo = ageRange.To()
+		}
+	}
+
+	return itemStandards{
+		ageGroupStandards: ageGroupStandards,
+		curve:             newStandardCurve(ageGroupStandards),
+		youngestFrom:      youngestFrom,
+		oldestTo:          oldestTo,
+	}
+}
+
 type judgedCurve struct {
 	curve          standardCurve
 	value          measurement.Value
@@ -391,24 +418,21 @@ type judgedCurve struct {
 
 func newMotorAge(
 	judgedItems []judgedItem,
-	ageGroupStandardsByItemID map[measurementitem.MeasurementItemID][]standard.AgeGroupStandard,
+	standardsByItemID map[measurementitem.MeasurementItemID]itemStandards,
 	age int,
 ) *MotorAge {
 	judgedCurves := make([]judgedCurve, 0, len(judgedItems))
 	youngestFrom, oldestTo := math.MaxInt, math.MinInt
 	for _, judged := range judgedItems {
-		ageGroupStandards := ageGroupStandardsByItemID[judged.item.ID()]
-		for _, ageGroupStandard := range ageGroupStandards {
-			ageRange := ageGroupStandard.AgeRange()
-			if ageRange.From() < youngestFrom {
-				youngestFrom = ageRange.From()
-			}
-			if ageRange.To() > oldestTo {
-				oldestTo = ageRange.To()
-			}
+		standards := standardsByItemID[judged.item.ID()]
+		if standards.youngestFrom < youngestFrom {
+			youngestFrom = standards.youngestFrom
+		}
+		if standards.oldestTo > oldestTo {
+			oldestTo = standards.oldestTo
 		}
 		judgedCurves = append(judgedCurves, judgedCurve{
-			curve:          newStandardCurve(ageGroupStandards),
+			curve:          standards.curve,
 			value:          judged.value,
 			scoreDirection: *judged.item.ScoreDirection(),
 		})
@@ -453,14 +477,22 @@ func newMotorAge(
 	return &motorAge
 }
 
-func NewEvaluation(
-	m measurement.Measurement,
+type Evaluator interface {
+	Evaluate(m measurement.Measurement, age int) Evaluation
+}
+
+type evaluator struct {
+	itemByID          map[measurementitem.MeasurementItemID]measurementitem.MeasurementItem
+	standardsByItemID map[measurementitem.MeasurementItemID]itemStandards
+	rankStandards     []standard.RankStandard
+}
+
+func NewEvaluator(
 	items []measurementitem.MeasurementItem,
 	gender standard.Gender,
-	age int,
 	ageGroupStandards []standard.AgeGroupStandard,
 	rankStandards []standard.RankStandard,
-) Evaluation {
+) Evaluator {
 	itemByID := make(map[measurementitem.MeasurementItemID]measurementitem.MeasurementItem, len(items))
 	for _, item := range items {
 		itemByID[item.ID()] = item
@@ -475,15 +507,28 @@ func NewEvaluation(
 		ageGroupStandardsByItemID[measurementItemID] = append(ageGroupStandardsByItemID[measurementItemID], ageGroupStandard)
 	}
 
+	standardsByItemID := make(map[measurementitem.MeasurementItemID]itemStandards, len(ageGroupStandardsByItemID))
+	for measurementItemID, itemAgeGroupStandards := range ageGroupStandardsByItemID {
+		standardsByItemID[measurementItemID] = newItemStandards(itemAgeGroupStandards)
+	}
+
+	return &evaluator{
+		itemByID:          itemByID,
+		standardsByItemID: standardsByItemID,
+		rankStandards:     rankStandards,
+	}
+}
+
+func (e *evaluator) Evaluate(m measurement.Measurement, age int) Evaluation {
 	entries := m.Entries()
-	baseHundredths, hasBase := heightHundredths(entries, itemByID)
+	baseHundredths, hasBase := heightHundredths(entries, e.itemByID)
 	itemEvaluations := make([]ItemEvaluation, 0, len(entries))
 	judgedItems := make([]judgedItem, 0, len(entries))
 	for _, entry := range entries {
 		if entry.Unmeasurable() {
 			continue
 		}
-		item, ok := itemByID[entry.MeasurementItemID()]
+		item, ok := e.itemByID[entry.MeasurementItemID()]
 		if !ok {
 			continue
 		}
@@ -499,7 +544,7 @@ func NewEvaluation(
 		if !ok {
 			continue
 		}
-		ageGroupStandard, ok := findAgeGroupStandard(ageGroupStandardsByItemID[item.ID()], age)
+		ageGroupStandard, ok := findAgeGroupStandard(e.standardsByItemID[item.ID()].ageGroupStandards, age)
 		if !ok {
 			continue
 		}
@@ -510,7 +555,7 @@ func NewEvaluation(
 
 		judgedItems = append(judgedItems, judgedItem{item: item, value: value})
 
-		rank, ok := findRank(rankStandards, zScore)
+		rank, ok := findRank(e.rankStandards, zScore)
 		if !ok {
 			continue
 		}
@@ -520,7 +565,7 @@ func NewEvaluation(
 
 	return &evaluation{
 		itemEvaluations:    itemEvaluations,
-		elementEvaluations: newElementEvaluations(itemEvaluations, itemByID, rankStandards),
-		motorAge:           newMotorAge(judgedItems, ageGroupStandardsByItemID, age),
+		elementEvaluations: newElementEvaluations(itemEvaluations, e.itemByID, e.rankStandards),
+		motorAge:           newMotorAge(judgedItems, e.standardsByItemID, age),
 	}
 }
