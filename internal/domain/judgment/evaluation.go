@@ -10,9 +10,12 @@ import (
 )
 
 const (
+	MaxYoungerAgeGroupFallbackYears = 2
+	MaxOlderAgeGroupFallbackYears   = 20
+)
+
+const (
 	evaluationScale                   = 100
-	maxYoungerAgeGroupFallbackYears   = 2
-	maxOlderAgeGroupFallbackYears     = 20
 	motorAgeSearchYearsBelowAgeGroups = 2
 	motorAgeSearchYearsAboveAgeGroups = 20
 	motorAgeMin                       = 0
@@ -235,13 +238,13 @@ func findAgeGroupStandard(ageGroupStandards []standard.AgeGroupStandard, age int
 		return nil, false
 	}
 	if age < youngest.AgeRange().From() {
-		if youngest.AgeRange().Distance(age) > maxYoungerAgeGroupFallbackYears {
+		if youngest.AgeRange().Distance(age) > MaxYoungerAgeGroupFallbackYears {
 			return nil, false
 		}
 		return youngest, true
 	}
 	if age > oldest.AgeRange().To() {
-		if oldest.AgeRange().Distance(age) > maxOlderAgeGroupFallbackYears {
+		if oldest.AgeRange().Distance(age) > MaxOlderAgeGroupFallbackYears {
 			return nil, false
 		}
 		return oldest, true
@@ -560,7 +563,7 @@ func (e *evaluator) Evaluate(m measurement.Measurement, age int) Evaluation {
 			continue
 		}
 
-		itemEvaluations = append(itemEvaluations, newItemEvaluation(item.ID(), value, ageGroupStandard.Mean(), zScore, rank))
+		itemEvaluations = append(itemEvaluations, newItemEvaluation(item.ID(), value, ageGroupStandard.Mean(), zScore, rank, ageGroupStandard.StandardDeviation(), ageGroupStandard.AgeRange()))
 	}
 
 	return &evaluation{

@@ -29,6 +29,9 @@ service JudgmentService {
   rpc DeletePrescription(DeletePrescriptionRequest) returns (DeletePrescriptionResponse) {
     option (google.api.http) = {delete: "/v1/measurement/{measurement_id}/prescription"};
   }
+  rpc GetJudgmentCriteria(GetJudgmentCriteriaRequest) returns (GetJudgmentCriteriaResponse) {
+    option (google.api.http) = {get: "/v1/judgment-criteria"};
+  }
 }
 
 enum Rank {
@@ -72,12 +75,21 @@ enum PrescribedUnit {
   PRESCRIBED_UNIT_MINUTES = 3;
 }
 
+enum StandardGender {
+  STANDARD_GENDER_UNSPECIFIED = 0;
+  STANDARD_GENDER_MALE = 1;
+  STANDARD_GENDER_FEMALE = 2;
+}
+
 message ItemEvaluation {
   string measurement_item_id = 1;
   double value = 2;
   double mean = 3;
   double z_score = 4;
   Rank rank = 5;
+  double standard_deviation = 6;
+  uint32 age_from = 7;
+  uint32 age_to = 8;
 }
 
 message ElementEvaluation {
@@ -169,3 +181,31 @@ message DeletePrescriptionRequest {
 }
 
 message DeletePrescriptionResponse {}
+
+message RankStandard {
+  Rank rank = 1;
+  optional double z_score_min = 2;
+  optional double z_score_max = 3;
+}
+
+message AgeGroupStandard {
+  string measurement_item_id = 1;
+  StandardGender gender = 2;
+  uint32 age_from = 3;
+  uint32 age_to = 4;
+  double mean = 5;
+  double standard_deviation = 6;
+}
+
+message AgeGroupFallback {
+  uint32 max_younger_years = 1;
+  uint32 max_older_years = 2;
+}
+
+message GetJudgmentCriteriaRequest {}
+
+message GetJudgmentCriteriaResponse {
+  repeated RankStandard rank_standards = 1;
+  repeated AgeGroupStandard age_group_standards = 2;
+  AgeGroupFallback age_group_fallback = 3;
+}

@@ -137,6 +137,8 @@ classDiagram
             standard.Mean mean
             standard.ZScore zScore
             standard.Rank rank
+            standard.StandardDeviation standardDeviation
+            standard.AgeRange ageRange
         }
 
         class ElementEvaluation["ElementEvaluation 体力要素別評価"] {

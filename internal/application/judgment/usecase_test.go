@@ -2132,3 +2132,120 @@ func TestDeletePrescription(t *testing.T) {
 		})
 	}
 }
+
+func TestGetJudgmentCriteria(t *testing.T) {
+	t.Parallel()
+	createdAt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	updatedAt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
+	userID := "google-oauth2|000000000000000000000"
+
+	zScoreA := standard.ZScore(1.5)
+	rankStandardA, _ := standard.NewRankStandard(standard.RankA, &zScoreA, nil, createdAt, updatedAt)
+	rankStandards := []standard.RankStandard{rankStandardA}
+
+	ageRange, _ := standard.NewAgeRange(20, 24)
+	mean, _ := standard.NewMean(46)
+	standardDeviation, _ := standard.NewStandardDeviation(5)
+	ageGroupStandards := []standard.AgeGroupStandard{
+		standard.NewAgeGroupStandard(standard.NewAgeGroupStandardID(), measurementitem.NewMeasurementItemID(), standard.GenderMale, ageRange, mean, standardDeviation, createdAt, updatedAt),
+	}
+
+	tests := []struct {
+		name                     string
+		success                  bool
+		ctx                      context.Context
+		verifyTokenErr           error
+		callListRankStandards    bool
+		listRankStandardsErr     error
+		callListAgeGroupStandard bool
+		listAgeGroupStandardErr  error
+	}{
+		{
+			name:                     "success get judgment criteria",
+			success:                  true,
+			ctx:                      context.Background(),
+			callListRankStandards:    true,
+			callListAgeGroupStandard: true,
+		},
+		{
+			name:           "failure verify token error",
+			ctx:            context.Background(),
+			verifyTokenErr: errors.New("verify token error"),
+		},
+		{
+			name:                  "failure list rank standards error",
+			ctx:                   context.Background(),
+			callListRankStandards: true,
+			listRankStandardsErr:  errors.New("list rank standards error"),
+		},
+		{
+			name:                     "failure list age group standards error",
+			ctx:                      context.Background(),
+			callListRankStandards:    true,
+			callListAgeGroupStandard: true,
+			listAgeGroupStandardErr:  errors.New("list age group standards error"),
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockAuthService := mocksappauth.NewMockAuthService(ctrl)
+			mockUserService := mocksappuser.NewMockUserService(ctrl)
+			mockJudgmentRepository := mocksjudgment.NewMockJudgmentRepository(ctrl)
+			mockMeasurementRepository := mocksmeasurement.NewMockMeasurementRepository(ctrl)
+			mockCustomerRepository := mockscustomer.NewMockCustomerRepository(ctrl)
+			mockOrganizationRepository := mocksorganization.NewMockOrganizationRepository(ctrl)
+			mockMeasurementItemRepository := mocksmeasurementitem.NewMockMeasurementItemRepository(ctrl)
+			mockAgeGroupStandardRepository := mocksstandard.NewMockAgeGroupStandardRepository(ctrl)
+			mockRankStandardRepository := mocksstandard.NewMockRankStandardRepository(ctrl)
+			mockPrescribedMenuOverrideRepository := mocksjudgment.NewMockPrescribedMenuOverrideRepository(ctrl)
+			mockTrainingMenuRepository := mockstraining.NewMockTrainingMenuRepository(ctrl)
+			mockPrescriptionRuleRepository := mockstraining.NewMockPrescriptionRuleRepository(ctrl)
+
+			mockAuthService.EXPECT().VerifyToken(tt.ctx).Return(userID, tt.verifyTokenErr).Times(1)
+			mockUserService.EXPECT().ListMyGroups(gomock.Any()).Times(0)
+
+			if tt.callListRankStandards {
+				mockRankStandardRepository.EXPECT().List(tt.ctx).Return(rankStandards, tt.listRankStandardsErr).Times(1)
+			} else {
+				mockRankStandardRepository.EXPECT().List(gomock.Any()).Times(0)
+			}
+
+			if tt.callListAgeGroupStandard {
+				mockAgeGroupStandardRepository.EXPECT().List(tt.ctx).Return(ageGroupStandards, tt.listAgeGroupStandardErr).Times(1)
+			} else {
+				mockAgeGroupStandardRepository.EXPECT().List(gomock.Any()).Times(0)
+			}
+
+			u := NewJudgmentUsecase(mockAuthService, mockUserService, mockJudgmentRepository, mockPrescribedMenuOverrideRepository, mockMeasurementRepository, mockCustomerRepository, mockOrganizationRepository, mockMeasurementItemRepository, mockAgeGroupStandardRepository, mockRankStandardRepository, mockTrainingMenuRepository, mockPrescriptionRuleRepository)
+
+			criteria, err := u.GetJudgmentCriteria(tt.ctx)
+			if tt.success && err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+			if !tt.success && err == nil {
+				t.Errorf("expected error, but got nil")
+			}
+			if !tt.success {
+				return
+			}
+			if len(criteria.RankStandards) != len(rankStandards) || criteria.RankStandards[0] != rankStandards[0] {
+				t.Errorf("RankStandards = %v, want %v", criteria.RankStandards, rankStandards)
+			}
+			if len(criteria.AgeGroupStandards) != len(ageGroupStandards) || criteria.AgeGroupStandards[0] != ageGroupStandards[0] {
+				t.Errorf("AgeGroupStandards = %v, want %v", criteria.AgeGroupStandards, ageGroupStandards)
+			}
+			if criteria.AgeGroupFallback.MaxYoungerYears != 2 {
+				t.Errorf("AgeGroupFallback.MaxYoungerYears = %v, want %v", criteria.AgeGroupFallback.MaxYoungerYears, 2)
+			}
+			if criteria.AgeGroupFallback.MaxOlderYears != 20 {
+				t.Errorf("AgeGroupFallback.MaxOlderYears = %v, want %v", criteria.AgeGroupFallback.MaxOlderYears, 20)
+			}
+		})
+	}
+}
