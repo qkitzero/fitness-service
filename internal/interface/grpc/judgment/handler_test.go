@@ -444,6 +444,12 @@ func TestGetJudgment(t *testing.T) {
 				if itemEvaluation.GetRank() != judgmentv1.Rank_RANK_A {
 					t.Errorf("Rank = %v, want %v", itemEvaluation.GetRank(), judgmentv1.Rank_RANK_A)
 				}
+				if itemEvaluation.GetStandardDeviation() != 5 {
+					t.Errorf("StandardDeviation = %v, want %v", itemEvaluation.GetStandardDeviation(), 5)
+				}
+				if itemEvaluation.GetAgeFrom() != 60 || itemEvaluation.GetAgeTo() != 64 {
+					t.Errorf("AgeFrom-AgeTo = %v-%v, want %v-%v", itemEvaluation.GetAgeFrom(), itemEvaluation.GetAgeTo(), 60, 64)
+				}
 			}
 			if tt.wantElementEvaluations > 0 {
 				elementEvaluation := judgmentMessage.GetElementEvaluations()[0]
@@ -733,6 +739,12 @@ func TestListOrganizationJudgments(t *testing.T) {
 					}
 					if itemEvaluation.GetRank() != judgmentv1.Rank_RANK_A {
 						t.Errorf("Judgments[%d].ItemEvaluations[0].Rank = %v, want %v", i, itemEvaluation.GetRank(), judgmentv1.Rank_RANK_A)
+					}
+					if itemEvaluation.GetStandardDeviation() != 5 {
+						t.Errorf("Judgments[%d].ItemEvaluations[0].StandardDeviation = %v, want %v", i, itemEvaluation.GetStandardDeviation(), 5)
+					}
+					if itemEvaluation.GetAgeFrom() != 60 || itemEvaluation.GetAgeTo() != 64 {
+						t.Errorf("Judgments[%d].ItemEvaluations[0].AgeFrom-AgeTo = %v-%v, want %v-%v", i, itemEvaluation.GetAgeFrom(), itemEvaluation.GetAgeTo(), 60, 64)
 					}
 				}
 				if spec.wantElementEvaluations > 0 {

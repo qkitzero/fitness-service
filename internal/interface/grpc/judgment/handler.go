@@ -168,6 +168,9 @@ func toProtoItemEvaluation(i domainjudgment.ItemEvaluation) (*judgmentv1.ItemEva
 		Mean:              i.Mean().Float64(),
 		ZScore:            i.ZScore().Float64(),
 		Rank:              rank,
+		StandardDeviation: i.StandardDeviation().Float64(),
+		AgeFrom:           uint32(i.AgeRange().From()),
+		AgeTo:             uint32(i.AgeRange().To()),
 	}, nil
 }
 
