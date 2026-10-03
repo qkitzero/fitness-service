@@ -560,7 +560,7 @@ func (e *evaluator) Evaluate(m measurement.Measurement, age int) Evaluation {
 			continue
 		}
 
-		itemEvaluations = append(itemEvaluations, newItemEvaluation(item.ID(), value, ageGroupStandard.Mean(), zScore, rank))
+		itemEvaluations = append(itemEvaluations, newItemEvaluation(item.ID(), value, ageGroupStandard.Mean(), zScore, rank, ageGroupStandard.StandardDeviation(), ageGroupStandard.AgeRange()))
 	}
 
 	return &evaluation{

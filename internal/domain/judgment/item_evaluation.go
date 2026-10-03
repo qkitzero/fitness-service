@@ -12,6 +12,8 @@ type ItemEvaluation interface {
 	Mean() standard.Mean
 	ZScore() standard.ZScore
 	Rank() standard.Rank
+	StandardDeviation() standard.StandardDeviation
+	AgeRange() standard.AgeRange
 }
 
 type itemEvaluation struct {
@@ -20,6 +22,8 @@ type itemEvaluation struct {
 	mean              standard.Mean
 	zScore            standard.ZScore
 	rank              standard.Rank
+	standardDeviation standard.StandardDeviation
+	ageRange          standard.AgeRange
 }
 
 func (i itemEvaluation) MeasurementItemID() measurementitem.MeasurementItemID {
@@ -42,12 +46,22 @@ func (i itemEvaluation) Rank() standard.Rank {
 	return i.rank
 }
 
+func (i itemEvaluation) StandardDeviation() standard.StandardDeviation {
+	return i.standardDeviation
+}
+
+func (i itemEvaluation) AgeRange() standard.AgeRange {
+	return i.ageRange
+}
+
 func newItemEvaluation(
 	measurementItemID measurementitem.MeasurementItemID,
 	value measurement.Value,
 	mean standard.Mean,
 	zScore standard.ZScore,
 	rank standard.Rank,
+	standardDeviation standard.StandardDeviation,
+	ageRange standard.AgeRange,
 ) ItemEvaluation {
 	return &itemEvaluation{
 		measurementItemID: measurementItemID,
@@ -55,5 +69,7 @@ func newItemEvaluation(
 		mean:              mean,
 		zScore:            zScore,
 		rank:              rank,
+		standardDeviation: standardDeviation,
+		ageRange:          ageRange,
 	}
 }
