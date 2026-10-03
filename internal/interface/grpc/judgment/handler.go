@@ -51,6 +51,17 @@ func toProtoRank(r domainstandard.Rank) (judgmentv1.Rank, error) {
 	}
 }
 
+func toProtoStandardGender(g domainstandard.Gender) (judgmentv1.StandardGender, error) {
+	switch g {
+	case domainstandard.GenderMale:
+		return judgmentv1.StandardGender_STANDARD_GENDER_MALE, nil
+	case domainstandard.GenderFemale:
+		return judgmentv1.StandardGender_STANDARD_GENDER_FEMALE, nil
+	default:
+		return judgmentv1.StandardGender_STANDARD_GENDER_UNSPECIFIED, fmt.Errorf("unmapped standard gender %q", g)
+	}
+}
+
 func toProtoElement(e domainmeasurementitem.Element) (judgmentv1.Element, error) {
 	switch e {
 	case domainmeasurementitem.ElementMuscleStrength:
@@ -342,6 +353,72 @@ func toProtoOrganizationJudgment(result appjudgment.OrganizationJudgmentResult) 
 	return msg, nil
 }
 
+func toProtoRankStandard(r domainstandard.RankStandard) (*judgmentv1.RankStandard, error) {
+	rank, err := toProtoRank(r.Rank())
+	if err != nil {
+		return nil, err
+	}
+
+	msg := &judgmentv1.RankStandard{
+		Rank: rank,
+	}
+	if zScoreMin := r.ZScoreMin(); zScoreMin != nil {
+		f := zScoreMin.Float64()
+		msg.ZScoreMin = &f
+	}
+	if zScoreMax := r.ZScoreMax(); zScoreMax != nil {
+		f := zScoreMax.Float64()
+		msg.ZScoreMax = &f
+	}
+
+	return msg, nil
+}
+
+func toProtoAgeGroupStandard(a domainstandard.AgeGroupStandard) (*judgmentv1.AgeGroupStandard, error) {
+	gender, err := toProtoStandardGender(a.Gender())
+	if err != nil {
+		return nil, err
+	}
+
+	return &judgmentv1.AgeGroupStandard{
+		MeasurementItemId: a.MeasurementItemID().String(),
+		Gender:            gender,
+		AgeFrom:           uint32(a.AgeRange().From()),
+		AgeTo:             uint32(a.AgeRange().To()),
+		Mean:              a.Mean().Float64(),
+		StandardDeviation: a.StandardDeviation().Float64(),
+	}, nil
+}
+
+func toProtoJudgmentCriteria(criteria appjudgment.JudgmentCriteria) (*judgmentv1.GetJudgmentCriteriaResponse, error) {
+	rankStandardMessages := make([]*judgmentv1.RankStandard, 0, len(criteria.RankStandards))
+	for _, r := range criteria.RankStandards {
+		rankStandardMessage, err := toProtoRankStandard(r)
+		if err != nil {
+			return nil, err
+		}
+		rankStandardMessages = append(rankStandardMessages, rankStandardMessage)
+	}
+
+	ageGroupStandardMessages := make([]*judgmentv1.AgeGroupStandard, 0, len(criteria.AgeGroupStandards))
+	for _, a := range criteria.AgeGroupStandards {
+		ageGroupStandardMessage, err := toProtoAgeGroupStandard(a)
+		if err != nil {
+			return nil, err
+		}
+		ageGroupStandardMessages = append(ageGroupStandardMessages, ageGroupStandardMessage)
+	}
+
+	return &judgmentv1.GetJudgmentCriteriaResponse{
+		RankStandards:     rankStandardMessages,
+		AgeGroupStandards: ageGroupStandardMessages,
+		AgeGroupFallback: &judgmentv1.AgeGroupFallback{
+			MaxYoungerYears: uint32(criteria.AgeGroupFallback.MaxYoungerYears),
+			MaxOlderYears:   uint32(criteria.AgeGroupFallback.MaxOlderYears),
+		},
+	}, nil
+}
+
 func mapJudgmentError(err error, op string) error {
 	if errors.Is(err, domainjudgment.ErrJudgmentNotFound) ||
 		errors.Is(err, domainmeasurement.ErrMeasurementNotFound) ||
@@ -541,4 +618,18 @@ func (h *JudgmentHandler) DeletePrescription(ctx context.Context, req *judgmentv
 	}
 
 	return &judgmentv1.DeletePrescriptionResponse{}, nil
+}
+
+func (h *JudgmentHandler) GetJudgmentCriteria(ctx context.Context, _ *judgmentv1.GetJudgmentCriteriaRequest) (*judgmentv1.GetJudgmentCriteriaResponse, error) {
+	criteria, err := h.judgmentUsecase.GetJudgmentCriteria(ctx)
+	if err != nil {
+		return nil, mapJudgmentError(err, "GetJudgmentCriteria")
+	}
+
+	res, err := toProtoJudgmentCriteria(criteria)
+	if err != nil {
+		return nil, mapJudgmentError(err, "GetJudgmentCriteria")
+	}
+
+	return res, nil
 }
