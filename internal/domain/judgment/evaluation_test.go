@@ -25,7 +25,7 @@ type wantElementEvaluation struct {
 	rank    standard.Rank
 }
 
-func TestNewEvaluation(t *testing.T) {
+func TestEvaluate(t *testing.T) {
 	t.Parallel()
 	createdAt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 	updatedAt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
@@ -1289,7 +1289,7 @@ func TestNewEvaluation(t *testing.T) {
 				targetRankStandards = tt.rankStandards()
 			}
 
-			e := NewEvaluation(m, items, tt.gender, tt.age, ageGroupStandards, targetRankStandards)
+			e := NewEvaluator(items, tt.gender, ageGroupStandards, targetRankStandards).Evaluate(m, tt.age)
 
 			itemEvaluations := e.ItemEvaluations()
 			if len(itemEvaluations) != len(tt.wantItemEvaluations) {

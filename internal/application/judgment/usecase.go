@@ -237,7 +237,7 @@ func (u *judgmentUsecase) evaluate(ctx context.Context, foundMeasurement measure
 	gender, err := standard.NewGender(foundCustomer.Gender().String())
 	if err != nil {
 		log.Printf("GetJudgment: measurement %s: no standards exist for customer gender %q, returning an empty evaluation", foundMeasurement.ID(), foundCustomer.Gender())
-		return judgment.NewEvaluation(foundMeasurement, nil, gender, age, nil, nil), nil
+		return judgment.NewEvaluator(nil, gender, nil, nil).Evaluate(foundMeasurement, age), nil
 	}
 
 	entries := foundMeasurement.Entries()
@@ -275,7 +275,7 @@ func (u *judgmentUsecase) evaluate(ctx context.Context, foundMeasurement measure
 		log.Printf("GetJudgment: measurement %s: the height required to normalize items %v is missing, skipping them", foundMeasurement.ID(), missingHeightCodes)
 	}
 
-	return judgment.NewEvaluation(foundMeasurement, measurementItems, gender, age, ageGroupStandards, rankStandards), nil
+	return judgment.NewEvaluator(measurementItems, gender, ageGroupStandards, rankStandards).Evaluate(foundMeasurement, age), nil
 }
 
 func (u *judgmentUsecase) prescribe(ctx context.Context, foundMeasurement measurement.Measurement, evaluation judgment.Evaluation) (judgment.Prescription, error) {
@@ -461,7 +461,7 @@ func (u *judgmentUsecase) ListOrganizationJudgments(ctx context.Context, organiz
 			}
 		}
 
-		evaluation := judgment.NewEvaluation(foundMeasurement, measurementItems, gender, age, genderStandards, rankStandards)
+		evaluation := judgment.NewEvaluator(measurementItems, gender, genderStandards, rankStandards).Evaluate(foundMeasurement, age)
 
 		results = append(results, OrganizationJudgmentResult{
 			CustomerID:       foundMeasurement.CustomerID(),
