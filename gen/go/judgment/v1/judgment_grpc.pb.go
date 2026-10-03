@@ -24,6 +24,7 @@ const (
 	JudgmentService_UpsertJudgmentAdvice_FullMethodName      = "/judgment.v1.JudgmentService/UpsertJudgmentAdvice"
 	JudgmentService_UpsertPrescription_FullMethodName        = "/judgment.v1.JudgmentService/UpsertPrescription"
 	JudgmentService_DeletePrescription_FullMethodName        = "/judgment.v1.JudgmentService/DeletePrescription"
+	JudgmentService_GetJudgmentCriteria_FullMethodName       = "/judgment.v1.JudgmentService/GetJudgmentCriteria"
 )
 
 // JudgmentServiceClient is the client API for JudgmentService service.
@@ -35,6 +36,7 @@ type JudgmentServiceClient interface {
 	UpsertJudgmentAdvice(ctx context.Context, in *UpsertJudgmentAdviceRequest, opts ...grpc.CallOption) (*UpsertJudgmentAdviceResponse, error)
 	UpsertPrescription(ctx context.Context, in *UpsertPrescriptionRequest, opts ...grpc.CallOption) (*UpsertPrescriptionResponse, error)
 	DeletePrescription(ctx context.Context, in *DeletePrescriptionRequest, opts ...grpc.CallOption) (*DeletePrescriptionResponse, error)
+	GetJudgmentCriteria(ctx context.Context, in *GetJudgmentCriteriaRequest, opts ...grpc.CallOption) (*GetJudgmentCriteriaResponse, error)
 }
 
 type judgmentServiceClient struct {
@@ -95,6 +97,16 @@ func (c *judgmentServiceClient) DeletePrescription(ctx context.Context, in *Dele
 	return out, nil
 }
 
+func (c *judgmentServiceClient) GetJudgmentCriteria(ctx context.Context, in *GetJudgmentCriteriaRequest, opts ...grpc.CallOption) (*GetJudgmentCriteriaResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetJudgmentCriteriaResponse)
+	err := c.cc.Invoke(ctx, JudgmentService_GetJudgmentCriteria_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // JudgmentServiceServer is the server API for JudgmentService service.
 // All implementations must embed UnimplementedJudgmentServiceServer
 // for forward compatibility.
@@ -104,6 +116,7 @@ type JudgmentServiceServer interface {
 	UpsertJudgmentAdvice(context.Context, *UpsertJudgmentAdviceRequest) (*UpsertJudgmentAdviceResponse, error)
 	UpsertPrescription(context.Context, *UpsertPrescriptionRequest) (*UpsertPrescriptionResponse, error)
 	DeletePrescription(context.Context, *DeletePrescriptionRequest) (*DeletePrescriptionResponse, error)
+	GetJudgmentCriteria(context.Context, *GetJudgmentCriteriaRequest) (*GetJudgmentCriteriaResponse, error)
 	mustEmbedUnimplementedJudgmentServiceServer()
 }
 
@@ -128,6 +141,9 @@ func (UnimplementedJudgmentServiceServer) UpsertPrescription(context.Context, *U
 }
 func (UnimplementedJudgmentServiceServer) DeletePrescription(context.Context, *DeletePrescriptionRequest) (*DeletePrescriptionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeletePrescription not implemented")
+}
+func (UnimplementedJudgmentServiceServer) GetJudgmentCriteria(context.Context, *GetJudgmentCriteriaRequest) (*GetJudgmentCriteriaResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetJudgmentCriteria not implemented")
 }
 func (UnimplementedJudgmentServiceServer) mustEmbedUnimplementedJudgmentServiceServer() {}
 func (UnimplementedJudgmentServiceServer) testEmbeddedByValue()                         {}
@@ -240,6 +256,24 @@ func _JudgmentService_DeletePrescription_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _JudgmentService_GetJudgmentCriteria_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetJudgmentCriteriaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(JudgmentServiceServer).GetJudgmentCriteria(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: JudgmentService_GetJudgmentCriteria_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(JudgmentServiceServer).GetJudgmentCriteria(ctx, req.(*GetJudgmentCriteriaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // JudgmentService_ServiceDesc is the grpc.ServiceDesc for JudgmentService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -266,6 +300,10 @@ var JudgmentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "DeletePrescription",
 			Handler:    _JudgmentService_DeletePrescription_Handler,
+		},
+		{
+			MethodName: "GetJudgmentCriteria",
+			Handler:    _JudgmentService_GetJudgmentCriteria_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
