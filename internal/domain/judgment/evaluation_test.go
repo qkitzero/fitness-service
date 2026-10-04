@@ -17,6 +17,9 @@ type wantItemEvaluation struct {
 	mean              float64
 	zScore            float64
 	rank              standard.Rank
+	standardDeviation float64
+	ageFrom           int
+	ageTo             int
 }
 
 type wantElementEvaluation struct {
@@ -25,7 +28,7 @@ type wantElementEvaluation struct {
 	rank    standard.Rank
 }
 
-func TestNewEvaluation(t *testing.T) {
+func TestEvaluate(t *testing.T) {
 	t.Parallel()
 	createdAt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 	updatedAt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
@@ -289,7 +292,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 36, 46, -2, standard.RankE}},
+			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 36, 46, -2, standard.RankE, 5, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, -2, standard.RankE}},
 			wantMotorAge:           &motorAge67,
 		},
@@ -307,7 +310,7 @@ func TestNewEvaluation(t *testing.T) {
 				entry, _ := measurement.NewMeasurementEntry(timedUpAndGo, false, nil, values)
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{timedUpAndGoID, 6, 6.5, 0.5, standard.RankB}},
+			wantItemEvaluations:    []wantItemEvaluation{{timedUpAndGoID, 6, 6.5, 0.5, standard.RankB, 1, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, 0.5, standard.RankB}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -325,7 +328,7 @@ func TestNewEvaluation(t *testing.T) {
 				entry, _ := measurement.NewMeasurementEntry(stickReaction, false, nil, values)
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{stickReactionID, 19.27, 20, 0.18, standard.RankC}},
+			wantItemEvaluations:    []wantItemEvaluation{{stickReactionID, 19.27, 20, 0.18, standard.RankC, 4, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementAgility, 0.18, standard.RankC}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -344,7 +347,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{stickReactionID, 19, 20, 0.25, standard.RankC}},
+			wantItemEvaluations:    []wantItemEvaluation{{stickReactionID, 19, 20, 0.25, standard.RankC, 4, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementAgility, 0.25, standard.RankC}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -377,7 +380,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 53.5, 46, 1.5, standard.RankA}},
+			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 53.5, 46, 1.5, standard.RankA, 5, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, 1.5, standard.RankA}},
 			wantMotorAge:           &motorAge38,
 		},
@@ -396,7 +399,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{timedUpAndGoID, 5.5, 6.5, 1, standard.RankB}},
+			wantItemEvaluations:    []wantItemEvaluation{{timedUpAndGoID, 5.5, 6.5, 1, standard.RankB, 1, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, 1, standard.RankB}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -422,8 +425,8 @@ func TestNewEvaluation(t *testing.T) {
 				return []measurement.MeasurementEntry{twoStepEntry, timedUpAndGoEntry}
 			},
 			wantItemEvaluations: []wantItemEvaluation{
-				{twoStepID, 160, 160, 0, standard.RankC},
-				{timedUpAndGoID, 5.5, 6.5, 1, standard.RankB},
+				{twoStepID, 160, 160, 0, standard.RankC, 15, 40, 44},
+				{timedUpAndGoID, 5.5, 6.5, 1, standard.RankB, 1, 40, 44},
 			},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, 0.5, standard.RankB}},
 			wantMotorAge:           &motorAge42,
@@ -443,7 +446,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{twoStepID, 170, 160, 0.67, standard.RankB}},
+			wantItemEvaluations:    []wantItemEvaluation{{twoStepID, 170, 160, 0.67, standard.RankB, 15, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, 0.67, standard.RankB}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -459,7 +462,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 46, 46, 0, standard.RankC}},
+			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 46, 46, 0, standard.RankC, 5, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, 0, standard.RankC}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -478,7 +481,7 @@ func TestNewEvaluation(t *testing.T) {
 				timedUpAndGoEntry, _ := measurement.NewMeasurementEntry(timedUpAndGo, true, note, nil)
 				return []measurement.MeasurementEntry{gripStrengthEntry, timedUpAndGoEntry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 46, 46, 0, standard.RankC}},
+			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 46, 46, 0, standard.RankC, 5, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, 0, standard.RankC}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -495,7 +498,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 46, 38, 1.6, standard.RankA}},
+			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 46, 38, 1.6, standard.RankA, 5, 60, 64}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, 1.6, standard.RankA}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -512,7 +515,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 38, 46, -1.6, standard.RankE}},
+			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 38, 46, -1.6, standard.RankE, 5, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, -1.6, standard.RankE}},
 			wantMotorAge:           &motorAge62,
 		},
@@ -535,7 +538,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{strideEntry, heightEntry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{heightRatioID, 1.48, 1.6, -0.8, standard.RankD}},
+			wantItemEvaluations:    []wantItemEvaluation{{heightRatioID, 1.48, 1.6, -0.8, standard.RankD, 0.15, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, -0.8, standard.RankD}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -674,7 +677,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 46, 46, 0, standard.RankC}},
+			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 46, 46, 0, standard.RankC, 5, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, 0, standard.RankC}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -705,7 +708,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 30, 38, -1.6, standard.RankE}},
+			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 30, 38, -1.6, standard.RankE, 5, 60, 64}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, -1.6, standard.RankE}},
 			wantMotorAge:           &motorAge82,
 		},
@@ -749,7 +752,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{functionalReachID, 30, 10, 4, standard.RankA}},
+			wantItemEvaluations:    []wantItemEvaluation{{functionalReachID, 30, 10, 4, standard.RankA, 5, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementBalance, 4, standard.RankA}},
 			wantMotorAge:           &motorAge45,
 		},
@@ -765,7 +768,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{functionalReachID, 30, 20, 2, standard.RankA}},
+			wantItemEvaluations:    []wantItemEvaluation{{functionalReachID, 30, 20, 2, standard.RankA, 5, 45, 49}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementBalance, 2, standard.RankA}},
 			wantMotorAge:           &motorAge45,
 		},
@@ -788,8 +791,8 @@ func TestNewEvaluation(t *testing.T) {
 				return []measurement.MeasurementEntry{gripStrengthEntry, oneLegStandEntry}
 			},
 			wantItemEvaluations: []wantItemEvaluation{
-				{gripStrengthID, 38, 38, 0, standard.RankC},
-				{oneLegStandID, 60, 30, 3, standard.RankA},
+				{gripStrengthID, 38, 38, 0, standard.RankC, 5, 60, 64},
+				{oneLegStandID, 60, 30, 3, standard.RankA, 10, 40, 49},
 			},
 			wantElementEvaluations: []wantElementEvaluation{
 				{measurementitem.ElementMuscleStrength, 0, standard.RankC},
@@ -818,7 +821,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{gripStrengthEntry, twoStepEntry, standUpTestEntry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{twoStepID, 190, 160, 2, standard.RankA}},
+			wantItemEvaluations:    []wantItemEvaluation{{twoStepID, 190, 160, 2, standard.RankA, 15, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, 2, standard.RankA}},
 			wantMotorAge:           &motorAge38,
 		},
@@ -947,8 +950,8 @@ func TestNewEvaluation(t *testing.T) {
 			},
 			rankStandards: func() []standard.RankStandard { return extremeRankStandards },
 			wantItemEvaluations: []wantItemEvaluation{
-				{twoStepID, 190, 160, 2, standard.RankA},
-				{timedUpAndGoID, 8.5, 6.5, -2, standard.RankE},
+				{twoStepID, 190, 160, 2, standard.RankA, 15, 40, 44},
+				{timedUpAndGoID, 8.5, 6.5, -2, standard.RankE, 1, 40, 44},
 			},
 			wantMotorAge: &motorAge42,
 		},
@@ -966,7 +969,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{oneLegStandID, 60, 30, 3, standard.RankA}},
+			wantItemEvaluations:    []wantItemEvaluation{{oneLegStandID, 60, 30, 3, standard.RankA, 10, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementBalance, 3, standard.RankA}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -984,7 +987,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{standUpTestID, 7, 6, 0.67, standard.RankB}},
+			wantItemEvaluations:    []wantItemEvaluation{{standUpTestID, 7, 6, 0.67, standard.RankB, 1.5, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, 0.67, standard.RankB}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -1002,7 +1005,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{standUpTestID, 5, 6, -0.67, standard.RankD}},
+			wantItemEvaluations:    []wantItemEvaluation{{standUpTestID, 5, 6, -0.67, standard.RankD, 1.5, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, -0.67, standard.RankD}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -1025,7 +1028,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{worstSideLowerIsBetterID, 8, 8, 0, standard.RankC}},
+			wantItemEvaluations:    []wantItemEvaluation{{worstSideLowerIsBetterID, 8, 8, 0, standard.RankC, 1, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, 0, standard.RankC}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -1058,7 +1061,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{worstSideLowerIsBetterID, 9, 8, -1, standard.RankD}},
+			wantItemEvaluations:    []wantItemEvaluation{{worstSideLowerIsBetterID, 9, 8, -1, standard.RankD, 1, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, -1, standard.RankD}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -1079,8 +1082,8 @@ func TestNewEvaluation(t *testing.T) {
 				return []measurement.MeasurementEntry{twoStepEntry, timedUpAndGoEntry}
 			},
 			wantItemEvaluations: []wantItemEvaluation{
-				{twoStepID, 149.8, 160, -0.68, standard.RankD},
-				{timedUpAndGoID, 4.83, 6.5, 1.67, standard.RankA},
+				{twoStepID, 149.8, 160, -0.68, standard.RankD, 15, 40, 44},
+				{timedUpAndGoID, 4.83, 6.5, 1.67, standard.RankA, 1, 40, 44},
 			},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMobility, 0.5, standard.RankB}},
 			wantMotorAge:           &motorAge42,
@@ -1097,7 +1100,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{edgeAgeGroupsID, 10, 10, 0, standard.RankC}},
+			wantItemEvaluations:    []wantItemEvaluation{{edgeAgeGroupsID, 10, 10, 0, standard.RankC, 5, 0, 4}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementFlexibility, 0, standard.RankC}},
 			wantMotorAge:           &motorAge2,
 		},
@@ -1113,7 +1116,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{peakInMiddleID, 40, 40, 0, standard.RankC}},
+			wantItemEvaluations:    []wantItemEvaluation{{peakInMiddleID, 40, 40, 0, standard.RankC, 5, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementFlexibility, 0, standard.RankC}},
 			wantMotorAge:           &motorAge42,
 		},
@@ -1129,7 +1132,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{peakInMiddleID, 40, 40, 0, standard.RankC}},
+			wantItemEvaluations:    []wantItemEvaluation{{peakInMiddleID, 40, 40, 0, standard.RankC, 5, 60, 64}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementFlexibility, 0, standard.RankC}},
 			wantMotorAge:           &motorAge62,
 		},
@@ -1146,7 +1149,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 44, 46, -0.4, standard.RankC}},
+			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 44, 46, -0.4, standard.RankC, 5, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, -0.4, standard.RankC}},
 			wantMotorAge:           &motorAge47,
 		},
@@ -1163,7 +1166,7 @@ func TestNewEvaluation(t *testing.T) {
 				})
 				return []measurement.MeasurementEntry{entry}
 			},
-			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 35.6, 46, -2.08, standard.RankE}},
+			wantItemEvaluations:    []wantItemEvaluation{{gripStrengthID, 35.6, 46, -2.08, standard.RankE, 5, 40, 44}},
 			wantElementEvaluations: []wantElementEvaluation{{measurementitem.ElementMuscleStrength, -2.08, standard.RankE}},
 			wantMotorAge:           &motorAge68,
 		},
@@ -1184,8 +1187,8 @@ func TestNewEvaluation(t *testing.T) {
 				return []measurement.MeasurementEntry{sitAndReachEntry, walk5mEntry}
 			},
 			wantItemEvaluations: []wantItemEvaluation{
-				{sitAndReachID, 40, 38, 0.4, standard.RankC},
-				{walk5mID, 5, 5.2, 0.4, standard.RankC},
+				{sitAndReachID, 40, 38, 0.4, standard.RankC, 5, 40, 44},
+				{walk5mID, 5, 5.2, 0.4, standard.RankC, 0.5, 40, 44},
 			},
 			wantElementEvaluations: []wantElementEvaluation{
 				{measurementitem.ElementFlexibility, 0.4, standard.RankC},
@@ -1211,8 +1214,8 @@ func TestNewEvaluation(t *testing.T) {
 				return []measurement.MeasurementEntry{sitAndReachEntry, gripStrengthEntry}
 			},
 			wantItemEvaluations: []wantItemEvaluation{
-				{sitAndReachID, 40, 38, 0.4, standard.RankC},
-				{gripStrengthID, 38, 46, -1.6, standard.RankE},
+				{sitAndReachID, 40, 38, 0.4, standard.RankC, 5, 40, 44},
+				{gripStrengthID, 38, 46, -1.6, standard.RankE, 5, 40, 44},
 			},
 			wantElementEvaluations: []wantElementEvaluation{
 				{measurementitem.ElementMuscleStrength, -1.6, standard.RankE},
@@ -1237,8 +1240,8 @@ func TestNewEvaluation(t *testing.T) {
 				return []measurement.MeasurementEntry{sitAndReachEntry, seatedStepping20sEntry}
 			},
 			wantItemEvaluations: []wantItemEvaluation{
-				{sitAndReachID, 40, 38, 0.4, standard.RankC},
-				{seatedStepping20sID, 35, 40, -1, standard.RankD},
+				{sitAndReachID, 40, 38, 0.4, standard.RankC, 5, 40, 44},
+				{seatedStepping20sID, 35, 40, -1, standard.RankD, 5, 40, 44},
 			},
 			wantElementEvaluations: []wantElementEvaluation{
 				{measurementitem.ElementFlexibility, 0.4, standard.RankC},
@@ -1264,8 +1267,8 @@ func TestNewEvaluation(t *testing.T) {
 				return []measurement.MeasurementEntry{stickReactionEntry, gripStrengthEntry}
 			},
 			wantItemEvaluations: []wantItemEvaluation{
-				{stickReactionID, 18, 20, 0.5, standard.RankB},
-				{gripStrengthID, 46, 46, 0, standard.RankC},
+				{stickReactionID, 18, 20, 0.5, standard.RankB, 4, 40, 44},
+				{gripStrengthID, 46, 46, 0, standard.RankC, 5, 40, 44},
 			},
 			wantElementEvaluations: []wantElementEvaluation{
 				{measurementitem.ElementMuscleStrength, 0, standard.RankC},
@@ -1289,7 +1292,7 @@ func TestNewEvaluation(t *testing.T) {
 				targetRankStandards = tt.rankStandards()
 			}
 
-			e := NewEvaluation(m, items, tt.gender, tt.age, ageGroupStandards, targetRankStandards)
+			e := NewEvaluator(items, tt.gender, ageGroupStandards, targetRankStandards).Evaluate(m, tt.age)
 
 			itemEvaluations := e.ItemEvaluations()
 			if len(itemEvaluations) != len(tt.wantItemEvaluations) {
@@ -1311,6 +1314,12 @@ func TestNewEvaluation(t *testing.T) {
 				}
 				if got.Rank() != want.rank {
 					t.Errorf("ItemEvaluations()[%d].Rank() = %v, want %v", i, got.Rank(), want.rank)
+				}
+				if got.StandardDeviation().Float64() != want.standardDeviation {
+					t.Errorf("ItemEvaluations()[%d].StandardDeviation() = %v, want %v", i, got.StandardDeviation().Float64(), want.standardDeviation)
+				}
+				if got.AgeRange().From() != want.ageFrom || got.AgeRange().To() != want.ageTo {
+					t.Errorf("ItemEvaluations()[%d].AgeRange() = %v-%v, want %v-%v", i, got.AgeRange().From(), got.AgeRange().To(), want.ageFrom, want.ageTo)
 				}
 			}
 

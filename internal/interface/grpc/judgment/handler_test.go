@@ -94,7 +94,7 @@ func TestGetJudgment(t *testing.T) {
 		measuredBy, _ := domainstaff.NewStaffID("google-oauth2|000000000000000000000")
 		ageAtMeasurement, _ := domainmeasurement.NewAgeAtMeasurement(62)
 		m := domainmeasurement.ReconstructMeasurement(domainmeasurement.NewMeasurementID(), domaincustomer.NewCustomerID(), measuredOn, measuredBy, ageAtMeasurement, measuredBy, false, []domainmeasurement.MeasurementEntry{gripStrengthEntry, cs30Entry}, createdAt, updatedAt)
-		return domainjudgment.NewEvaluation(m, evaluatedItems, domainstandard.GenderMale, 62, ageGroupStandards, rs)
+		return domainjudgment.NewEvaluator(evaluatedItems, domainstandard.GenderMale, ageGroupStandards, rs).Evaluate(m, 62)
 	}
 
 	advice, _ := domainjudgment.NewAdvice("週2回のスクワットを継続してください")
@@ -444,6 +444,12 @@ func TestGetJudgment(t *testing.T) {
 				if itemEvaluation.GetRank() != judgmentv1.Rank_RANK_A {
 					t.Errorf("Rank = %v, want %v", itemEvaluation.GetRank(), judgmentv1.Rank_RANK_A)
 				}
+				if itemEvaluation.GetStandardDeviation() != 5 {
+					t.Errorf("StandardDeviation = %v, want %v", itemEvaluation.GetStandardDeviation(), 5)
+				}
+				if itemEvaluation.GetAgeFrom() != 60 || itemEvaluation.GetAgeTo() != 64 {
+					t.Errorf("AgeFrom-AgeTo = %v-%v, want %v-%v", itemEvaluation.GetAgeFrom(), itemEvaluation.GetAgeTo(), 60, 64)
+				}
 			}
 			if tt.wantElementEvaluations > 0 {
 				elementEvaluation := judgmentMessage.GetElementEvaluations()[0]
@@ -504,7 +510,7 @@ func TestListOrganizationJudgments(t *testing.T) {
 		})
 		measuredBy, _ := domainstaff.NewStaffID("google-oauth2|000000000000000000000")
 		m := domainmeasurement.ReconstructMeasurement(domainmeasurement.NewMeasurementID(), domaincustomer.NewCustomerID(), measuredOn, measuredBy, ageAtMeasurement, measuredBy, false, []domainmeasurement.MeasurementEntry{gripStrengthEntry}, createdAt, updatedAt)
-		return domainjudgment.NewEvaluation(m, evaluatedItems, domainstandard.GenderMale, 62, ageGroupStandards, rs)
+		return domainjudgment.NewEvaluator(evaluatedItems, domainstandard.GenderMale, ageGroupStandards, rs).Evaluate(m, 62)
 	}
 
 	motorAge62 := uint32(62)
@@ -734,6 +740,12 @@ func TestListOrganizationJudgments(t *testing.T) {
 					if itemEvaluation.GetRank() != judgmentv1.Rank_RANK_A {
 						t.Errorf("Judgments[%d].ItemEvaluations[0].Rank = %v, want %v", i, itemEvaluation.GetRank(), judgmentv1.Rank_RANK_A)
 					}
+					if itemEvaluation.GetStandardDeviation() != 5 {
+						t.Errorf("Judgments[%d].ItemEvaluations[0].StandardDeviation = %v, want %v", i, itemEvaluation.GetStandardDeviation(), 5)
+					}
+					if itemEvaluation.GetAgeFrom() != 60 || itemEvaluation.GetAgeTo() != 64 {
+						t.Errorf("Judgments[%d].ItemEvaluations[0].AgeFrom-AgeTo = %v-%v, want %v-%v", i, itemEvaluation.GetAgeFrom(), itemEvaluation.GetAgeTo(), 60, 64)
+					}
 				}
 				if spec.wantElementEvaluations > 0 {
 					elementEvaluation := judgmentMessage.GetElementEvaluations()[0]
@@ -779,6 +791,38 @@ func TestToProtoRank(t *testing.T) {
 
 			if rank != tt.want {
 				t.Errorf("toProtoRank() = %v, want %v", rank, tt.want)
+			}
+		})
+	}
+}
+
+func TestToProtoStandardGender(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		success bool
+		gender  domainstandard.Gender
+		want    judgmentv1.StandardGender
+	}{
+		{"success male", true, domainstandard.GenderMale, judgmentv1.StandardGender_STANDARD_GENDER_MALE},
+		{"success female", true, domainstandard.GenderFemale, judgmentv1.StandardGender_STANDARD_GENDER_FEMALE},
+		{"failure unmapped gender", false, domainstandard.Gender("other"), judgmentv1.StandardGender_STANDARD_GENDER_UNSPECIFIED},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			gender, err := toProtoStandardGender(tt.gender)
+			if tt.success && err != nil {
+				t.Errorf("expected no error, but got %v", err)
+			}
+			if !tt.success && err == nil {
+				t.Errorf("expected error, but got nil")
+			}
+
+			if gender != tt.want {
+				t.Errorf("toProtoStandardGender() = %v, want %v", gender, tt.want)
 			}
 		})
 	}
@@ -1469,6 +1513,180 @@ func TestDeletePrescription(t *testing.T) {
 			_, err := handler.DeletePrescription(context.Background(), &judgmentv1.DeletePrescriptionRequest{MeasurementId: tt.measurementID})
 			if got := status.Code(err); got != tt.wantCode {
 				t.Errorf("expected code %v, got %v (err=%v)", tt.wantCode, got, err)
+			}
+		})
+	}
+}
+
+func TestGetJudgmentCriteria(t *testing.T) {
+	t.Parallel()
+	createdAt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	updatedAt := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
+
+	zScoreA := domainstandard.ZScore(1.5)
+	zScoreCMin := domainstandard.ZScore(-0.5)
+	zScoreCMax := domainstandard.ZScore(0.5)
+	zScoreE := domainstandard.ZScore(-1.5)
+	rankStandardA, _ := domainstandard.NewRankStandard(domainstandard.RankA, &zScoreA, nil, createdAt, updatedAt)
+	rankStandardC, _ := domainstandard.NewRankStandard(domainstandard.RankC, &zScoreCMin, &zScoreCMax, createdAt, updatedAt)
+	rankStandardE, _ := domainstandard.NewRankStandard(domainstandard.RankE, nil, &zScoreE, createdAt, updatedAt)
+	unmappedRankStandard, _ := domainstandard.NewRankStandard(domainstandard.Rank("F"), &zScoreA, nil, createdAt, updatedAt)
+
+	measurementItemID := domainmeasurementitem.NewMeasurementItemID()
+	ageRange2024, _ := domainstandard.NewAgeRange(20, 24)
+	ageRange7579, _ := domainstandard.NewAgeRange(75, 79)
+	mean2024, _ := domainstandard.NewMean(46.5)
+	mean7579, _ := domainstandard.NewMean(30)
+	standardDeviation2024, _ := domainstandard.NewStandardDeviation(6.25)
+	standardDeviation7579, _ := domainstandard.NewStandardDeviation(5)
+	maleAgeGroupStandard := domainstandard.NewAgeGroupStandard(domainstandard.NewAgeGroupStandardID(), measurementItemID, domainstandard.GenderMale, ageRange2024, mean2024, standardDeviation2024, createdAt, updatedAt)
+	femaleAgeGroupStandard := domainstandard.NewAgeGroupStandard(domainstandard.NewAgeGroupStandardID(), measurementItemID, domainstandard.GenderFemale, ageRange7579, mean7579, standardDeviation7579, createdAt, updatedAt)
+	unmappedAgeGroupStandard := domainstandard.NewAgeGroupStandard(domainstandard.NewAgeGroupStandardID(), measurementItemID, domainstandard.Gender("other"), ageRange2024, mean2024, standardDeviation2024, createdAt, updatedAt)
+
+	fallback := appjudgment.AgeGroupFallback{MaxYoungerYears: 2, MaxOlderYears: 20}
+
+	tests := []struct {
+		name     string
+		criteria appjudgment.JudgmentCriteria
+		getErr   error
+		wantCode codes.Code
+	}{
+		{
+			name: "success get judgment criteria",
+			criteria: appjudgment.JudgmentCriteria{
+				RankStandards:     []domainstandard.RankStandard{rankStandardA, rankStandardC, rankStandardE},
+				AgeGroupStandards: []domainstandard.AgeGroupStandard{maleAgeGroupStandard, femaleAgeGroupStandard},
+				AgeGroupFallback:  fallback,
+			},
+			wantCode: codes.OK,
+		},
+		{
+			name:     "success get empty judgment criteria",
+			criteria: appjudgment.JudgmentCriteria{AgeGroupFallback: fallback},
+			wantCode: codes.OK,
+		},
+		{
+			name:     "failure usecase error",
+			getErr:   errors.New("get judgment criteria error"),
+			wantCode: codes.Internal,
+		},
+		{
+			name:     "failure unauthenticated is preserved",
+			getErr:   status.Error(codes.Unauthenticated, "auth"),
+			wantCode: codes.Unauthenticated,
+		},
+		{
+			name: "failure unmapped rank",
+			criteria: appjudgment.JudgmentCriteria{
+				RankStandards:    []domainstandard.RankStandard{unmappedRankStandard},
+				AgeGroupFallback: fallback,
+			},
+			wantCode: codes.Internal,
+		},
+		{
+			name: "failure unmapped gender",
+			criteria: appjudgment.JudgmentCriteria{
+				AgeGroupStandards: []domainstandard.AgeGroupStandard{unmappedAgeGroupStandard},
+				AgeGroupFallback:  fallback,
+			},
+			wantCode: codes.Internal,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			mockUsecase := mocksappjudgment.NewMockJudgmentUsecase(ctrl)
+			mockUsecase.EXPECT().GetJudgmentCriteria(gomock.Any()).Return(tt.criteria, tt.getErr).Times(1)
+
+			handler := NewJudgmentHandler(mockUsecase)
+
+			res, err := handler.GetJudgmentCriteria(context.Background(), &judgmentv1.GetJudgmentCriteriaRequest{})
+			if got := status.Code(err); got != tt.wantCode {
+				t.Errorf("expected code %v, got %v (err=%v)", tt.wantCode, got, err)
+			}
+			if tt.wantCode != codes.OK {
+				return
+			}
+
+			if len(res.GetRankStandards()) != len(tt.criteria.RankStandards) {
+				t.Fatalf("len(RankStandards) = %v, want %v", len(res.GetRankStandards()), len(tt.criteria.RankStandards))
+			}
+			if len(res.GetAgeGroupStandards()) != len(tt.criteria.AgeGroupStandards) {
+				t.Fatalf("len(AgeGroupStandards) = %v, want %v", len(res.GetAgeGroupStandards()), len(tt.criteria.AgeGroupStandards))
+			}
+			if res.GetAgeGroupFallback().GetMaxYoungerYears() != 2 {
+				t.Errorf("AgeGroupFallback.MaxYoungerYears = %v, want %v", res.GetAgeGroupFallback().GetMaxYoungerYears(), 2)
+			}
+			if res.GetAgeGroupFallback().GetMaxOlderYears() != 20 {
+				t.Errorf("AgeGroupFallback.MaxOlderYears = %v, want %v", res.GetAgeGroupFallback().GetMaxOlderYears(), 20)
+			}
+			if len(tt.criteria.RankStandards) == 0 {
+				return
+			}
+
+			rankA := res.GetRankStandards()[0]
+			if rankA.GetRank() != judgmentv1.Rank_RANK_A {
+				t.Errorf("RankStandards[0].Rank = %v, want %v", rankA.GetRank(), judgmentv1.Rank_RANK_A)
+			}
+			if rankA.ZScoreMin == nil || rankA.GetZScoreMin() != 1.5 {
+				t.Errorf("RankStandards[0].ZScoreMin = %v, want %v", rankA.ZScoreMin, 1.5)
+			}
+			if rankA.ZScoreMax != nil {
+				t.Errorf("RankStandards[0].ZScoreMax = %v, want nil", rankA.GetZScoreMax())
+			}
+			rankC := res.GetRankStandards()[1]
+			if rankC.GetRank() != judgmentv1.Rank_RANK_C {
+				t.Errorf("RankStandards[1].Rank = %v, want %v", rankC.GetRank(), judgmentv1.Rank_RANK_C)
+			}
+			if rankC.ZScoreMin == nil || rankC.GetZScoreMin() != -0.5 {
+				t.Errorf("RankStandards[1].ZScoreMin = %v, want %v", rankC.ZScoreMin, -0.5)
+			}
+			if rankC.ZScoreMax == nil || rankC.GetZScoreMax() != 0.5 {
+				t.Errorf("RankStandards[1].ZScoreMax = %v, want %v", rankC.ZScoreMax, 0.5)
+			}
+			rankE := res.GetRankStandards()[2]
+			if rankE.GetRank() != judgmentv1.Rank_RANK_E {
+				t.Errorf("RankStandards[2].Rank = %v, want %v", rankE.GetRank(), judgmentv1.Rank_RANK_E)
+			}
+			if rankE.ZScoreMin != nil {
+				t.Errorf("RankStandards[2].ZScoreMin = %v, want nil", rankE.GetZScoreMin())
+			}
+			if rankE.ZScoreMax == nil || rankE.GetZScoreMax() != -1.5 {
+				t.Errorf("RankStandards[2].ZScoreMax = %v, want %v", rankE.ZScoreMax, -1.5)
+			}
+
+			wantAgeGroupStandards := []struct {
+				gender            judgmentv1.StandardGender
+				ageFrom           uint32
+				ageTo             uint32
+				mean              float64
+				standardDeviation float64
+			}{
+				{judgmentv1.StandardGender_STANDARD_GENDER_MALE, 20, 24, 46.5, 6.25},
+				{judgmentv1.StandardGender_STANDARD_GENDER_FEMALE, 75, 79, 30, 5},
+			}
+			for i, want := range wantAgeGroupStandards {
+				got := res.GetAgeGroupStandards()[i]
+				if got.GetMeasurementItemId() != measurementItemID.String() {
+					t.Errorf("AgeGroupStandards[%d].MeasurementItemId = %v, want %v", i, got.GetMeasurementItemId(), measurementItemID.String())
+				}
+				if got.GetGender() != want.gender {
+					t.Errorf("AgeGroupStandards[%d].Gender = %v, want %v", i, got.GetGender(), want.gender)
+				}
+				if got.GetAgeFrom() != want.ageFrom || got.GetAgeTo() != want.ageTo {
+					t.Errorf("AgeGroupStandards[%d].AgeFrom-AgeTo = %v-%v, want %v-%v", i, got.GetAgeFrom(), got.GetAgeTo(), want.ageFrom, want.ageTo)
+				}
+				if got.GetMean() != want.mean {
+					t.Errorf("AgeGroupStandards[%d].Mean = %v, want %v", i, got.GetMean(), want.mean)
+				}
+				if got.GetStandardDeviation() != want.standardDeviation {
+					t.Errorf("AgeGroupStandards[%d].StandardDeviation = %v, want %v", i, got.GetStandardDeviation(), want.standardDeviation)
+				}
 			}
 		})
 	}
