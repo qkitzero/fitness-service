@@ -460,11 +460,19 @@ func TestListByCustomerID(t *testing.T) {
 	}
 }
 
-func TestListByCustomerIDs(t *testing.T) {
+func TestListPageByCustomerIDs(t *testing.T) {
 	t.Parallel()
 	otherCustomerID := "88888888-8888-8888-8888-888888888888"
 	otherMeasurementID := "99999999-9999-9999-9999-999999999999"
-	selectByCustomerIDsSQL := `SELECT * FROM "measurements" WHERE customer_id IN ($1,$2) ORDER BY customer_id, measured_on DESC, id`
+	selectByCustomerIDsSQL := `SELECT * FROM "measurements" WHERE customer_id IN ($1,$2) ORDER BY customer_id, measured_on DESC, id LIMIT $3`
+	selectByCustomerIDsAfterSQL := `SELECT * FROM "measurements" WHERE customer_id IN ($1,$2) AND (customer_id >= $3 AND (customer_id > $4 OR (customer_id = $5 AND (measured_on < $6 OR (measured_on = $7 AND id > $8))))) ORDER BY customer_id, measured_on DESC, id LIMIT $9`
+	cursorCustomerID, _ := customer.NewCustomerIDFromString(testCustomerID)
+	cursorMeasurementID, _ := measurement.NewMeasurementIDFromString(testMeasurementID)
+	cursor := &measurement.ListCursor{
+		CustomerID:    cursorCustomerID,
+		MeasuredOn:    measurement.MeasuredOn{Time: testMeasuredOn},
+		MeasurementID: cursorMeasurementID,
+	}
 	selectEntriesInSQL := `SELECT * FROM "measurement_entries" WHERE "measurement_entries"."measurement_id" IN ($1,$2) ORDER BY measurement_entries.measurement_item_id`
 
 	type measurementRow struct {
@@ -479,6 +487,8 @@ func TestListByCustomerIDs(t *testing.T) {
 		name             string
 		success          bool
 		customerIDs      []string
+		after            *measurement.ListCursor
+		limit            int
 		wantMeasurements []measurementRow
 		setup            func(mock sqlmock.Sqlmock)
 	}{
@@ -486,13 +496,14 @@ func TestListByCustomerIDs(t *testing.T) {
 			name:        "success list measurements of multiple customers",
 			success:     true,
 			customerIDs: []string{testCustomerID, otherCustomerID},
+			limit:       501,
 			wantMeasurements: []measurementRow{
 				{measurementID: testMeasurementID, customerID: testCustomerID, age: 65, isDraft: false, entries: 1},
 				{measurementID: otherMeasurementID, customerID: otherCustomerID, age: 48, isDraft: true, entries: 0},
 			},
 			setup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta(selectByCustomerIDsSQL)).
-					WithArgs(testCustomerID, otherCustomerID).
+					WithArgs(testCustomerID, otherCustomerID, 501).
 					WillReturnRows(sqlmock.NewRows(measurementCols).
 						AddRow(testMeasurementID, testCustomerID, testMeasuredOn, testStaffID, 65, testStaffID, false, testCreatedAt, testUpdatedAt).
 						AddRow(otherMeasurementID, otherCustomerID, testMeasuredOn, testStaffID, 48, testStaffID, true, testCreatedAt, testUpdatedAt))
@@ -510,10 +521,30 @@ func TestListByCustomerIDs(t *testing.T) {
 			name:        "success list no measurements of customers without any measurement",
 			success:     true,
 			customerIDs: []string{testCustomerID, otherCustomerID},
+			limit:       501,
 			setup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta(selectByCustomerIDsSQL)).
-					WithArgs(testCustomerID, otherCustomerID).
+					WithArgs(testCustomerID, otherCustomerID, 501).
 					WillReturnRows(sqlmock.NewRows(measurementCols))
+			},
+		},
+		{
+			name:        "success list measurements after the cursor",
+			success:     true,
+			customerIDs: []string{testCustomerID, otherCustomerID},
+			after:       cursor,
+			limit:       2,
+			wantMeasurements: []measurementRow{
+				{measurementID: otherMeasurementID, customerID: otherCustomerID, age: 48, isDraft: true, entries: 0},
+			},
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(selectByCustomerIDsAfterSQL)).
+					WithArgs(testCustomerID, otherCustomerID, testCustomerID, testCustomerID, testCustomerID, testMeasuredOn, testMeasuredOn, testMeasurementID, 2).
+					WillReturnRows(sqlmock.NewRows(measurementCols).
+						AddRow(otherMeasurementID, otherCustomerID, testMeasuredOn, testStaffID, 48, testStaffID, true, testCreatedAt, testUpdatedAt))
+				mock.ExpectQuery(regexp.QuoteMeta(`SELECT * FROM "measurement_entries" WHERE "measurement_entries"."measurement_id" = $1 ORDER BY measurement_entries.measurement_item_id`)).
+					WithArgs(otherMeasurementID).
+					WillReturnRows(sqlmock.NewRows(entryCols))
 			},
 		},
 		{
@@ -526,9 +557,10 @@ func TestListByCustomerIDs(t *testing.T) {
 			name:        "failure list measurements error",
 			success:     false,
 			customerIDs: []string{testCustomerID, otherCustomerID},
+			limit:       501,
 			setup: func(mock sqlmock.Sqlmock) {
 				mock.ExpectQuery(regexp.QuoteMeta(selectByCustomerIDsSQL)).
-					WithArgs(testCustomerID, otherCustomerID).
+					WithArgs(testCustomerID, otherCustomerID, 501).
 					WillReturnError(errors.New("list measurements error"))
 			},
 		},
@@ -561,7 +593,7 @@ func TestListByCustomerIDs(t *testing.T) {
 				customerIDs = append(customerIDs, customerID)
 			}
 
-			measurements, err := repo.ListByCustomerIDs(context.Background(), customerIDs)
+			measurements, err := repo.ListPageByCustomerIDs(context.Background(), customerIDs, tt.after, tt.limit)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}

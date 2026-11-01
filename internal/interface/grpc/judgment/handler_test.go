@@ -533,8 +533,11 @@ func TestListOrganizationJudgments(t *testing.T) {
 		name            string
 		organizationID  string
 		includeInactive bool
+		pageSize        int32
+		pageToken       string
 		callUsecase     bool
 		judgments       []judgmentSpec
+		nextPageToken   string
 		listErr         error
 		wantCode        codes.Code
 	}{
@@ -591,10 +594,44 @@ func TestListOrganizationJudgments(t *testing.T) {
 			wantCode: codes.OK,
 		},
 		{
+			name:           "success list a page of organization judgments",
+			organizationID: sampleOrganizationID,
+			pageSize:       1,
+			pageToken:      "current-page-token",
+			callUsecase:    true,
+			judgments: []judgmentSpec{
+				{
+					customerID: sampleCustomerID, measurementID: sampleMeasurementID, year: 2026, month: 8, day: 1, age: 62,
+					evaluation: func() domainjudgment.Evaluation {
+						return evaluationOf([]domainmeasurementitem.MeasurementItem{gripStrength}, rankStandards)
+					},
+					wantItemEvaluations: 1, wantElementEvaluations: 1, wantMotorAge: &motorAge62,
+				},
+			},
+			nextPageToken: "next-page-token",
+			wantCode:      codes.OK,
+		},
+		{
 			name:           "success list no judgments",
 			organizationID: sampleOrganizationID,
 			callUsecase:    true,
 			wantCode:       codes.OK,
+		},
+		{
+			name:           "failure invalid page size",
+			organizationID: sampleOrganizationID,
+			pageSize:       -1,
+			callUsecase:    true,
+			listErr:        appjudgment.ErrInvalidPageSize,
+			wantCode:       codes.InvalidArgument,
+		},
+		{
+			name:           "failure invalid page token",
+			organizationID: sampleOrganizationID,
+			pageToken:      "invalid",
+			callUsecase:    true,
+			listErr:        appjudgment.ErrInvalidPageToken,
+			wantCode:       codes.InvalidArgument,
 		},
 		{
 			name:           "failure invalid organization id",
@@ -680,17 +717,22 @@ func TestListOrganizationJudgments(t *testing.T) {
 					}
 				}
 				organizationID, _ := domainorganization.NewOrganizationIDFromString(tt.organizationID)
-				mockUsecase.EXPECT().ListOrganizationJudgments(gomock.Any(), organizationID, tt.includeInactive).Return(results, tt.listErr).Times(1)
+				page := appjudgment.OrganizationJudgmentPage{Judgments: results, NextPageToken: tt.nextPageToken}
+				mockUsecase.EXPECT().ListOrganizationJudgments(gomock.Any(), organizationID, tt.includeInactive, int(tt.pageSize), tt.pageToken).Return(page, tt.listErr).Times(1)
 			}
 
 			handler := NewJudgmentHandler(mockUsecase)
 
-			res, err := handler.ListOrganizationJudgments(context.Background(), &judgmentv1.ListOrganizationJudgmentsRequest{OrganizationId: tt.organizationID, IncludeInactive: tt.includeInactive})
+			res, err := handler.ListOrganizationJudgments(context.Background(), &judgmentv1.ListOrganizationJudgmentsRequest{OrganizationId: tt.organizationID, IncludeInactive: tt.includeInactive, PageSize: tt.pageSize, PageToken: tt.pageToken})
 			if got := status.Code(err); got != tt.wantCode {
 				t.Errorf("expected code %v, got %v (err=%v)", tt.wantCode, got, err)
 			}
 			if tt.wantCode != codes.OK {
 				return
+			}
+
+			if res.GetNextPageToken() != tt.nextPageToken {
+				t.Errorf("NextPageToken = %v, want %v", res.GetNextPageToken(), tt.nextPageToken)
 			}
 
 			judgmentMessages := res.GetJudgments()

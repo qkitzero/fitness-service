@@ -63,7 +63,7 @@ type PrescribedMenuInput struct {
 
 type JudgmentUsecase interface {
 	GetJudgment(ctx context.Context, measurementID measurement.MeasurementID) (JudgmentResult, error)
-	ListOrganizationJudgments(ctx context.Context, organizationID organization.OrganizationID, includeInactive bool) ([]OrganizationJudgmentResult, error)
+	ListOrganizationJudgments(ctx context.Context, organizationID organization.OrganizationID, includeInactive bool, pageSize int, pageToken string) (OrganizationJudgmentPage, error)
 	UpsertJudgmentAdvice(ctx context.Context, measurementID measurement.MeasurementID, patch AdvicePatch) (judgment.Judgment, error)
 	UpsertPrescription(ctx context.Context, measurementID measurement.MeasurementID, menus []PrescribedMenuInput) (judgment.Prescription, error)
 	DeletePrescription(ctx context.Context, measurementID measurement.MeasurementID) error
@@ -435,26 +435,36 @@ func (u *judgmentUsecase) GetJudgment(ctx context.Context, measurementID measure
 	return result, nil
 }
 
-func (u *judgmentUsecase) ListOrganizationJudgments(ctx context.Context, organizationID organization.OrganizationID, includeInactive bool) ([]OrganizationJudgmentResult, error) {
+func (u *judgmentUsecase) ListOrganizationJudgments(ctx context.Context, organizationID organization.OrganizationID, includeInactive bool, pageSize int, pageToken string) (OrganizationJudgmentPage, error) {
 	if _, err := u.authService.VerifyToken(ctx); err != nil {
-		return nil, err
+		return OrganizationJudgmentPage{}, err
 	}
 
 	foundOrganization, err := u.organizationRepo.FindByID(ctx, organizationID)
 	if err != nil {
-		return nil, err
+		return OrganizationJudgmentPage{}, err
 	}
 
 	if err := u.verifyTenantMembership(ctx, foundOrganization.TenantID()); err != nil {
 		if errors.Is(err, tenant.ErrNotMember) {
-			return nil, organization.ErrOrganizationNotFound
+			return OrganizationJudgmentPage{}, organization.ErrOrganizationNotFound
 		}
-		return nil, err
+		return OrganizationJudgmentPage{}, err
+	}
+
+	limit, err := resolvePageSize(pageSize)
+	if err != nil {
+		return OrganizationJudgmentPage{}, err
+	}
+
+	after, err := decodePageToken(pageToken, organizationID, includeInactive)
+	if err != nil {
+		return OrganizationJudgmentPage{}, err
 	}
 
 	customers, err := u.customerRepo.ListByOrganizationID(ctx, foundOrganization.TenantID(), organizationID, includeInactive)
 	if err != nil {
-		return nil, err
+		return OrganizationJudgmentPage{}, err
 	}
 
 	customerIDs := make([]customer.CustomerID, 0, len(customers))
@@ -464,27 +474,36 @@ func (u *judgmentUsecase) ListOrganizationJudgments(ctx context.Context, organiz
 		customerGenderByID[foundCustomer.ID()] = foundCustomer.Gender()
 	}
 
-	measurements, err := u.measurementRepo.ListByCustomerIDs(ctx, customerIDs)
+	measurements, err := u.measurementRepo.ListPageByCustomerIDs(ctx, customerIDs, after, limit+1)
 	if err != nil {
-		return nil, err
+		return OrganizationJudgmentPage{}, err
 	}
 	if len(measurements) == 0 {
-		return []OrganizationJudgmentResult{}, nil
+		return OrganizationJudgmentPage{Judgments: []OrganizationJudgmentResult{}}, nil
+	}
+
+	var nextPageToken string
+	if len(measurements) > limit {
+		measurements = measurements[:limit]
+		nextPageToken, err = encodePageToken(organizationID, includeInactive, measurements[limit-1])
+		if err != nil {
+			return OrganizationJudgmentPage{}, err
+		}
 	}
 
 	measurementItems, err := u.measurementItemRepo.List(ctx)
 	if err != nil {
-		return nil, err
+		return OrganizationJudgmentPage{}, err
 	}
 
 	ageGroupStandards, err := u.ageGroupStandardRepo.List(ctx)
 	if err != nil {
-		return nil, err
+		return OrganizationJudgmentPage{}, err
 	}
 
 	rankStandards, err := u.rankStandardRepo.List(ctx)
 	if err != nil {
-		return nil, err
+		return OrganizationJudgmentPage{}, err
 	}
 
 	evaluator := newMeasurementEvaluator("ListOrganizationJudgments", measurementItems, ageGroupStandards, rankStandards)
@@ -501,7 +520,7 @@ func (u *judgmentUsecase) ListOrganizationJudgments(ctx context.Context, organiz
 		})
 	}
 
-	return results, nil
+	return OrganizationJudgmentPage{Judgments: results, NextPageToken: nextPageToken}, nil
 }
 
 func (u *judgmentUsecase) UpsertJudgmentAdvice(ctx context.Context, measurementID measurement.MeasurementID, patch AdvicePatch) (judgment.Judgment, error) {

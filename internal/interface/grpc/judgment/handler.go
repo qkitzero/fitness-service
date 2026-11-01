@@ -429,7 +429,9 @@ func mapJudgmentError(err error, op string) error {
 	if errors.Is(err, domaintraining.ErrTrainingMenuNotFound) ||
 		errors.Is(err, domaintraining.ErrInvalidSortOrder) ||
 		errors.Is(err, domainjudgment.ErrEmptyPrescription) ||
-		errors.Is(err, domainjudgment.ErrInvalidPrescribedMenuLabels) {
+		errors.Is(err, domainjudgment.ErrInvalidPrescribedMenuLabels) ||
+		errors.Is(err, appjudgment.ErrInvalidPageSize) ||
+		errors.Is(err, appjudgment.ErrInvalidPageToken) {
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
 	if s, ok := status.FromError(err); ok {
@@ -469,13 +471,13 @@ func (h *JudgmentHandler) ListOrganizationJudgments(ctx context.Context, req *ju
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	results, err := h.judgmentUsecase.ListOrganizationJudgments(ctx, organizationID, req.GetIncludeInactive())
+	page, err := h.judgmentUsecase.ListOrganizationJudgments(ctx, organizationID, req.GetIncludeInactive(), int(req.GetPageSize()), req.GetPageToken())
 	if err != nil {
 		return nil, mapJudgmentError(err, "ListOrganizationJudgments")
 	}
 
-	judgmentMessages := make([]*judgmentv1.OrganizationJudgment, 0, len(results))
-	for _, result := range results {
+	judgmentMessages := make([]*judgmentv1.OrganizationJudgment, 0, len(page.Judgments))
+	for _, result := range page.Judgments {
 		judgmentMessage, err := toProtoOrganizationJudgment(result)
 		if err != nil {
 			return nil, mapJudgmentError(err, "ListOrganizationJudgments")
@@ -484,7 +486,8 @@ func (h *JudgmentHandler) ListOrganizationJudgments(ctx context.Context, req *ju
 	}
 
 	return &judgmentv1.ListOrganizationJudgmentsResponse{
-		Judgments: judgmentMessages,
+		Judgments:     judgmentMessages,
+		NextPageToken: page.NextPageToken,
 	}, nil
 }
 
