@@ -469,13 +469,13 @@ func (h *JudgmentHandler) ListOrganizationJudgments(ctx context.Context, req *ju
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	results, err := h.judgmentUsecase.ListOrganizationJudgments(ctx, organizationID, req.GetIncludeInactive())
+	page, err := h.judgmentUsecase.ListOrganizationJudgments(ctx, organizationID, req.GetIncludeInactive(), int(req.GetPageSize()), req.GetPageToken())
 	if err != nil {
 		return nil, mapJudgmentError(err, "ListOrganizationJudgments")
 	}
 
-	judgmentMessages := make([]*judgmentv1.OrganizationJudgment, 0, len(results))
-	for _, result := range results {
+	judgmentMessages := make([]*judgmentv1.OrganizationJudgment, 0, len(page.Judgments))
+	for _, result := range page.Judgments {
 		judgmentMessage, err := toProtoOrganizationJudgment(result)
 		if err != nil {
 			return nil, mapJudgmentError(err, "ListOrganizationJudgments")

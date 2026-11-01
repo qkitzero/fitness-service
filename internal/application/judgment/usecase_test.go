@@ -2,7 +2,10 @@ package judgment
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"reflect"
 	"testing"
 	"time"
 
@@ -1009,6 +1012,22 @@ func TestListOrganizationJudgments(t *testing.T) {
 		})
 	}
 
+	cursorCustomerID := customer.NewCustomerID()
+	cursorMeasurementID := measurement.NewMeasurementID()
+	tokenOf := func(organizationID string, includeInactive bool, customerID string, measuredOn string, measurementID string) string {
+		data, _ := json.Marshal(organizationJudgmentPageToken{
+			OrganizationID:  organizationID,
+			IncludeInactive: includeInactive,
+			CustomerID:      customerID,
+			MeasuredOn:      measuredOn,
+			MeasurementID:   measurementID,
+		})
+		return base64.RawURLEncoding.EncodeToString(data)
+	}
+	validPageToken := func(organizationID organization.OrganizationID) string {
+		return tokenOf(organizationID.String(), false, cursorCustomerID.String(), "2026-08-01", cursorMeasurementID.String())
+	}
+
 	type measurementSpec struct {
 		customerIndex       int
 		isDraft             bool
@@ -1032,6 +1051,12 @@ func TestListOrganizationJudgments(t *testing.T) {
 		listMyGroupsErr          error
 		callListCustomers        bool
 		includeInactive          bool
+		pageSize                 int
+		pageTokenOf              func(organizationID organization.OrganizationID) string
+		wantLimit                int
+		wantAfter                bool
+		wantResultCount          int
+		wantNextPageToken        bool
 		genders                  []customer.Gender
 		listCustomersErr         error
 		callListMeasurements     bool
@@ -1151,6 +1176,63 @@ func TestListOrganizationJudgments(t *testing.T) {
 			normalizedItem:      true,
 		},
 		{
+			name:                 "success list the first page of organization judgments",
+			success:              true,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			callListCustomers:    true,
+			pageSize:             2,
+			wantLimit:            3,
+			genders:              []customer.Gender{customer.GenderMale, customer.GenderFemale},
+			callListMeasurements: true,
+			measurements: []measurementSpec{
+				{customerIndex: 0, isDraft: false, wantItemEvaluations: 1, wantMean: 38, wantZScore: 1.6, wantRank: standard.RankA, wantMotorAge: 42},
+				{customerIndex: 0, isDraft: true, wantItemEvaluations: 1, wantMean: 38, wantZScore: 1.6, wantRank: standard.RankA, wantMotorAge: 42},
+				{customerIndex: 1, isDraft: false, wantItemEvaluations: 1, wantMean: 44, wantZScore: 0.4, wantRank: standard.RankC, wantMotorAge: 51},
+			},
+			wantResultCount:     2,
+			wantNextPageToken:   true,
+			callListMasters:     true,
+			registeredStandards: true,
+		},
+		{
+			name:                 "success list the last page of organization judgments",
+			success:              true,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			callListCustomers:    true,
+			pageSize:             2,
+			pageTokenOf:          validPageToken,
+			wantLimit:            3,
+			wantAfter:            true,
+			genders:              []customer.Gender{customer.GenderFemale},
+			callListMeasurements: true,
+			measurements: []measurementSpec{
+				{customerIndex: 0, isDraft: false, wantItemEvaluations: 1, wantMean: 44, wantZScore: 0.4, wantRank: standard.RankC, wantMotorAge: 51},
+			},
+			callListMasters:     true,
+			registeredStandards: true,
+		},
+		{
+			name:                 "success list judgments with the page size capped",
+			success:              true,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			callListCustomers:    true,
+			pageSize:             MaxOrganizationJudgmentPageSize + 1,
+			wantLimit:            MaxOrganizationJudgmentPageSize + 1,
+			genders:              []customer.Gender{customer.GenderMale},
+			callListMeasurements: true,
+			measurements: []measurementSpec{
+				{customerIndex: 0, isDraft: false, wantItemEvaluations: 1, wantMean: 38, wantZScore: 1.6, wantRank: standard.RankA, wantMotorAge: 42},
+			},
+			callListMasters:     true,
+			registeredStandards: true,
+		},
+		{
 			name:                 "success list no judgments of an organization without customers",
 			success:              true,
 			ctx:                  context.Background(),
@@ -1173,6 +1255,94 @@ func TestListOrganizationJudgments(t *testing.T) {
 			name:           "failure verify token error",
 			ctx:            context.Background(),
 			verifyTokenErr: errors.New("verify token error"),
+		},
+		{
+			name:                 "failure negative page size",
+			wantErr:              ErrInvalidPageSize,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			pageSize:             -1,
+		},
+		{
+			name:                 "failure malformed page token",
+			wantErr:              ErrInvalidPageToken,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			pageTokenOf: func(organization.OrganizationID) string {
+				return "not a page token"
+			},
+		},
+		{
+			name:                 "failure page token of another organization",
+			wantErr:              ErrInvalidPageToken,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			pageTokenOf: func(organization.OrganizationID) string {
+				return validPageToken(organization.NewOrganizationID())
+			},
+		},
+		{
+			name:                 "failure page token of another inactive filter",
+			wantErr:              ErrInvalidPageToken,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			pageTokenOf: func(organizationID organization.OrganizationID) string {
+				return tokenOf(organizationID.String(), true, cursorCustomerID.String(), "2026-08-01", cursorMeasurementID.String())
+			},
+		},
+		{
+			name:                 "failure page token with an invalid customer id",
+			wantErr:              ErrInvalidPageToken,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			pageTokenOf: func(organizationID organization.OrganizationID) string {
+				return tokenOf(organizationID.String(), false, "invalid", "2026-08-01", cursorMeasurementID.String())
+			},
+		},
+		{
+			name:                 "failure page token with an invalid measured on",
+			wantErr:              ErrInvalidPageToken,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			pageTokenOf: func(organizationID organization.OrganizationID) string {
+				return tokenOf(organizationID.String(), false, cursorCustomerID.String(), "2026/08/01", cursorMeasurementID.String())
+			},
+		},
+		{
+			name:                 "failure page token with an invalid measurement id",
+			wantErr:              ErrInvalidPageToken,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			pageTokenOf: func(organizationID organization.OrganizationID) string {
+				return tokenOf(organizationID.String(), false, cursorCustomerID.String(), "2026-08-01", "invalid")
+			},
+		},
+		{
+			name:                 "failure page token that is not json",
+			wantErr:              ErrInvalidPageToken,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{tenantID.String()},
+			pageTokenOf: func(organization.OrganizationID) string {
+				return base64.RawURLEncoding.EncodeToString([]byte("not json"))
+			},
+		},
+		{
+			name:                 "failure malformed page token of another tenant is hidden as not found",
+			wantErr:              organization.ErrOrganizationNotFound,
+			ctx:                  context.Background(),
+			callFindOrganization: true,
+			myTenantIDs:          []string{otherTenantID},
+			pageTokenOf: func(organization.OrganizationID) string {
+				return "not a page token"
+			},
 		},
 		{
 			name:                 "failure organization not found",
@@ -1258,6 +1428,19 @@ func TestListOrganizationJudgments(t *testing.T) {
 			defer ctrl.Finish()
 
 			organizationID := organization.NewOrganizationID()
+			pageToken := ""
+			if tt.pageTokenOf != nil {
+				pageToken = tt.pageTokenOf(organizationID)
+			}
+			wantLimit := tt.wantLimit
+			if wantLimit == 0 {
+				wantLimit = DefaultOrganizationJudgmentPageSize + 1
+			}
+			var wantAfter *measurement.ListCursor
+			if tt.wantAfter {
+				cursorMeasuredOn, _ := measurement.NewMeasuredOn(2026, 8, 1)
+				wantAfter = &measurement.ListCursor{CustomerID: cursorCustomerID, MeasuredOn: cursorMeasuredOn, MeasurementID: cursorMeasurementID}
+			}
 			customerIDs := make([]customer.CustomerID, 0, len(tt.genders))
 			for range tt.genders {
 				customerIDs = append(customerIDs, customer.NewCustomerID())
@@ -1337,7 +1520,7 @@ func TestListOrganizationJudgments(t *testing.T) {
 						measurements = append(measurements, mockMeasurement)
 					}
 				}
-				mockMeasurementRepository.EXPECT().ListByCustomerIDs(tt.ctx, customerIDs).Return(measurements, tt.listMeasurementsErr).Times(1)
+				mockMeasurementRepository.EXPECT().ListPageByCustomerIDs(tt.ctx, customerIDs, wantAfter, wantLimit).Return(measurements, tt.listMeasurementsErr).Times(1)
 			}
 
 			if tt.callListMasters {
@@ -1366,7 +1549,7 @@ func TestListOrganizationJudgments(t *testing.T) {
 
 			u := NewJudgmentUsecase(mockAuthService, mockUserService, mockJudgmentRepository, mockPrescribedMenuOverrideRepository, mockMeasurementRepository, mockCustomerRepository, mockOrganizationRepository, mockMeasurementItemRepository, mockAgeGroupStandardRepository, mockRankStandardRepository, mockTrainingMenuRepository, mockPrescriptionRuleRepository)
 
-			results, err := u.ListOrganizationJudgments(tt.ctx, organizationID, tt.includeInactive)
+			page, err := u.ListOrganizationJudgments(tt.ctx, organizationID, tt.includeInactive, tt.pageSize, pageToken)
 			if tt.success && err != nil {
 				t.Errorf("expected no error, but got %v", err)
 			}
@@ -1380,10 +1563,29 @@ func TestListOrganizationJudgments(t *testing.T) {
 				return
 			}
 
-			if len(results) != len(tt.measurements) {
-				t.Fatalf("len(results) = %v, want %v", len(results), len(tt.measurements))
+			results := page.Judgments
+			wantResultCount := len(tt.measurements)
+			if tt.wantResultCount != 0 {
+				wantResultCount = tt.wantResultCount
 			}
-			for i, spec := range tt.measurements {
+			if len(results) != wantResultCount {
+				t.Fatalf("len(results) = %v, want %v", len(results), wantResultCount)
+			}
+			if !tt.wantNextPageToken && page.NextPageToken != "" {
+				t.Errorf("NextPageToken = %v, want empty", page.NextPageToken)
+			}
+			if tt.wantNextPageToken {
+				last := results[len(results)-1]
+				wantNextAfter := &measurement.ListCursor{CustomerID: last.CustomerID, MeasuredOn: last.MeasuredOn, MeasurementID: last.MeasurementID}
+				nextAfter, err := decodePageToken(page.NextPageToken, organizationID, tt.includeInactive)
+				if err != nil {
+					t.Fatalf("failed to decode NextPageToken: %v", err)
+				}
+				if !reflect.DeepEqual(nextAfter, wantNextAfter) {
+					t.Errorf("NextPageToken cursor = %+v, want %+v", nextAfter, wantNextAfter)
+				}
+			}
+			for i, spec := range tt.measurements[:wantResultCount] {
 				result := results[i]
 				if result.MeasurementID != measurementIDs[i] {
 					t.Errorf("results[%d].MeasurementID = %v, want %v", i, result.MeasurementID, measurementIDs[i])

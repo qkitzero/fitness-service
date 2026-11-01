@@ -89,18 +89,18 @@ func (mr *MockJudgmentUsecaseMockRecorder) GetJudgmentCriteria(ctx any) *gomock.
 }
 
 // ListOrganizationJudgments mocks base method.
-func (m *MockJudgmentUsecase) ListOrganizationJudgments(ctx context.Context, organizationID organization.OrganizationID, includeInactive bool) ([]judgment.OrganizationJudgmentResult, error) {
+func (m *MockJudgmentUsecase) ListOrganizationJudgments(ctx context.Context, organizationID organization.OrganizationID, includeInactive bool, pageSize int, pageToken string) (judgment.OrganizationJudgmentPage, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListOrganizationJudgments", ctx, organizationID, includeInactive)
-	ret0, _ := ret[0].([]judgment.OrganizationJudgmentResult)
+	ret := m.ctrl.Call(m, "ListOrganizationJudgments", ctx, organizationID, includeInactive, pageSize, pageToken)
+	ret0, _ := ret[0].(judgment.OrganizationJudgmentPage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListOrganizationJudgments indicates an expected call of ListOrganizationJudgments.
-func (mr *MockJudgmentUsecaseMockRecorder) ListOrganizationJudgments(ctx, organizationID, includeInactive any) *gomock.Call {
+func (mr *MockJudgmentUsecaseMockRecorder) ListOrganizationJudgments(ctx, organizationID, includeInactive, pageSize, pageToken any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOrganizationJudgments", reflect.TypeOf((*MockJudgmentUsecase)(nil).ListOrganizationJudgments), ctx, organizationID, includeInactive)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListOrganizationJudgments", reflect.TypeOf((*MockJudgmentUsecase)(nil).ListOrganizationJudgments), ctx, organizationID, includeInactive, pageSize, pageToken)
 }
 
 // UpsertJudgmentAdvice mocks base method.

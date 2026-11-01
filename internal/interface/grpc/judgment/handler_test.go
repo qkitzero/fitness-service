@@ -680,7 +680,8 @@ func TestListOrganizationJudgments(t *testing.T) {
 					}
 				}
 				organizationID, _ := domainorganization.NewOrganizationIDFromString(tt.organizationID)
-				mockUsecase.EXPECT().ListOrganizationJudgments(gomock.Any(), organizationID, tt.includeInactive).Return(results, tt.listErr).Times(1)
+				page := appjudgment.OrganizationJudgmentPage{Judgments: results}
+				mockUsecase.EXPECT().ListOrganizationJudgments(gomock.Any(), organizationID, tt.includeInactive, 0, "").Return(page, tt.listErr).Times(1)
 			}
 
 			handler := NewJudgmentHandler(mockUsecase)
