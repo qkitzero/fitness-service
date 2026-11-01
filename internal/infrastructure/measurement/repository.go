@@ -172,14 +172,6 @@ func (r *measurementRepository) ListByCustomerID(ctx context.Context, customerID
 	return r.list(r.db.WithContext(ctx).Where("customer_id = ?", customerID), "measured_on DESC, id")
 }
 
-func (r *measurementRepository) ListByCustomerIDs(ctx context.Context, customerIDs []customer.CustomerID) ([]measurement.Measurement, error) {
-	if len(customerIDs) == 0 {
-		return []measurement.Measurement{}, nil
-	}
-
-	return r.list(r.db.WithContext(ctx).Where("customer_id IN ?", customerIDs), "customer_id, measured_on DESC, id")
-}
-
 func (r *measurementRepository) ListPageByCustomerIDs(ctx context.Context, customerIDs []customer.CustomerID, after *measurement.ListCursor, limit int) ([]measurement.Measurement, error) {
 	if len(customerIDs) == 0 {
 		return []measurement.Measurement{}, nil
