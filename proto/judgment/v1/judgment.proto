@@ -150,10 +150,13 @@ message GetJudgmentResponse {
 message ListOrganizationJudgmentsRequest {
   string organization_id = 1;
   bool include_inactive = 2;
+  int32 page_size = 3;
+  string page_token = 4;
 }
 
 message ListOrganizationJudgmentsResponse {
   repeated OrganizationJudgment judgments = 1;
+  string next_page_token = 2;
 }
 
 message UpsertJudgmentAdviceRequest {

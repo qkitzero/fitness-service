@@ -201,6 +201,19 @@
             "in": "query",
             "required": false,
             "type": "boolean"
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pageToken",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -464,6 +477,9 @@
             "type": "object",
             "$ref": "#/definitions/v1OrganizationJudgment"
           }
+        },
+        "nextPageToken": {
+          "type": "string"
         }
       }
     },

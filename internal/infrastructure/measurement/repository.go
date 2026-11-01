@@ -154,9 +154,9 @@ func (r *measurementRepository) FindByID(ctx context.Context, id measurement.Mea
 	return toDomain(measurementModel), nil
 }
 
-func (r *measurementRepository) list(ctx context.Context, order string, query any, args ...any) ([]measurement.Measurement, error) {
+func (r *measurementRepository) list(db *gorm.DB, order string) ([]measurement.Measurement, error) {
 	var measurementModels []MeasurementModel
-	if err := withChildren(r.db.WithContext(ctx)).Where(query, args...).Order(order).Find(&measurementModels).Error; err != nil {
+	if err := withChildren(db).Order(order).Find(&measurementModels).Error; err != nil {
 		return nil, err
 	}
 
@@ -169,15 +169,23 @@ func (r *measurementRepository) list(ctx context.Context, order string, query an
 }
 
 func (r *measurementRepository) ListByCustomerID(ctx context.Context, customerID customer.CustomerID) ([]measurement.Measurement, error) {
-	return r.list(ctx, "measured_on DESC, id", "customer_id = ?", customerID)
+	return r.list(r.db.WithContext(ctx).Where("customer_id = ?", customerID), "measured_on DESC, id")
 }
 
-func (r *measurementRepository) ListByCustomerIDs(ctx context.Context, customerIDs []customer.CustomerID) ([]measurement.Measurement, error) {
+func (r *measurementRepository) ListPageByCustomerIDs(ctx context.Context, customerIDs []customer.CustomerID, after *measurement.ListCursor, limit int) ([]measurement.Measurement, error) {
 	if len(customerIDs) == 0 {
 		return []measurement.Measurement{}, nil
 	}
 
-	return r.list(ctx, "customer_id, measured_on DESC, id", "customer_id IN ?", customerIDs)
+	db := r.db.WithContext(ctx).Where("customer_id IN ?", customerIDs)
+	if after != nil {
+		db = db.Where(
+			"customer_id >= ? AND (customer_id > ? OR (customer_id = ? AND (measured_on < ? OR (measured_on = ? AND id > ?))))",
+			after.CustomerID, after.CustomerID, after.CustomerID, after.MeasuredOn, after.MeasuredOn, after.MeasurementID,
+		)
+	}
+
+	return r.list(db.Limit(limit), "customer_id, measured_on DESC, id")
 }
 
 func (r *measurementRepository) Update(ctx context.Context, m measurement.Measurement) error {
