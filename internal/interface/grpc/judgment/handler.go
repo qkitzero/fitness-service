@@ -429,7 +429,9 @@ func mapJudgmentError(err error, op string) error {
 	if errors.Is(err, domaintraining.ErrTrainingMenuNotFound) ||
 		errors.Is(err, domaintraining.ErrInvalidSortOrder) ||
 		errors.Is(err, domainjudgment.ErrEmptyPrescription) ||
-		errors.Is(err, domainjudgment.ErrInvalidPrescribedMenuLabels) {
+		errors.Is(err, domainjudgment.ErrInvalidPrescribedMenuLabels) ||
+		errors.Is(err, appjudgment.ErrInvalidPageSize) ||
+		errors.Is(err, appjudgment.ErrInvalidPageToken) {
 		return status.Error(codes.InvalidArgument, err.Error())
 	}
 	if s, ok := status.FromError(err); ok {
@@ -484,7 +486,8 @@ func (h *JudgmentHandler) ListOrganizationJudgments(ctx context.Context, req *ju
 	}
 
 	return &judgmentv1.ListOrganizationJudgmentsResponse{
-		Judgments: judgmentMessages,
+		Judgments:     judgmentMessages,
+		NextPageToken: page.NextPageToken,
 	}, nil
 }
 
