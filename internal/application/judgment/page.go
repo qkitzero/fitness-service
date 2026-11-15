@@ -47,19 +47,16 @@ func resolvePageSize(pageSize int) (int, error) {
 	}
 }
 
-func encodePageToken(organizationID organization.OrganizationID, includeInactive bool, last measurement.Measurement) (string, error) {
-	data, err := json.Marshal(organizationJudgmentPageToken{
+func encodePageToken(organizationID organization.OrganizationID, includeInactive bool, last measurement.Measurement) string {
+	data, _ := json.Marshal(organizationJudgmentPageToken{
 		OrganizationID:  organizationID.String(),
 		IncludeInactive: includeInactive,
 		CustomerID:      last.CustomerID().String(),
 		MeasuredOn:      last.MeasuredOn().Format(time.DateOnly),
 		MeasurementID:   last.ID().String(),
 	})
-	if err != nil {
-		return "", err
-	}
 
-	return base64.RawURLEncoding.EncodeToString(data), nil
+	return base64.RawURLEncoding.EncodeToString(data)
 }
 
 func decodePageToken(pageToken string, organizationID organization.OrganizationID, includeInactive bool) (*measurement.ListCursor, error) {

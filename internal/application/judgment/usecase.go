@@ -485,10 +485,7 @@ func (u *judgmentUsecase) ListOrganizationJudgments(ctx context.Context, organiz
 	var nextPageToken string
 	if len(measurements) > limit {
 		measurements = measurements[:limit]
-		nextPageToken, err = encodePageToken(organizationID, includeInactive, measurements[limit-1])
-		if err != nil {
-			return OrganizationJudgmentPage{}, err
-		}
+		nextPageToken = encodePageToken(organizationID, includeInactive, measurements[limit-1])
 	}
 
 	measurementItems, err := u.measurementItemRepo.List(ctx)
