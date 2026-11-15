@@ -83,6 +83,24 @@ func TestListAgeGroupStandards(t *testing.T) {
 						AddRow(testAgeGroupID40s, testGripStrengthID, "other", 45, 49, 46.5, 6.8, createdAt, updatedAt))
 			},
 		},
+		{
+			name:    "failure mean above the upper bound",
+			success: false,
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
+					WillReturnRows(sqlmock.NewRows(ageGroupStandardColumns).
+						AddRow(testAgeGroupID40s, testGripStrengthID, "male", 45, 49, 10000.0, 6.8, createdAt, updatedAt))
+			},
+		},
+		{
+			name:    "failure standard deviation zero",
+			success: false,
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(listSQL)).
+					WillReturnRows(sqlmock.NewRows(ageGroupStandardColumns).
+						AddRow(testAgeGroupID40s, testGripStrengthID, "male", 45, 49, 46.5, 0.0, createdAt, updatedAt))
+			},
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -203,6 +221,30 @@ func TestListByItemIDsAndGender(t *testing.T) {
 					WithArgs(testGripStrengthID, testSitAndReachID, "male").
 					WillReturnRows(sqlmock.NewRows(ageGroupStandardColumns).
 						AddRow(testAgeGroupID40s, testGripStrengthID, "male", 45, 151, 46.5, 6.8, createdAt, updatedAt))
+			},
+		},
+		{
+			name:    "failure mean below the lower bound",
+			success: false,
+			ids:     []string{testGripStrengthID, testSitAndReachID},
+			gender:  standard.GenderMale,
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(listByItemIDsAndGenderSQL)).
+					WithArgs(testGripStrengthID, testSitAndReachID, "male").
+					WillReturnRows(sqlmock.NewRows(ageGroupStandardColumns).
+						AddRow(testAgeGroupID40s, testGripStrengthID, "male", 45, 49, -0.1, 6.8, createdAt, updatedAt))
+			},
+		},
+		{
+			name:    "failure standard deviation negative",
+			success: false,
+			ids:     []string{testGripStrengthID, testSitAndReachID},
+			gender:  standard.GenderMale,
+			setup: func(mock sqlmock.Sqlmock) {
+				mock.ExpectQuery(regexp.QuoteMeta(listByItemIDsAndGenderSQL)).
+					WithArgs(testGripStrengthID, testSitAndReachID, "male").
+					WillReturnRows(sqlmock.NewRows(ageGroupStandardColumns).
+						AddRow(testAgeGroupID40s, testGripStrengthID, "male", 45, 49, 46.5, -6.8, createdAt, updatedAt))
 			},
 		},
 	}
